@@ -1,0 +1,22 @@
+dbgit/
+├── cmd/
+│   ├── root.go
+│   ├── init.go
+│   ├── commit.go
+│   ├── log.go
+│   └── explore.go
+│
+├── tui/
+│   ├── explorer.go
+│   ├── commits.go
+│   └── branches.go
+│
+├── core/
+│   ├── commit.go
+│   ├── repository.go
+│   ├── branch.go
+│   └── graph.go
+│
+└── storage/
+    ├── objects.go
+    └── repository.go
