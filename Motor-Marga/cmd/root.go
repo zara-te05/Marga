@@ -6,17 +6,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use: "marga",
 }
 
 func init() {
-	rootCmd.AddCommand(&ls)
-	rootCmd.AddCommand(cd)
+	RootCmd.AddCommand(&ls)
+	RootCmd.AddCommand(cd)
+	RootCmd.AddCommand(&mkdir)
+	RootCmd.AddCommand(create)
+	RootCmd.AddCommand(&clear)
 }
 
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

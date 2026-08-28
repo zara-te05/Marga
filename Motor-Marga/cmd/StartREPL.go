@@ -29,20 +29,20 @@ func StartREPL() {
 		}
 
 		// En lugar de: args := strings.Fields(input)
-		args := parseInput(input)
+		args := ParseInput(input)
 
 		// IMPORTANTE: Limpiar los flags/argumentos previos de Cobra
-		rootCmd.SetArgs(args)
+		RootCmd.SetArgs(args)
 
 		// Ejecutar el comando
-		if err := rootCmd.Execute(); err != nil {
+		if err := RootCmd.Execute(); err != nil {
 			// Si hay error en la sintaxis o comando no encontrado, Cobra lo imprime
 		}
 	}
 }
 
 // Función auxiliar para separar respetando comillas
-func parseInput(input string) []string {
+func ParseInput(input string) []string {
 	var args []string
 	var current strings.Builder
 	inQuotes := false

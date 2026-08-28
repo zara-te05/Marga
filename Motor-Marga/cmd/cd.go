@@ -26,6 +26,6 @@ var cd = &cobra.Command{
 		}
 
 		dir, _ := os.Getwd()
-		fmt.Printf("Directorio actual del proceso: %s\n", dir)
+		cmd.Printf("Directorio actual del proceso: %s\n", dir)
 	},
 }
