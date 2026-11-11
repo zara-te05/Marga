@@ -1,0 +1,589 @@
+<!DOCTYPE html><html class="dark" lang="es" style="width: 1280px; height: 1203px; overflow: hidden; position: relative;"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<meta content="web_dashboard" name="shell-type">
+<title>Marga — Database Version Control &amp; Migrations</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Geist', system-ui, -apple-system, sans-serif;
+      }
+      body {
+        overscroll-behavior: none;
+      }
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0F19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #252D4A;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3B4670;
+    }
+  </style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            // Marga Strict Midnight & Indigo Palette (NO GREEN)
+            "marga-bg": "#0B0F19",
+            "marga-surface": "#111827",
+            "marga-card": "#151D31",
+            "marga-card-hover": "#1C2642",
+            "marga-border": "#232F4D",
+            "marga-border-subtle": "#1B243B",
+            "marga-border-active": "#6366F1",
+            
+            // Accents
+            "brand-purple": "#8B5CF6",
+            "brand-violet": "#7C3AED",
+            "brand-indigo": "#6366F1",
+            "brand-blue": "#38BDF8",
+            "brand-sky": "#60A5FA",
+            
+            // Diff states (NO GREEN)
+            "diff-add": "#6366F1",
+            "diff-add-bg": "rgba(99, 102, 241, 0.12)",
+            "diff-del": "#F43F5E",
+            "diff-del-bg": "rgba(244, 63, 94, 0.12)",
+          },
+          fontFamily: {
+            sans: ["Geist", "Inter", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-marga-bg text-slate-200 antialiased selection:bg-brand-violet selection:text-white min-h-screen flex flex-col">
+<!-- TOP HEADER / NAV BAR -->
+<header class="sticky top-0 z-50 bg-[#0B0F19]/90 backdrop-blur-xl border-b border-marga-border">
+<div class="h-16 w-full px-5 lg:px-8 flex items-center justify-between gap-4">
+<!-- Brand & Project Switcher -->
+<div class="flex items-center gap-4 shrink-0"><a class="flex items-center gap-2 group transition-opacity hover:opacity-90" href="#"><div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-violet to-brand-blue flex items-center justify-center p-[1px] shadow-sm"><div class="w-full h-full bg-marga-surface rounded-[7px] flex items-center justify-center"><span class="material-symbols-outlined text-[18px] text-brand-purple">dataset</span></div></div><div class="flex items-center gap-2"><span class="font-headline-lg text-headline-lg font-bold text-white tracking-wide">Marga</span><span class="px-1.5 py-0.5 rounded font-label-code-sm text-[10px] bg-brand-violet/20 text-brand-purple border border-brand-violet/30">v1.0</span></div></a></div>
+<!-- Quick Global Search Bar -->
+<div class="flex-1 max-w-md mx-4 hidden md:block">
+<div class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-3 text-[18px] text-slate-500 pointer-events-none">search</span>
+<input class="w-full h-9 pl-9 pr-14 bg-marga-surface border border-marga-border rounded-lg text-slate-200 font-mono text-xs placeholder:text-slate-500 focus:outline-none focus:border-brand-indigo focus:ring-1 focus:ring-brand-indigo transition-all" placeholder="Buscar commits, esquemas, tablas o migraciones..." type="text">
+<div class="absolute right-2.5 flex items-center gap-1 pointer-events-none">
+<kbd class="px-1.5 py-0.5 bg-marga-card border border-marga-border rounded text-[10px] font-mono text-slate-400">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Header Action Controls & User Profile -->
+<div class="flex items-center gap-3 shrink-0"><div class="flex items-center p-1 bg-marga-surface border border-marga-border rounded-lg"><button class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-colors" id="theme-light-btn" onclick="toggleTheme(false)" title="Cambiar a modo claro" type="button"><span class="material-symbols-outlined text-[16px]">light_mode</span></button><button class="p-1 rounded bg-brand-violet text-white shadow-sm transition-colors" id="theme-dark-btn" onclick="toggleTheme(true)" title="Modo oscuro activo" type="button"><span class="material-symbols-outlined text-[16px]">dark_mode</span></button></div><div class="flex items-center gap-2 pl-1 cursor-pointer"><div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-violet to-brand-blue p-[1px] flex items-center justify-center"><div class="w-full h-full bg-marga-surface rounded-[7px] flex items-center justify-center text-xs font-bold text-white">SR</div></div></div></div>
+</div>
+<!-- Secondary Minimal Navigation Subbar -->
+<div class="h-10 px-5 lg:px-8 border-t border-marga-border-subtle bg-marga-bg/50 flex items-center overflow-x-auto text-xs">
+
+</div>
+</header>
+<!-- MAIN DASHBOARD CONTENT -->
+<main class="flex-1 w-full max-w-[1600px] mx-auto p-5 lg:p-8 space-y-6"><div class="flex flex-col w-full">
+<!-- AMBIENT BACKDROP LIGHT (CONTAINED) -->
+<div class="relative w-full overflow-hidden">
+<div class="absolute -top-32 left-1/4 w-[520px] h-[340px] bg-gradient-to-br from-primary-container/20 via-tertiary-container/10 to-transparent blur-3xl pointer-events-none rounded-full"></div>
+<div class="absolute top-48 right-10 w-[420px] h-[260px] bg-secondary-container/10 blur-3xl pointer-events-none rounded-full"></div>
+<!-- MAIN CONTAINER -->
+<div class="relative flex flex-col gap-8 pb-16">
+<!-- SECTION 1: HEADER & STATS SUMMARY -->
+
+<!-- SECTION 2: CONTROL TOOLBAR (FILTERS, SEARCH, VIEW MODE, CREATION CTA) -->
+<section class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-2 rounded-xl bg-surface-container-lowest shadow-sm"><div class="flex items-center gap-3 px-2"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-[20px] text-brand-purple">folder_special</span><h1 class="font-headline-md text-headline-md text-white font-medium">Proyectos Activos</h1></div><span class="px-2 py-0.5 rounded-full font-label-code-sm text-label-code-sm bg-surface-container text-slate-300 border border-marga-border">5 workspaces</span></div><div class="flex items-center gap-3"><div class="flex items-center p-1 rounded-lg bg-surface-container border border-marga-border"><button class="p-1.5 rounded bg-surface-container-high text-brand-blue" title="Vista Cuadrícula" type="button"><span class="material-symbols-outlined text-[18px]">grid_view</span></button><button class="p-1.5 rounded text-outline hover:text-white transition-colors" title="Vista Lista" type="button"><span class="material-symbols-outlined text-[18px]">view_list</span></button></div><button class="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary-container hover:bg-inverse-primary text-white font-headline-md text-body-sm shadow-md hover:shadow-xl transition-all active:scale-[0.98]" onclick="openCreateDrawer()" type="button"><span class="material-symbols-outlined text-[18px]">add_circle</span><span class="">Crear Proyecto</span></button></div></section>
+<!-- SECTION 3: PROJECTS GRID & EMPTY STATE CARD -->
+<section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="projects-grid"><!-- CARD 1: FinTech Core Engine --><article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-marga-border hover:border-brand-violet/50 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Producción" data-name="FinTech Core Engine" data-slug="fintech-core-prod"><div class="flex flex-col gap-4"><div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-brand-violet/20 border border-brand-violet/30 flex items-center justify-center text-brand-purple shrink-0"><span class="material-symbols-outlined text-[22px]">database</span></div><div><h2 class="font-headline-md text-headline-md text-slate-100 group-hover:text-brand-purple transition-colors">FinTech Core Engine</h2><span class="font-label-code-sm text-label-code-sm text-slate-400">fintech-core-prod</span></div></div><div class="flex items-center gap-2"><span class="shrink-0 px-2.5 py-1 rounded-full font-label-code-sm text-label-code-sm bg-brand-blue/10 text-brand-blue border border-brand-blue/30">Producción</span><button class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-1')" type="button"><span class="material-symbols-outlined text-[18px]">more_vert</span></button></div></div><p class="font-body-sm text-body-sm text-slate-400 line-clamp-2 leading-relaxed">Motor transaccional de pagos, ledger contable distribuido y conciliación bancaria en tiempo real.</p><div class="flex flex-col gap-1.5 pt-1"><span class="font-label-code-sm text-label-code-sm text-slate-400 uppercase tracking-wider">3 DBs Vinculadas</span><div class="flex flex-wrap gap-1.5"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>pg-primary</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>ch-analytics</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-sky"></span>redis-cache</span></div></div><div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-label-code-sm text-label-code-sm"><div class="flex items-center gap-1.5 text-slate-200"><span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span><span class="font-label-code-md text-label-code-md text-white font-medium">main</span><span class="text-slate-400">#d93f8a1</span></div><span class="text-slate-400">hace 20m · miguel.dev</span></div></div><div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle"><button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-slate-200 font-body-sm text-body-sm transition-colors border border-marga-border" onclick="openEditDrawer('FinTech Core Engine', 'fintech-core-prod', 'Motor transaccional de pagos y ledger contable de alta disponibilidad.', 'Producción')" type="button"><span class="material-symbols-outlined text-[16px] text-slate-400">tune</span><span class="">Configurar</span></button><button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-violet/20 hover:bg-brand-violet text-brand-purple hover:text-white font-headline-md text-headline-md border border-brand-violet/30 transition-all" onclick="quickLaunch('FinTech Core Engine')" type="button"><span class="">Abrir DB Hub</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></button></div><div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-1"><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-slate-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('FinTech Core Engine', 'fintech-core-prod', 'Motor transaccional de pagos...', 'Producción')" type="button"><span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span><span class="">Editar ajustes</span></button><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-slate-200 hover:bg-marga-card transition-colors" onclick="duplicateProject('FinTech Core Engine')" type="button"><span class="material-symbols-outlined text-[15px] text-slate-400">content_copy</span><span class="">Duplicar esquema</span></button><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-slate-200 hover:bg-marga-card transition-colors" onclick="archiveProject('FinTech Core Engine')" type="button"><span class="material-symbols-outlined text-[15px] text-slate-400">archive</span><span class="">Archivar</span></button><div class="h-[1px] bg-marga-border my-1"></div><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-diff-del hover:bg-diff-del/20 transition-colors" onclick="confirmDelete('FinTech Core Engine')" type="button"><span class="material-symbols-outlined text-[15px] text-diff-del">delete</span><span class="">Eliminar</span></button></div></article><!-- CARD 2: Logistics & Fleet API --><article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-marga-border hover:border-brand-violet/50 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Producción" data-name="Logistics &amp; Fleet API" data-slug="logistics-fleet"><div class="flex flex-col gap-4"><div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-brand-blue/15 border border-brand-blue/30 flex items-center justify-center text-brand-blue shrink-0"><span class="material-symbols-outlined text-[22px]">route</span></div><div><h2 class="font-headline-md text-headline-md text-slate-100 group-hover:text-brand-blue transition-colors">Logistics &amp; Fleet API</h2><span class="font-label-code-sm text-label-code-sm text-slate-400">logistics-fleet</span></div></div><div class="flex items-center gap-2"><span class="shrink-0 px-2.5 py-1 rounded-full font-label-code-sm text-label-code-sm bg-brand-blue/10 text-brand-blue border border-brand-blue/30">Producción</span><button class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-2')" type="button"><span class="material-symbols-outlined text-[18px]">more_vert</span></button></div></div><p class="font-body-sm text-body-sm text-slate-400 line-clamp-2 leading-relaxed">Rastreo de telemetría geoespacial, cálculo de ETA en tiempo real y asignación de despachos autónomos.</p><div class="flex flex-col gap-1.5 pt-1"><span class="font-label-code-sm text-label-code-sm text-slate-400 uppercase tracking-wider">4 DBs Vinculadas</span><div class="flex flex-wrap gap-1.5"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>pg-postgis</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>redis-pubsub</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-sky"></span>timescale-events</span></div></div><div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-label-code-sm text-label-code-sm"><div class="flex items-center gap-1.5 text-slate-200"><span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span><span class="font-label-code-md text-label-code-md text-white font-medium">main</span><span class="text-slate-400">#a412cf3</span></div><span class="text-slate-400">hace 2h · sara.infra</span></div></div><div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle"><button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-slate-200 font-body-sm text-body-sm transition-colors border border-marga-border" onclick="openEditDrawer('Logistics &amp; Fleet API', 'logistics-fleet', 'Rastreo de telemetría y ruteo de envíos.', 'Producción')" type="button"><span class="material-symbols-outlined text-[16px] text-slate-400">tune</span><span class="">Configurar</span></button><button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-violet/20 hover:bg-brand-violet text-brand-purple hover:text-white font-headline-md text-headline-md border border-brand-violet/30 transition-all" onclick="quickLaunch('Logistics &amp; Fleet API')" type="button"><span class="">Abrir DB Hub</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></button></div><div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-2"><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-slate-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('Logistics &amp; Fleet API', 'logistics-fleet', 'Rastreo de telemetría...', 'Producción')" type="button"><span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span><span class="">Editar ajustes</span></button><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-diff-del hover:bg-diff-del/20 transition-colors" onclick="confirmDelete('Logistics &amp; Fleet API')" type="button"><span class="material-symbols-outlined text-[15px] text-diff-del">delete</span><span class="">Eliminar</span></button></div></article><!-- CARD 3: User Identity & Auth Engine --><article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-marga-border hover:border-brand-violet/50 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Staging" data-name="User Identity &amp; Auth Engine" data-slug="auth-engine-stg"><div class="flex flex-col gap-4"><div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-brand-purple/15 border border-brand-purple/30 flex items-center justify-center text-brand-purple shrink-0"><span class="material-symbols-outlined text-[22px]">fingerprint</span></div><div><h2 class="font-headline-md text-headline-md text-slate-100 group-hover:text-brand-purple transition-colors">User Identity &amp; Auth Engine</h2><span class="font-label-code-sm text-label-code-sm text-slate-400">auth-engine-stg</span></div></div><div class="flex items-center gap-2"><span class="shrink-0 px-2.5 py-1 rounded-full font-label-code-sm text-label-code-sm bg-brand-purple/15 text-brand-purple border border-brand-purple/30">Staging</span><button class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-3')" type="button"><span class="material-symbols-outlined text-[18px]">more_vert</span></button></div></div><p class="font-body-sm text-body-sm text-slate-400 line-clamp-2 leading-relaxed">Gestor de tokens OAuth2, Single Sign-On empresarial y almacenamiento de credenciales blindadas por Zero-Knowledge.</p><div class="flex flex-col gap-1.5 pt-1"><span class="font-label-code-sm text-label-code-sm text-slate-400 uppercase tracking-wider">2 DBs Vinculadas</span><div class="flex flex-wrap gap-1.5"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>pg-identity</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>redis-session-jwt</span></div></div><div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-label-code-sm text-label-code-sm"><div class="flex items-center gap-1.5 text-slate-200"><span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span><span class="font-label-code-md text-label-code-md text-white font-medium">staging</span><span class="text-slate-400">#7f89b1c</span></div><span class="text-slate-400">hace 5h · carlos.sec</span></div></div><div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle"><button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-slate-200 font-body-sm text-body-sm transition-colors border border-marga-border" onclick="openEditDrawer('User Identity &amp; Auth Engine', 'auth-engine-stg', 'Servicios OAuth2, SSO y gestión de credenciales seguras.', 'Staging')" type="button"><span class="material-symbols-outlined text-[16px] text-slate-400">tune</span><span class="">Configurar</span></button><button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-violet/20 hover:bg-brand-violet text-brand-purple hover:text-white font-headline-md text-headline-md border border-brand-violet/30 transition-all" onclick="quickLaunch('User Identity &amp; Auth Engine')" type="button"><span class="">Abrir DB Hub</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></button></div><div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-3"><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-slate-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('User Identity &amp; Auth Engine', 'auth-engine-stg', 'Servicios OAuth2...', 'Staging')" type="button"><span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span><span class="">Editar ajustes</span></button><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-diff-del hover:bg-diff-del/20 transition-colors" onclick="confirmDelete('User Identity &amp; Auth Engine')" type="button"><span class="material-symbols-outlined text-[15px] text-diff-del">delete</span><span class="">Eliminar</span></button></div></article><!-- CARD 4: Billing & Subscriptions --><article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-marga-border hover:border-brand-violet/50 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Producción" data-name="Billing &amp; Subscriptions" data-slug="billing-sub"><div class="flex flex-col gap-4"><div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-brand-violet/20 border border-brand-violet/30 flex items-center justify-center text-brand-purple shrink-0"><span class="material-symbols-outlined text-[22px]">receipt_long</span></div><div><h2 class="font-headline-md text-headline-md text-slate-100 group-hover:text-brand-purple transition-colors">Billing &amp; Subscriptions</h2><span class="font-label-code-sm text-label-code-sm text-slate-400">billing-sub</span></div></div><div class="flex items-center gap-2"><span class="shrink-0 px-2.5 py-1 rounded-full font-label-code-sm text-label-code-sm bg-brand-blue/10 text-brand-blue border border-brand-blue/30">Producción</span><button class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-4')" type="button"><span class="material-symbols-outlined text-[18px]">more_vert</span></button></div></div><p class="font-body-sm text-body-sm text-slate-400 line-clamp-2 leading-relaxed">Facturación electrónica recurrente, integraciones Stripe/Adyen y control estricto de suscripciones SaaS.</p><div class="flex flex-col gap-1.5 pt-1"><span class="font-label-code-sm text-label-code-sm text-slate-400 uppercase tracking-wider">2 DBs Vinculadas</span><div class="flex flex-wrap gap-1.5"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>pg-billing-ledger</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border-subtle font-label-code-sm text-label-code-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>clickhouse-invoices</span></div></div><div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-label-code-sm text-label-code-sm"><div class="flex items-center gap-1.5 text-slate-200"><span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span><span class="font-label-code-md text-label-code-md text-white font-medium">main</span><span class="text-slate-400">#e291f0a</span></div><span class="text-slate-400">ayer · elena.core</span></div></div><div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle"><button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-slate-200 font-body-sm text-body-sm transition-colors border border-marga-border" onclick="openEditDrawer('Billing &amp; Subscriptions', 'billing-sub', 'Conciliación bancaria, facturación electrónica.', 'Producción')" type="button"><span class="material-symbols-outlined text-[16px] text-slate-400">tune</span><span class="">Configurar</span></button><button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-violet/20 hover:bg-brand-violet text-brand-purple hover:text-white font-headline-md text-headline-md border border-brand-violet/30 transition-all" onclick="quickLaunch('Billing &amp; Subscriptions')" type="button"><span class="">Abrir DB Hub</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></button></div><div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-4"><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-slate-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('Billing &amp; Subscriptions', 'billing-sub', 'Conciliación...', 'Producción')" type="button"><span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span><span class="">Editar ajustes</span></button><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-diff-del hover:bg-diff-del/20 transition-colors" onclick="confirmDelete('Billing &amp; Subscriptions')" type="button"><span class="material-symbols-outlined text-[15px] text-diff-del">delete</span><span class="">Eliminar</span></button></div></article><!-- CARD 5: Marketing & Growth Analytics --><article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-marga-border hover:border-brand-violet/50 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Desarrollo" data-name="Marketing &amp; Growth Analytics" data-slug="mkt-analytics-dev"><div class="flex flex-col gap-4"><div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-brand-sky/15 border border-brand-sky/30 flex items-center justify-center text-brand-sky shrink-0"><span class="material-symbols-outlined text-[22px]">monitoring</span></div><div><h2 class="font-headline-md text-headline-md text-slate-100 group-hover:text-brand-sky transition-colors">Marketing &amp; Growth Analytics</h2><span class="font-label-code-sm text-label-code-sm text-slate-400">mkt-analytics-dev</span></div></div><div class="flex items-center gap-2"><span class="shrink-0 px-2.5 py-1 rounded-full font-label-code-sm text-label-code-sm bg-marga-surface text-slate-300 border border-marga-border">Desarrollo</span><button class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-5')" type="button"><span class="material-symbols-outlined text-[18px]">more_vert</span></button></div></div><p class="font-body-sm text-body-sm text-slate-400 line-clamp-2 leading-relaxed">Ingesta masiva de logs de navegación, segmentación de cohortes e integración con data lake columnar.</p><div class="flex flex-col gap-1.5 pt-1"><span class="font-label-code-sm text-label-code-sm text-slate-400 uppercase tracking-wider">1 DB Vinculada</span><div class="flex flex-wrap gap-1.5"><span class="shrink-0 px-2.5 py-1 rounded-full font-label-code-sm text-label-code-sm bg-marga-surface text-slate-300 border border-marga-border">Desarrollo</span></div></div><div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-label-code-sm text-label-code-sm"><div class="flex items-center gap-1.5 text-slate-200"><span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span><span class="font-label-code-md text-label-code-md text-white font-medium">feat/event-stream</span><span class="text-slate-400">#551bc42</span></div><span class="text-slate-400">hace 3d · diego.data</span></div></div><div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle"><button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-slate-200 font-body-sm text-body-sm transition-colors border border-marga-border" onclick="openEditDrawer('Marketing &amp; Growth Analytics', 'mkt-analytics-dev', 'Pipeline de eventos y métricas de adquisición.', 'Desarrollo')" type="button"><span class="material-symbols-outlined text-[16px] text-slate-400">tune</span><span class="">Configurar</span></button><button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-violet/20 hover:bg-brand-violet text-brand-purple hover:text-white font-headline-md text-headline-md border border-brand-violet/30 transition-all" onclick="quickLaunch('Marketing &amp; Growth Analytics')" type="button"><span class="">Abrir DB Hub</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></button></div><div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-5"><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-slate-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('Marketing &amp; Growth Analytics', 'mkt-analytics-dev', 'Pipeline de eventos...', 'Desarrollo')" type="button"><span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span><span class="">Editar ajustes</span></button><button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left font-body-sm text-body-sm text-diff-del hover:bg-diff-del/20 transition-colors" onclick="confirmDelete('Marketing &amp; Growth Analytics')" type="button"><span class="material-symbols-outlined text-[15px] text-diff-del">delete</span><span class="">Eliminar</span></button></div></article><!-- CARD 6: INTUITIVE NEW PROJECT CREATION CARD --><article class="group flex flex-col items-center justify-center p-8 rounded-2xl bg-[#0F1422]/60 hover:bg-marga-card/80 border-2 border-dashed border-marga-border hover:border-brand-violet transition-all cursor-pointer shadow-sm hover:shadow-xl text-center min-h-[320px]" onclick="openCreateDrawer()"><div class="flex flex-col items-center justify-center h-full gap-4 text-center my-auto"><div class="w-14 h-14 rounded-2xl bg-brand-violet/15 group-hover:bg-brand-violet border border-brand-violet/30 text-brand-purple group-hover:text-white flex items-center justify-center transition-all shadow-md"><span class="material-symbols-outlined text-[28px]">add</span></div><div><h3 class="font-headline-md text-headline-md text-slate-200 group-hover:text-white transition-colors">Crear Nuevo Proyecto</h3><p class="font-body-sm text-body-sm text-slate-400 mt-1 max-w-xs leading-relaxed">Configura un espacio aislado, conecta clusters de PostgreSQL o ClickHouse y versiona tus esquemas.</p></div><span class="px-4 py-2 rounded-lg bg-marga-surface border border-marga-border font-label-code-sm text-label-code-sm text-brand-sky group-hover:bg-brand-violet/20 group-hover:border-brand-violet/40 transition-colors inline-flex items-center gap-1.5">Presiona para configurar <span class="material-symbols-outlined text-[15px]">arrow_forward</span></span></div></article></section>
+<!-- SECTION 4: SLIDE-OVER DRAWER (CREATION & EDITING EXPERIENCE) -->
+<!-- BACKDROP -->
+<div class="fixed inset-0 z-40 bg-surface-dim/80 backdrop-blur-sm hidden transition-opacity" id="drawer-backdrop" onclick="closeAllDrawers()"></div>
+<!-- DRAWER PANEL -->
+<aside class="fixed top-0 right-0 z-50 h-full w-full max-w-xl bg-surface-container-low shadow-2xl flex flex-col justify-between translate-x-full transition-transform duration-300 ease-out overflow-y-auto" id="project-drawer">
+<div class="flex flex-col">
+<!-- Drawer Top Navigation Header -->
+<div class="sticky top-0 z-10 flex items-center justify-between p-6 bg-surface-container-low shadow-sm">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" id="drawer-icon">tune</span>
+</div>
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface" id="drawer-title">Configurar Proyecto</h3>
+<span class="font-label-code-sm text-label-code-sm text-outline" id="drawer-subtitle">Ajustes generales y control de bases de datos</span>
+</div>
+</div>
+<button class="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" onclick="closeAllDrawers()" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Drawer Navigation Tabs -->
+<div class="flex items-center px-6 gap-2 bg-surface-container-low">
+<button class="py-2.5 px-3 font-headline-md text-headline-md text-primary bg-surface-container rounded-t-lg" onclick="switchDrawerTab('general', this)" type="button">General</button>
+<button class="py-2.5 px-3 font-headline-md text-headline-md text-outline hover:text-on-surface rounded-t-lg transition-colors" onclick="switchDrawerTab('databases', this)" type="button">Bases de Datos</button>
+<button class="py-2.5 px-3 font-headline-md text-headline-md text-outline hover:text-on-surface rounded-t-lg transition-colors" onclick="switchDrawerTab('danger', this)" type="button">Zona Peligrosa</button>
+</div>
+<!-- Drawer Body Content -->
+<div class="p-6 flex flex-col gap-6">
+<!-- TAB 1: GENERAL SETTINGS -->
+<div class="flex flex-col gap-5" id="tab-general">
+<div class="flex flex-col gap-2">
+<label class="font-headline-md text-headline-md text-on-surface">Nombre del Proyecto</label>
+<input class="h-10 px-3.5 rounded-lg bg-surface-container font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-high transition-colors" id="form-name" oninput="syncSlug(this.value)" placeholder="ej. Payments Microservice" type="text" value="FinTech Core Engine">
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-headline-md text-headline-md text-on-surface">Slug Identificador (Inmutable)</label>
+<input class="h-10 px-3.5 rounded-lg bg-surface-container font-label-code-md text-label-code-md text-tertiary focus:outline-none focus:bg-surface-container-high transition-colors" id="form-slug" placeholder="ej. payments-microservice" type="text" value="fintech-core-prod">
+<span class="font-caption text-caption text-outline">Se utiliza para URLs internas, logs de migración y CLI hooks.</span>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-headline-md text-headline-md text-on-surface">Descripción</label>
+<textarea class="p-3 rounded-lg bg-surface-container font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-high transition-colors" id="form-desc" placeholder="Describe la función principal de este esquema de base de datos..." rows="3">Motor transaccional de pagos, ledger contable distribuido y conciliación bancaria.</textarea>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<label class="font-headline-md text-headline-md text-on-surface">Entorno Activo</label>
+<select class="h-10 px-3 rounded-lg bg-surface-container font-body-sm text-body-sm text-on-surface focus:outline-none cursor-pointer" id="form-env">
+<option value="Producción">Producción</option>
+<option value="Staging">Staging</option>
+<option value="Desarrollo">Desarrollo</option>
+<option value="Sandbox">Sandbox / QA</option>
+</select>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-headline-md text-headline-md text-on-surface">Rama por Defecto</label>
+<input class="h-10 px-3 rounded-lg bg-surface-container font-label-code-md text-label-code-md text-on-surface focus:outline-none" type="text" value="main">
+</div>
+</div>
+</div>
+<!-- TAB 2: DATABASES MANAGEMENT -->
+<div class="hidden flex flex-col gap-4" id="tab-databases">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Clusters de bases de datos conectados a este repositorio:</span>
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-container">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-[20px]">database</span>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-on-surface">prod-postgres-main</span>
+<span class="font-label-code-sm text-label-code-sm text-outline">PostgreSQL 16.2 · 5432</span>
+</div>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded">Sincronizado</span>
+</div>
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-container">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary text-[20px]">analytics</span>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-on-surface">clickhouse-analytics</span>
+<span class="font-label-code-sm text-label-code-sm text-outline">ClickHouse Cloud · 8123</span>
+</div>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-tertiary bg-tertiary/10 px-2 py-0.5 rounded">Activo</span>
+</div>
+</div>
+<!-- Quick Link DB Inline Trigger -->
+<button class="flex items-center justify-center gap-2 p-3 rounded-xl bg-surface-container hover:bg-surface-container-high font-headline-md text-headline-md text-secondary transition-colors" onclick="alert('Abriendo asistente de conexión SSL...');" type="button">
+<span class="material-symbols-outlined text-[18px]">add_link</span>
+<span class="">Vincular Cluster Adicional</span>
+</button>
+</div>
+<!-- TAB 3: DANGER ZONE -->
+<div class="hidden flex flex-col gap-5" id="tab-danger">
+<div class="p-4 rounded-xl bg-error-container/20 flex flex-col gap-3">
+<div class="flex items-center gap-2 text-error">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+<span class="font-headline-md text-headline-md">Zona de Destrucción y Purga</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                  Eliminar un proyecto destruirá las configuraciones de esquema, el historial de commits y el mapeo de reversiones en Marga. Tus servidores de bases de datos físicos no sufrirán daños directos de escritura.
+                </p>
+<div class="flex items-center gap-3 pt-2">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-error hover:bg-on-error-container text-on-error font-headline-md text-headline-md transition-colors" id="danger-delete-btn" onclick="triggerDeleteFromDrawer()" type="button">
+<span class="material-symbols-outlined text-[18px]">delete_forever</span>
+<span class="">Eliminar Proyecto Completo</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Action Footer -->
+<div class="sticky bottom-0 p-6 bg-surface-container-low shadow-lg flex items-center justify-between">
+<button class="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high font-body-sm text-body-sm text-on-surface transition-colors" onclick="closeAllDrawers()" type="button">
+            Cancelar
+          </button>
+<button class="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary-container hover:bg-inverse-primary font-headline-md text-headline-md text-on-primary shadow-md transition-all" id="drawer-save-btn" onclick="saveProjectChanges()" type="button">
+<span class="material-symbols-outlined text-[18px]">check</span>
+<span id="drawer-save-text" class="">Guardar Cambios</span>
+</button>
+</div>
+</aside>
+<!-- CONFIRMATION MODAL: DELETION GUARD -->
+<div class="fixed inset-0 z-50 bg-surface-dim/85 backdrop-blur-md hidden flex items-center justify-center p-4" id="delete-modal">
+<div class="max-w-md w-full p-6 rounded-2xl bg-surface-container-low shadow-2xl flex flex-col gap-4">
+<div class="flex items-center gap-3 text-error">
+<div class="w-10 h-10 rounded-xl bg-error-container/30 flex items-center justify-center text-error shrink-0">
+<span class="material-symbols-outlined text-[22px]">delete</span>
+</div>
+<div>
+<h4 class="font-headline-lg text-headline-lg text-on-surface">¿Confirmar Eliminación?</h4>
+<span class="font-label-code-sm text-label-code-sm text-error">Esta acción no puede revertirse</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Estás a punto de desvincular y purgar el proyecto <strong class="text-on-surface" id="delete-target-name">FinTech Core Engine</strong> de Marga. Para proceder, escribe <code class="font-label-code-sm text-secondary bg-surface-container px-1 py-0.5 rounded">ELIMINAR</code> a continuación:
+          </p>
+<input class="h-10 px-3.5 rounded-lg bg-surface-container font-label-code-md text-label-code-md text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-high transition-colors" id="delete-confirm-input" oninput="validateDeleteInput(this.value)" placeholder="Escribe ELIMINAR" type="text">
+<div class="flex items-center justify-end gap-3 pt-2">
+<button class="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high font-body-sm text-body-sm text-on-surface transition-colors" onclick="closeDeleteModal()" type="button">
+              Cancelar
+            </button>
+<button class="px-4 py-2 rounded-lg bg-error/40 text-on-error/60 font-headline-md text-headline-md cursor-not-allowed transition-all" disabled="" id="delete-execute-btn" onclick="executeProjectDeletion()" type="button">
+              Destruir Proyecto
+            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  let currentTargetProject = "FinTech Core Engine";
+
+  function openCreateDrawer() {
+    document.getElementById('drawer-title').innerText = "Crear Nuevo Proyecto";
+    document.getElementById('drawer-subtitle').innerText = "Configura los datos base de tu nuevo espacio";
+    document.getElementById('drawer-icon').innerText = "add_box";
+    document.getElementById('form-name').value = "";
+    document.getElementById('form-slug').value = "";
+    document.getElementById('form-desc').value = "";
+    document.getElementById('drawer-save-text').innerText = "Crear Proyecto";
+    
+    // Switch to general tab
+    switchDrawerTab('general', null);
+    
+    document.getElementById('drawer-backdrop').classList.remove('hidden');
+    document.getElementById('project-drawer').classList.remove('translate-x-full');
+  }
+
+  function openEditDrawer(name, slug, desc, env) {
+    currentTargetProject = name;
+    document.getElementById('drawer-title').innerText = "Editar Proyecto: " + name;
+    document.getElementById('drawer-subtitle').innerText = "Modifica la configuración de ramas y cluster";
+    document.getElementById('drawer-icon').innerText = "tune";
+    document.getElementById('form-name').value = name;
+    document.getElementById('form-slug').value = slug;
+    document.getElementById('form-desc').value = desc;
+    document.getElementById('form-env').value = env;
+    document.getElementById('drawer-save-text').innerText = "Guardar Cambios";
+
+    switchDrawerTab('general', null);
+
+    document.getElementById('drawer-backdrop').classList.remove('hidden');
+    document.getElementById('project-drawer').classList.remove('translate-x-full');
+  }
+
+  function closeAllDrawers() {
+    document.getElementById('drawer-backdrop').classList.add('hidden');
+    document.getElementById('project-drawer').classList.add('translate-x-full');
+    closeAllMenus();
+  }
+
+  function syncSlug(val) {
+    const slug = val.toLowerCase().trim().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    document.getElementById('form-slug').value = slug;
+  }
+
+  function switchDrawerTab(tabName, clickedBtn) {
+    document.getElementById('tab-general').classList.add('hidden');
+    document.getElementById('tab-databases').classList.add('hidden');
+    document.getElementById('tab-danger').classList.add('hidden');
+    document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+    if (clickedBtn) {
+      const parent = clickedBtn.parentElement;
+      const buttons = parent.querySelectorAll('button');
+      buttons.forEach(b => {
+        b.className = "py-2.5 px-3 font-headline-md text-headline-md text-outline hover:text-on-surface rounded-t-lg transition-colors";
+      });
+      clickedBtn.className = "py-2.5 px-3 font-headline-md text-headline-md text-primary bg-surface-container rounded-t-lg";
+    }
+  }
+
+  function saveProjectChanges() {
+    const name = document.getElementById('form-name').value;
+    if (!name) {
+      alert("Por favor introduce un nombre para el proyecto.");
+      return;
+    }
+    alert("Operación completada: Proyecto '" + name + "' actualizado correctamente.");
+    closeAllDrawers();
+  }
+
+  function confirmDelete(projectName) {
+    currentTargetProject = projectName;
+    document.getElementById('delete-target-name').innerText = projectName;
+    document.getElementById('delete-confirm-input').value = "";
+    validateDeleteInput("");
+    document.getElementById('delete-modal').classList.remove('hidden');
+    closeAllMenus();
+  }
+
+  function triggerDeleteFromDrawer() {
+    confirmDelete(currentTargetProject);
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('delete-modal').classList.add('hidden');
+  }
+
+  function validateDeleteInput(val) {
+    const btn = document.getElementById('delete-execute-btn');
+    if (val.trim().toUpperCase() === "ELIMINAR") {
+      btn.disabled = false;
+      btn.className = "px-4 py-2 rounded-lg bg-error hover:bg-error-container text-on-error font-headline-md text-headline-md transition-all cursor-pointer shadow-md";
+    } else {
+      btn.disabled = true;
+      btn.className = "px-4 py-2 rounded-lg bg-error/40 text-on-error/60 font-headline-md text-headline-md cursor-not-allowed transition-all";
+    }
+  }
+
+  function executeProjectDeletion() {
+    alert("El proyecto '" + currentTargetProject + "' ha sido eliminado con éxito de tu workspace.");
+    closeDeleteModal();
+    closeAllDrawers();
+  }
+
+  function toggleContextMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    const isHidden = menu.classList.contains('hidden');
+    closeAllMenus();
+    if (isHidden) {
+      menu.classList.remove('hidden');
+    }
+  }
+
+  function closeAllMenus() {
+    const menus = document.querySelectorAll('[id^="menu-"]');
+    menus.forEach(m => m.classList.add('hidden'));
+  }
+
+  function filterProjects(searchVal) {
+    const query = searchVal.toLowerCase();
+    const cards = document.querySelectorAll('.project-card');
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name').toLowerCase();
+      const slug = card.getAttribute('data-slug').toLowerCase();
+      if (name.includes(query) || slug.includes(query)) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+  }
+
+  function filterByEnvironment(env) {
+    const cards = document.querySelectorAll('.project-card');
+    cards.forEach(card => {
+      const cardEnv = card.getAttribute('data-env');
+      if (env === 'all' || cardEnv === env) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+  }
+
+  function setActiveTab(btn) {
+    const parent = btn.parentElement;
+    parent.querySelectorAll('button').forEach(b => {
+      b.className = "px-2.5 py-1 rounded font-body-sm text-body-sm text-outline hover:text-on-surface transition-colors";
+    });
+    btn.className = "px-2.5 py-1 rounded font-body-sm text-body-sm text-on-surface bg-surface-container-high shadow-sm";
+  }
+
+  function quickLaunch(name) {
+    alert("Abriendo panel de commits y ramas para '" + name + "'.");
+  }
+
+  function duplicateProject(name) {
+    alert("Creando clon del esquema estructural de '" + name + "'...");
+    closeAllMenus();
+  }
+
+  function archiveProject(name) {
+    if (confirm("¿Deseas archivar el proyecto '" + name + "'?")) {
+      alert("Proyecto archivado.");
+      closeAllMenus();
+    }
+  }
+
+  // Click outside listener for context menus
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.project-card') && !e.target.closest('[id^="menu-"]')) {
+      closeAllMenus();
+    }
+  });
+</script></main>
+<!-- MODAL: QUERY INSPECTOR (Triggered by double clicking commit card) -->
+<div class="fixed inset-0 z-50 bg-[#0B0F19]/80 backdrop-blur-md hidden flex items-center justify-center p-4" id="inspector-modal">
+<div class="bg-marga-surface border border-marga-border rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+<!-- Modal Header -->
+<div class="flex items-start justify-between">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-xl bg-brand-violet/20 border border-brand-violet/30 flex items-center justify-center text-brand-purple shrink-0">
+<span class="material-symbols-outlined text-[22px]">terminal</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-base font-bold text-white" id="modal-commit-title">add_composite_index_transactions_idx</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-violet/20 text-brand-purple font-semibold border border-brand-violet/30" id="modal-commit-tag">MIGRATION DDL</span>
+</div>
+<div class="flex items-center gap-2 text-xs font-mono text-slate-400 mt-1">
+<span class="">Commit: <strong class="text-brand-sky" id="modal-commit-hash">#d93f8a1</strong></span>
+<span class="">•</span>
+<span class="">Autor: <strong class="text-slate-200" id="modal-commit-author">miguel.dev</strong></span>
+</div>
+</div>
+</div>
+<button class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-marga-card transition-colors" onclick="closeModal()" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Benchmark Metric Cards -->
+<div class="grid grid-cols-2 gap-3 font-mono text-xs">
+<div class="bg-marga-card p-3 rounded-xl border border-marga-border">
+<span class="text-[10px] text-slate-400 uppercase block">Latencia Estimada</span>
+<span class="text-lg font-bold text-brand-sky">12.4 ms</span>
+<span class="text-[11px] text-slate-500 block">p99 en producción</span>
+</div>
+<div class="bg-marga-card p-3 rounded-xl border border-marga-border">
+<span class="text-[10px] text-slate-400 uppercase block">Latencia Previa</span>
+<span class="text-lg font-bold text-diff-del">142.8 ms</span>
+<span class="text-[11px] text-slate-500 block">Seq scan costoso</span>
+</div>
+</div>
+<!-- SQL Script Box -->
+<div>
+<span class="text-xs font-mono text-slate-400 block mb-1.5">Sentencia SQL Ejecutada (UP Migration):</span>
+<div class="bg-marga-bg border border-marga-border-subtle rounded-xl p-4 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
+<pre><span class="text-slate-500">-- Marga Automated Migration</span>
+<span class="text-brand-purple">BEGIN;</span>
+<span class="text-brand-purple">SET statement_timeout</span> = <span class="text-brand-sky">'10s'</span>;
+
+<span class="text-brand-purple">CREATE INDEX CONCURRENTLY IF NOT EXISTS</span> idx_trx_user_created 
+  <span class="text-brand-purple">ON</span> transactions (user_id, created_at <span class="text-brand-sky">DESC</span>);
+
+<span class="text-brand-purple">ANALYZE</span> transactions;
+<span class="text-brand-purple">COMMIT;</span></pre>
+</div>
+</div>
+<!-- Rollback Down SQL -->
+<div>
+<span class="text-xs font-mono text-diff-del block mb-1.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">undo</span> Sentencia de Reversión (DOWN Migration):
+        </span>
+<div class="bg-marga-bg border border-diff-del/20 rounded-xl p-3 font-mono text-xs text-diff-del/90 overflow-x-auto">
+<code>DROP INDEX CONCURRENTLY IF EXISTS idx_trx_user_created;</code>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="flex items-center justify-between pt-2 border-t border-marga-border">
+<button class="px-3.5 py-1.5 rounded-lg bg-marga-card hover:bg-marga-border text-slate-300 text-xs font-mono transition-colors" onclick="closeModal()" type="button">
+          Cerrar
+        </button>
+<div class="flex items-center gap-2">
+<button class="px-3.5 py-1.5 rounded-lg bg-diff-del/15 hover:bg-diff-del/25 text-diff-del text-xs font-mono font-medium transition-colors flex items-center gap-1.5" onclick="triggerRollbackAlert()" type="button">
+<span class="material-symbols-outlined text-[15px]">history</span>
+<span class="">Revertir Ahora</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-lg bg-brand-violet hover:bg-brand-purple text-white text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 shadow-md shadow-brand-violet/25" onclick="copySqlQuery()" type="button">
+<span class="material-symbols-outlined text-[15px]">content_copy</span>
+<span class="">Copiar DDL</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- INTERACTIVE LOGIC -->
+<script>
+    function openModalDetails(hash, title, author, tag, tables) {
+      const modal = document.getElementById('inspector-modal');
+      document.getElementById('modal-commit-title').innerText = title;
+      document.getElementById('modal-commit-hash').innerText = hash;
+      document.getElementById('modal-commit-author').innerText = author;
+      document.getElementById('modal-commit-tag').innerText = tag;
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('inspector-modal');
+      modal.classList.add('hidden');
+    }
+
+    function openNewProjectModal() {
+      const name = prompt("Nombre del nuevo proyecto:", "Payment Gateway Engine");
+      if (name) {
+        alert("Proyecto '" + name + "' creado con éxito en Marga.");
+      }
+    }
+
+    function openLinkDbModal() {
+      const dbUrl = prompt("Introduce connection string de PostgreSQL, ClickHouse o Redis:", "postgresql://user:pass@db.internal:5432/core");
+      if (dbUrl) {
+        alert("Base de datos vinculada correctamente. Iniciando sincronización WAL.");
+      }
+    }
+
+    function copySqlQuery() {
+      navigator.clipboard.writeText("CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_trx_user_created ON transactions (user_id, created_at DESC);");
+      alert("Script SQL copiado al portapapeles con éxito.");
+    }
+
+    function testInStaging() {
+      alert("Ejecutando simulación 'dry-run' en staging-pg-replica. Zero lock errors.");
+    }
+
+    function triggerRollbackAlert() {
+      if (confirm("¿Confirmas la reversión concurrente de esta migración?")) {
+        alert("Comando DOWN enviado con éxito. WAL replay programado sin downtime.");
+        closeModal();
+      }
+    }
+
+    function toggleTheme(isDark) {
+      const lightBtn = document.getElementById('theme-light-btn');
+      const darkBtn = document.getElementById('theme-dark-btn');
+      if (isDark) {
+        darkBtn.className = "p-1 rounded bg-brand-violet text-white shadow-sm transition-colors";
+        lightBtn.className = "p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-colors";
+      } else {
+        lightBtn.className = "p-1 rounded bg-brand-violet text-white shadow-sm transition-colors";
+        darkBtn.className = "p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-colors";
+        alert("Modo claro seleccionado (diseño optimizado para tema oscuro Marga).");
+      }
+    }
+
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+  </script>
+
+
+</body></html>
