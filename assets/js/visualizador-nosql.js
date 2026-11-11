@@ -49,12 +49,12 @@ function filterCollections(type) {
   // Update button states
   const pills = document.querySelectorAll('.filter-pill');
   pills.forEach(p => {
-    p.className = 'filter-pill px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-all';
+    p.className = 'filter-pill px-3 py-1 rounded-md text-xs font-medium text-neutral-400 hover:text-neutral-200 hover:bg-marga-card transition-all';
   });
 
   const activeBtn = document.getElementById('btn-' + type);
   if (activeBtn) {
-    activeBtn.className = 'filter-pill px-3 py-1 rounded-md text-xs font-medium bg-brand-violet text-white shadow-sm transition-all';
+    activeBtn.className = 'filter-pill px-3 py-1 rounded-md text-xs font-medium bg-brand-violet text-neutral-950 shadow-sm transition-all';
   }
 
   // Toggle cards visibility

@@ -30,7 +30,7 @@ async function initLiveCommits() {
   if (!repo) {
     const repos = await MargaAPI.get('/repos');
     if (!repos.length) {
-      setTimeline(`<div class="p-6 rounded-xl border border-dashed border-marga-border text-center text-xs text-slate-400">
+      setTimeline(`<div class="p-6 rounded-xl border border-dashed border-marga-border text-center text-xs text-neutral-400">
         No tienes proyectos todavía. <a class="text-brand-cyan hover:underline" href="proyectos.html">Crea uno</a>.</div>`);
       return;
     }
@@ -77,7 +77,7 @@ async function loadHistory() {
   setText('catalogo-activo', h.commits[0] ? firstLine(h.commits[0].mensaje) : 'vacío');
 
   if (!h.commits.length) {
-    setTimeline(`<div class="p-6 rounded-xl border border-dashed border-marga-border text-center text-xs text-slate-400">
+    setTimeline(`<div class="p-6 rounded-xl border border-dashed border-marga-border text-center text-xs text-neutral-400">
       La rama <span class="font-mono text-white">${MargaAPI.escapeHTML(liveBranch)}</span> no tiene commits.<br>
       Crea uno desde la CLI con <code class="font-mono text-brand-cyan">marga commit</code>.</div>`);
     clearInspector();
@@ -93,7 +93,7 @@ async function runSearch(q) {
   try {
     const res = await MargaAPI.get(`/repos/${liveRepoId}/buscar?q=${encodeURIComponent(q)}`);
     if (!res.length) {
-      setTimeline(`<div class="p-6 text-center text-xs text-slate-400">Sin resultados para “${MargaAPI.escapeHTML(q)}”.</div>`);
+      setTimeline(`<div class="p-6 text-center text-xs text-neutral-400">Sin resultados para “${MargaAPI.escapeHTML(q)}”.</div>`);
       return;
     }
     renderTimeline(res.map(r => ({ ...r, tablas: [] })), null);
@@ -118,24 +118,24 @@ function renderTimeline(commits, head) {
   setTimeline(commits.map(c => {
     const isRevert = /^Revert "/.test(c.mensaje);
     let badge = '';
-    if (c.hash === head) badge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-cyan/10 text-brand-cyan font-semibold border border-brand-cyan/20 shrink-0">HEAD</span>';
-    else if (isRevert) badge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">Revert</span>';
+    if (c.hash === head) badge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-brand-cyan font-semibold border border-white/10 shrink-0">HEAD</span>';
+    else if (isRevert) badge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-500/10 text-neutral-400 border border-neutral-500/20 shrink-0">Revert</span>';
     else if (c.branch && c.branch !== liveBranch) badge = `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-card border border-marga-border text-brand-purple shrink-0">${e(c.branch)}</span>`;
 
     const tablas = (c.tablas || []).map(t =>
-      `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-card border border-marga-border text-slate-300 flex items-center gap-1">
+      `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-card border border-marga-border text-neutral-300 flex items-center gap-1">
          <span class="w-1 h-1 rounded-full bg-brand-cyan"></span>${e(t)}</span>`).join('');
 
     return `
     <div class="commit-timeline-item relative group bg-marga-surface hover:bg-marga-card border border-marga-border p-4 rounded-xl transition-all cursor-pointer" id="commit-item-${e(c.hash)}" onclick="selectCommitItem('${e(c.hash)}')">
       <div class="flex items-start gap-3">
-        <div class="w-7 h-7 rounded-full bg-marga-card border border-marga-border text-slate-400 flex items-center justify-center font-mono text-xs z-10 shrink-0">${c.numero || '•'}</div>
+        <div class="w-7 h-7 rounded-full bg-marga-card border border-marga-border text-neutral-400 flex items-center justify-center font-mono text-xs z-10 shrink-0">${c.numero || '•'}</div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
             <span class="font-mono text-xs text-white font-medium truncate">${e(firstLine(c.mensaje))}</span>
             ${badge}
           </div>
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 font-mono text-[11px] text-slate-400">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 font-mono text-[11px] text-neutral-400">
             <span class="text-brand-cyan font-bold">${e(c.hash_corto)}</span>
             <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">person</span>${e(c.autor || '—')}</span>
             <span class="flex items-center gap-1" title="${e(new Date(c.fecha).toLocaleString('es-MX'))}"><span class="material-symbols-outlined text-[13px]">schedule</span>${e(MargaAPI.timeAgo(c.fecha))}</span>
@@ -179,17 +179,17 @@ function renderDiff(d) {
   const parts = [];
 
   if (!d.tablas.length) {
-    parts.push('<div class="px-2 py-3 text-slate-400">Este commit no cambia el esquema (sin diferencias en DDL).</div>');
+    parts.push('<div class="px-2 py-3 text-neutral-400">Este commit no cambia el esquema (sin diferencias en DDL).</div>');
   }
 
   d.tablas.forEach(t => {
     add += t.agregadas; del += t.eliminadas;
-    const color = { agregada: 'text-brand-cyan', eliminada: 'text-rose-400', modificada: 'text-brand-purple' }[t.estado];
+    const color = { agregada: 'text-brand-cyan', eliminada: 'text-neutral-400', modificada: 'text-brand-purple' }[t.estado];
     parts.push(`<div class="flex items-center gap-2 px-2 pt-3 pb-1 text-[11px] ${parts.length ? 'mt-2 border-t border-marga-border-subtle' : ''}">
       <span class="material-symbols-outlined text-[14px] ${color}">table</span>
       <span class="text-white font-semibold">${e(t.tabla)}</span>
       <span class="${color}">${e(t.estado)}</span>
-      <span class="text-slate-500">+${t.agregadas} −${t.eliminadas}</span></div>`);
+      <span class="text-neutral-500">+${t.agregadas} −${t.eliminadas}</span></div>`);
 
     // Mostrar solo el contexto cercano a los cambios.
     const ls = t.lineas;
@@ -204,24 +204,24 @@ function renderDiff(d) {
     let skipped = false;
     ls.forEach((l, i) => {
       if (!visible[i]) {
-        if (!skipped) parts.push('<div class="px-2 py-0.5 text-slate-600 select-none">⋯</div>');
+        if (!skipped) parts.push('<div class="px-2 py-0.5 text-neutral-600 select-none">⋯</div>');
         skipped = true;
         return;
       }
       skipped = false;
       const txt = `<span class="whitespace-pre">${e(l.texto) || ' '}</span>`;
       if (l.tipo === '+') {
-        parts.push(`<div class="flex items-center gap-3 px-2 py-0.5 bg-brand-violet/10 text-brand-cyan rounded border border-brand-violet/20">
+        parts.push(`<div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
           <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">…</span>
           <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold">${l.b}</span>
           <span class="select-none font-bold">+</span>${txt}</div>`);
       } else if (l.tipo === '-') {
-        parts.push(`<div class="flex items-center gap-3 px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded border border-rose-500/20">
+        parts.push(`<div class="flex items-center gap-3 px-2 py-0.5 bg-neutral-500/10 text-neutral-400 rounded border border-neutral-500/20">
           <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-50">${l.a}</span>
           <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">…</span>
           <span class="select-none font-bold">-</span>${txt}</div>`);
       } else {
-        parts.push(`<div class="flex items-center gap-3 px-2 py-0.5 text-slate-400">
+        parts.push(`<div class="flex items-center gap-3 px-2 py-0.5 text-neutral-400">
           <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">${l.a}</span>
           <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">${l.b}</span>
           <span class="select-none">&nbsp;</span>${txt}</div>`);
@@ -259,12 +259,12 @@ async function selectCommitItem(hash, filename, author, time, duration) {
     setText('inspector-filename', firstLine(c.mensaje) + '.sql');
     const meta = document.getElementById('inspector-meta');
     if (meta) meta.innerHTML = `Commit <code class="font-mono text-brand-cyan font-bold">${e(c.hash_corto)}</code> · ${e(c.autor || '—')} · ${e(new Date(c.fecha).toLocaleString('es-MX'))}` +
-      (c.padre_hash ? ` · padre <code class="font-mono text-slate-300">${e(c.padre_hash.slice(0, 7))}</code>` : ' · commit raíz');
+      (c.padre_hash ? ` · padre <code class="font-mono text-neutral-300">${e(c.padre_hash.slice(0, 7))}</code>` : ' · commit raíz');
     setText('down-status', c.reversible ? firstLine(c.sql_down) : 'Sin script DOWN');
     const det = document.getElementById('down-detalle');
     if (det) {
       det.textContent = c.reversible ? 'Reversible · revert disponible' : 'No reversible automáticamente';
-      det.className = 'font-mono text-[10px] ' + (c.reversible ? 'text-brand-cyan' : 'text-rose-400');
+      det.className = 'font-mono text-[10px] ' + (c.reversible ? 'text-brand-cyan' : 'text-neutral-400');
     }
     renderDiff(d);
   } catch (err) {

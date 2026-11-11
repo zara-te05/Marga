@@ -9,9 +9,9 @@ function switchRepoTab(tabId) {
     const el = document.getElementById('tab-' + t);
     if (el) {
       if (t === tabId) {
-        el.className = 'tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-violet text-white text-xs font-semibold shadow-sm transition-colors';
+        el.className = 'tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-violet text-neutral-950 text-xs font-semibold shadow-sm transition-colors';
       } else {
-        el.className = 'tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-slate-400 hover:text-slate-200 text-xs transition-colors';
+        el.className = 'tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-neutral-400 hover:text-neutral-200 text-xs transition-colors';
       }
     }
   });
@@ -33,8 +33,8 @@ function setViewMode(mode) {
     window.location.href = 'visualizador-sql.html';
   } else {
     if (treeView) treeView.classList.remove('hidden');
-    if (btnTree) btnTree.className = 'px-2.5 py-1 rounded text-xs font-medium bg-brand-violet text-white transition-all flex items-center gap-1.5';
-    if (btnGraph) btnGraph.className = 'px-2.5 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5';
+    if (btnTree) btnTree.className = 'px-2.5 py-1 rounded text-xs font-medium bg-brand-violet text-neutral-950 transition-all flex items-center gap-1.5';
+    if (btnGraph) btnGraph.className = 'px-2.5 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-all flex items-center gap-1.5';
   }
 }
 

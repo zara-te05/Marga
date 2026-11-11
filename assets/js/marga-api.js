@@ -97,10 +97,10 @@
       menu.innerHTML = `
         <div class="px-2.5 py-2 border-b border-marga-border-subtle mb-1">
           <div class="text-xs font-semibold text-white">${escapeHTML(u.nombre)}</div>
-          <div class="text-[11px] font-mono text-slate-400 truncate">${escapeHTML(u.email)}</div>
+          <div class="text-[11px] font-mono text-neutral-400 truncate">${escapeHTML(u.email)}</div>
           <div class="text-[10px] font-mono text-brand-cyan mt-1">${escapeHTML(u.rol)}${u.equipo ? ' · ' + escapeHTML(u.equipo) : ''}</div>
         </div>
-        <button type="button" id="logout-btn" class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-xs text-rose-400 hover:bg-rose-500/20 transition-colors">
+        <button type="button" id="logout-btn" class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors">
           <span class="material-symbols-outlined text-[15px]">logout</span><span>Cerrar sesión</span>
         </button>`;
       chip.appendChild(menu);

@@ -14,10 +14,10 @@ const liveRepos = new Map();         // id -> repositorio de la API
 // ------------------------------------------------------------------ Modo en vivo
 
 const ENV_BADGE = {
-  'Producción': 'bg-brand-cyan/10 text-brand-cyan border-brand-cyan/30',
-  'Staging': 'bg-brand-purple/10 text-brand-purple border-brand-purple/30',
-  'Desarrollo': 'bg-brand-sky/10 text-brand-sky border-brand-sky/30',
-  'Sandbox': 'bg-slate-500/10 text-slate-300 border-slate-500/30'
+  'Producción': 'bg-white/5 text-brand-cyan border-white/10',
+  'Staging': 'bg-white/5 text-brand-purple border-white/10',
+  'Desarrollo': 'bg-white/5 text-brand-sky border-white/10',
+  'Sandbox': 'bg-neutral-500/10 text-neutral-300 border-neutral-500/30'
 };
 
 function isLive() {
@@ -37,8 +37,8 @@ async function loadProjects() {
       ? repos.map(renderProjectCard).join('')
       : `<div class="col-span-full p-10 rounded-2xl border border-dashed border-marga-border text-center flex flex-col items-center gap-3">
            <span class="material-symbols-outlined text-[32px] text-brand-purple">add_box</span>
-           <p class="text-sm text-slate-300">Aún no tienes proyectos.</p>
-           <button type="button" onclick="openCreateDrawer()" class="px-4 py-2 rounded-lg bg-brand-violet hover:bg-brand-purple text-white text-xs font-semibold">Crear el primero</button>
+           <p class="text-sm text-neutral-300">Aún no tienes proyectos.</p>
+           <button type="button" onclick="openCreateDrawer()" class="px-4 py-2 rounded-lg bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-xs font-semibold">Crear el primero</button>
          </div>`;
   }
 
@@ -59,71 +59,71 @@ function renderProjectCard(r) {
   const badge = ENV_BADGE[r.entorno] || ENV_BADGE.Sandbox;
 
   return `
-  <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-brand-violet/50 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="${e(r.entorno)}" data-name="${e(r.nombre)}" data-slug="${e(r.slug)}" data-id="${r.id}">
+  <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-white/20 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="${e(r.entorno)}" data-name="${e(r.nombre)}" data-slug="${e(r.slug)}" data-id="${r.id}">
     <div class="flex flex-col gap-4">
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="w-10 h-10 rounded-xl bg-brand-violet/20 border border-brand-violet/30 flex items-center justify-center text-brand-purple shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-brand-purple shrink-0">
             <span class="material-symbols-outlined text-[22px]">database</span>
           </div>
           <div class="min-w-0">
-            <h2 class="text-base font-semibold text-slate-100 group-hover:text-brand-purple transition-colors truncate">${e(r.nombre)}</h2>
-            <span class="font-mono text-xs text-slate-400">${e(r.slug)}</span>
+            <h2 class="text-base font-semibold text-neutral-100 group-hover:text-brand-purple transition-colors truncate">${e(r.nombre)}</h2>
+            <span class="font-mono text-xs text-neutral-400">${e(r.slug)}</span>
           </div>
         </div>
         <div class="flex items-center gap-2">
           <span class="shrink-0 px-2.5 py-1 rounded-full font-mono text-[10px] border ${badge}">${e(r.entorno)}</span>
-          ${canAdmin ? `<button class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-r${r.id}')" type="button">
+          ${canAdmin ? `<button class="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-r${r.id}')" type="button">
             <span class="material-symbols-outlined text-[18px]">more_vert</span>
           </button>` : ''}
         </div>
       </div>
 
-      <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${e(r.descripcion) || '<span class="italic text-slate-500">Sin descripción</span>'}</p>
+      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">${e(r.descripcion) || '<span class="italic text-neutral-500">Sin descripción</span>'}</p>
 
       <div class="flex flex-col gap-1.5 pt-1">
-        <span class="font-mono text-[10px] text-slate-400 uppercase tracking-wider">${r.total_commits} commits · ${r.total_branches} ramas</span>
+        <span class="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">${r.total_commits} commits · ${r.total_branches} ramas</span>
         <div class="flex flex-wrap gap-1.5">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-slate-300">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
             <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>${e(motor)}
           </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-slate-300">
-            <span class="material-symbols-outlined text-[13px] text-slate-400">${r.visibilidad === 'publico' ? 'public' : 'lock'}</span>${r.visibilidad === 'publico' ? 'público' : 'privado'}
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+            <span class="material-symbols-outlined text-[13px] text-neutral-400">${r.visibilidad === 'publico' ? 'public' : 'lock'}</span>${r.visibilidad === 'publico' ? 'público' : 'privado'}
           </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-slate-300">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
             <span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>${e(r.permiso)}
           </span>
         </div>
       </div>
 
       <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-mono text-xs">
-        <div class="flex items-center gap-1.5 text-slate-200 min-w-0">
+        <div class="flex items-center gap-1.5 text-neutral-200 min-w-0">
           <span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span>
           <span class="text-white font-medium">main</span>
-          <span class="text-slate-400">${last ? '#' + e(last.hash_corto) : 'sin commits'}</span>
+          <span class="text-neutral-400">${last ? '#' + e(last.hash_corto) : 'sin commits'}</span>
         </div>
-        <span class="text-slate-400 truncate">${last ? `${e(MargaAPI.timeAgo(last.fecha))} · ${e(last.autor || '—')}` : `por ${e(r.propietario)}`}</span>
+        <span class="text-neutral-400 truncate">${last ? `${e(MargaAPI.timeAgo(last.fecha))} · ${e(last.autor || '—')}` : `por ${e(r.propietario)}`}</span>
       </div>
     </div>
 
     <div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle">
-      ${canAdmin ? `<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-slate-200 text-xs transition-colors border border-marga-border" onclick="openEditDrawerById(${r.id})" type="button">
-        <span class="material-symbols-outlined text-[16px] text-slate-400">tune</span>
+      ${canAdmin ? `<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-neutral-200 text-xs transition-colors border border-marga-border" onclick="openEditDrawerById(${r.id})" type="button">
+        <span class="material-symbols-outlined text-[16px] text-neutral-400">tune</span>
         <span>Configurar</span>
-      </button>` : `<span class="text-[11px] font-mono text-slate-500">propietario: ${e(r.propietario)}</span>`}
-      <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-violet/20 hover:bg-brand-violet text-brand-purple hover:text-white text-xs font-semibold border border-brand-violet/30 transition-all" onclick="quickLaunch(${r.id})" type="button">
+      </button>` : `<span class="text-[11px] font-mono text-neutral-500">propietario: ${e(r.propietario)}</span>`}
+      <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-violet text-brand-purple hover:text-neutral-950 text-xs font-semibold border border-white/10 transition-all" onclick="quickLaunch(${r.id})" type="button">
         <span>Ver commits</span>
         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
       </button>
     </div>
 
     ${canAdmin ? `<div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-r${r.id}">
-      <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-slate-200 hover:bg-marga-card transition-colors" onclick="openEditDrawerById(${r.id})" type="button">
+      <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-200 hover:bg-marga-card transition-colors" onclick="openEditDrawerById(${r.id})" type="button">
         <span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span><span>Editar ajustes</span>
       </button>
       <div class="h-px bg-marga-border my-1"></div>
-      <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-rose-400 hover:bg-rose-500/20 transition-colors" onclick="confirmDeleteById(${r.id})" type="button">
-        <span class="material-symbols-outlined text-[15px] text-rose-400">delete</span><span>Eliminar</span>
+      <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors" onclick="confirmDeleteById(${r.id})" type="button">
+        <span class="material-symbols-outlined text-[15px] text-neutral-400">delete</span><span>Eliminar</span>
       </button>
     </div>` : ''}
   </article>`;
@@ -212,7 +212,7 @@ function switchDrawerTab(tabName, clickedBtn) {
   if (clickedBtn) {
     const parent = clickedBtn.parentElement;
     parent.querySelectorAll('button').forEach(b => {
-      b.className = "py-2.5 px-3 font-medium text-xs text-slate-400 hover:text-slate-200 rounded-t-lg transition-colors";
+      b.className = "py-2.5 px-3 font-medium text-xs text-neutral-400 hover:text-neutral-200 rounded-t-lg transition-colors";
     });
     clickedBtn.className = "py-2.5 px-3 font-semibold text-xs text-brand-purple bg-marga-card rounded-t-lg border-b-2 border-brand-violet";
   }
@@ -272,10 +272,10 @@ function validateDeleteInput(val) {
   const btn = document.getElementById('delete-execute-btn');
   if (val.trim().toUpperCase() === "ELIMINAR") {
     btn.disabled = false;
-    btn.className = "px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition-all cursor-pointer shadow-md";
+    btn.className = "px-4 py-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-950 font-medium text-xs transition-all cursor-pointer shadow-md";
   } else {
     btn.disabled = true;
-    btn.className = "px-4 py-2 rounded-lg bg-rose-900/40 text-rose-300/60 font-medium text-xs cursor-not-allowed transition-all";
+    btn.className = "px-4 py-2 rounded-lg bg-neutral-900/40 text-neutral-300/60 font-medium text-xs cursor-not-allowed transition-all";
   }
 }
 
@@ -340,9 +340,9 @@ function filterByEnvironment(env, btn) {
   if (btn) {
     const parent = btn.parentElement;
     parent.querySelectorAll('button').forEach(b => {
-      b.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors";
+      b.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors";
     });
-    btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-violet shadow-sm";
+    btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-950 bg-brand-violet shadow-sm";
   }
 }
 

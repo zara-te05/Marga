@@ -67,13 +67,13 @@ function selectErdEntity(id, fullName, type, rows, size, pk, fk, indices) {
   
   // Highlight active card
   document.querySelectorAll('.table-card').forEach(card => {
-    card.classList.remove('border-brand-violet', 'shadow-2xl', 'shadow-brand-violet/20');
+    card.classList.remove('border-brand-violet', 'shadow-2xl', '');
     card.classList.add('border-marga-border');
   });
   const activeCard = document.getElementById('card-' + id);
   if (activeCard) {
     activeCard.classList.remove('border-marga-border');
-    activeCard.classList.add('border-brand-violet', 'shadow-2xl', 'shadow-brand-violet/20');
+    activeCard.classList.add('border-brand-violet', 'shadow-2xl', '');
   }
 
   // Update inspector DOM
@@ -103,9 +103,9 @@ function selectErdEntity(id, fullName, type, rows, size, pk, fk, indices) {
         div.innerHTML = `
           <div class="flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[13px] text-brand-cyan">storage</span>
-            <span class="text-slate-200">${idx.split(' ')[0]}</span>
+            <span class="text-neutral-200">${idx.split(' ')[0]}</span>
           </div>
-          <span class="text-[10px] text-slate-400">${idx.replace(idx.split(' ')[0], '').trim()}</span>
+          <span class="text-[10px] text-neutral-400">${idx.replace(idx.split(' ')[0], '').trim()}</span>
         `;
         idxListEl.appendChild(div);
       });

@@ -16,23 +16,23 @@
       theme: {
         extend: {
           colors: {
-            "marga-bg": "#0B0F19",
-            "marga-surface": "#111827",
-            "marga-card": "#151D31",
-            "marga-card-hover": "#1C2642",
-            "marga-border": "#232F4D",
-            "marga-border-subtle": "#1B243B",
-            "marga-border-active": "#6366F1",
-            "brand-purple": "#8B5CF6",
-            "brand-violet": "#7C3AED",
-            "brand-indigo": "#6366F1",
-            "brand-cyan": "#38BDF8",
-            "brand-blue": "#0284C7",
-            "brand-sky": "#60A5FA",
-            "diff-add": "#6366F1",
-            "diff-add-bg": "rgba(99, 102, 241, 0.12)",
-            "diff-del": "#F43F5E",
-            "diff-del-bg": "rgba(244, 63, 94, 0.12)"
+            "marga-bg": "#0A0A0A",
+            "marga-surface": "#111111",
+            "marga-card": "#171717",
+            "marga-card-hover": "#1F1F1F",
+            "marga-border": "#262626",
+            "marga-border-subtle": "#1C1C1C",
+            "marga-border-active": "#737373",
+            "brand-purple": "#A3A3A3",
+            "brand-violet": "#FAFAFA",
+            "brand-indigo": "#737373",
+            "brand-cyan": "#F5F5F5",
+            "brand-blue": "#737373",
+            "brand-sky": "#A3A3A3",
+            "diff-add": "#737373",
+            "diff-add-bg": "rgba(255, 255, 255, 0.05)",
+            "diff-del": "#A3A3A3",
+            "diff-del-bg": "rgba(255, 255, 255, 0.02)"
           },
           fontFamily: {
             sans: ["Geist", "Inter", "system-ui", "sans-serif"],
@@ -44,9 +44,8 @@
   </script>
   <link rel="stylesheet" href="../assets/css/marga-shared.css">
 </head>
-<body class="bg-marga-bg text-slate-200 antialiased selection:bg-brand-violet selection:text-white min-h-screen flex items-center justify-center p-4 canvas-grid">
+<body class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex items-center justify-center p-4 canvas-grid">
 
-  <div class="absolute -top-32 left-1/4 w-[520px] h-[340px] bg-gradient-to-br from-brand-violet/20 via-brand-purple/10 to-transparent blur-3xl pointer-events-none rounded-full"></div>
 
   <main class="relative w-full max-w-sm">
     <div class="flex items-center justify-center gap-2 mb-6">
@@ -57,40 +56,40 @@
     <section class="rounded-2xl bg-marga-surface border border-marga-border shadow-2xl overflow-hidden">
       <div class="flex border-b border-marga-border text-xs">
         <button type="button" id="tab-login" class="flex-1 py-3 font-semibold text-brand-purple bg-marga-card border-b-2 border-brand-violet" onclick="setMode('login')">Iniciar sesión</button>
-        <button type="button" id="tab-register" class="flex-1 py-3 font-medium text-slate-400 hover:text-slate-200" onclick="setMode('register')">Crear cuenta</button>
+        <button type="button" id="tab-register" class="flex-1 py-3 font-medium text-neutral-400 hover:text-neutral-200" onclick="setMode('register')">Crear cuenta</button>
       </div>
 
       <form id="auth-form" class="p-6 flex flex-col gap-4" novalidate>
         <div class="flex flex-col gap-1.5 hidden" id="field-nombre">
-          <label for="nombre" class="text-xs font-semibold text-slate-300">Nombre de usuario</label>
-          <input id="nombre" autocomplete="username" class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-violet" placeholder="ej. zara-te05">
+          <label for="nombre" class="text-xs font-semibold text-neutral-300">Nombre de usuario</label>
+          <input id="nombre" autocomplete="username" class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet" placeholder="ej. zara-te05">
         </div>
         <div class="flex flex-col gap-1.5">
-          <label for="email" class="text-xs font-semibold text-slate-300">Email</label>
-          <input id="email" type="email" autocomplete="email" required class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-violet" placeholder="tu@correo.com">
+          <label for="email" class="text-xs font-semibold text-neutral-300">Email</label>
+          <input id="email" type="email" autocomplete="email" required class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet" placeholder="tu@correo.com">
         </div>
         <div class="flex flex-col gap-1.5">
-          <label for="password" class="text-xs font-semibold text-slate-300">Contraseña</label>
-          <input id="password" type="password" autocomplete="current-password" required class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-violet" placeholder="••••••••">
-          <span class="text-[11px] text-slate-500 hidden" id="pass-hint">Mínimo 8 caracteres.</span>
+          <label for="password" class="text-xs font-semibold text-neutral-300">Contraseña</label>
+          <input id="password" type="password" autocomplete="current-password" required class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet" placeholder="••••••••">
+          <span class="text-[11px] text-neutral-500 hidden" id="pass-hint">Mínimo 8 caracteres.</span>
         </div>
         <div class="flex flex-col gap-1.5 hidden" id="field-equipo">
-          <label for="equipo" class="text-xs font-semibold text-slate-300">Equipo <span class="text-slate-500 font-normal">(opcional)</span></label>
+          <label for="equipo" class="text-xs font-semibold text-neutral-300">Equipo <span class="text-neutral-500 font-normal">(opcional)</span></label>
           <select id="equipo" class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer">
             <option value="">Sin equipo</option>
           </select>
         </div>
 
-        <p id="form-error" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></p>
+        <p id="form-error" class="hidden text-xs text-neutral-400 bg-neutral-500/10 border border-neutral-500/30 rounded-lg px-3 py-2"></p>
 
-        <button type="submit" id="submit-btn" class="h-10 rounded-lg bg-brand-violet hover:bg-brand-purple text-white text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+        <button type="submit" id="submit-btn" class="h-10 rounded-lg bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60">
           <span class="material-symbols-outlined text-[18px]">login</span>
           <span id="submit-text">Entrar</span>
         </button>
       </form>
     </section>
 
-    <p class="mt-4 text-center font-mono text-[11px] text-slate-500" id="server-status">Comprobando servidor…</p>
+    <p class="mt-4 text-center font-mono text-[11px] text-neutral-500" id="server-status">Comprobando servidor…</p>
   </main>
 
   <script src="../assets/js/marga-common.js"></script>
@@ -107,7 +106,7 @@
       document.getElementById('password').autocomplete = reg ? 'new-password' : 'current-password';
       document.getElementById('submit-text').textContent = reg ? 'Crear cuenta' : 'Entrar';
       const on = 'flex-1 py-3 font-semibold text-brand-purple bg-marga-card border-b-2 border-brand-violet';
-      const off = 'flex-1 py-3 font-medium text-slate-400 hover:text-slate-200';
+      const off = 'flex-1 py-3 font-medium text-neutral-400 hover:text-neutral-200';
       document.getElementById('tab-login').className = reg ? off : on;
       document.getElementById('tab-register').className = reg ? on : off;
       showError('');
@@ -164,7 +163,7 @@
         equipos.forEach(eq => sel.insertAdjacentHTML('beforeend',
           `<option value="${eq.id}">${MargaAPI.escapeHTML(eq.nombre)}</option>`));
       } catch (err) {
-        status.innerHTML = '<span class="text-rose-400">●</span> ' + MargaAPI.escapeHTML(err.message);
+        status.innerHTML = '<span class="text-neutral-400">●</span> ' + MargaAPI.escapeHTML(err.message);
       }
     })();
   </script>

@@ -49,11 +49,11 @@ function updateThemeButtonStyles(isDark) {
   if (!darkBtn || !lightBtn) return;
 
   if (isDark) {
-    darkBtn.className = 'p-1 rounded bg-brand-violet text-white shadow-sm transition-colors';
-    lightBtn.className = 'p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-colors';
+    darkBtn.className = 'p-1 rounded bg-brand-violet text-neutral-950 shadow-sm transition-colors';
+    lightBtn.className = 'p-1 rounded text-neutral-400 hover:text-neutral-200 hover:bg-marga-card transition-colors';
   } else {
-    lightBtn.className = 'p-1 rounded bg-brand-violet text-white shadow-sm transition-colors';
-    darkBtn.className = 'p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors';
+    lightBtn.className = 'p-1 rounded bg-brand-violet text-neutral-950 shadow-sm transition-colors';
+    darkBtn.className = 'p-1 rounded text-neutral-400 hover:text-neutral-600 hover:bg-neutral-200 transition-colors';
   }
 }
 
@@ -75,7 +75,7 @@ function showToast(message, type = 'info') {
   }
 
   const toast = document.createElement('div');
-  toast.className = 'pointer-events-auto px-4 py-2.5 rounded-lg bg-marga-card border border-brand-violet/40 text-slate-200 text-xs font-mono shadow-2xl flex items-center gap-2.5 transform transition-all duration-300 opacity-0 translate-y-3';
+  toast.className = 'pointer-events-auto px-4 py-2.5 rounded-lg bg-marga-card border border-white/20 text-neutral-200 text-xs font-mono shadow-2xl flex items-center gap-2.5 transform transition-all duration-300 opacity-0 translate-y-3';
   
   let icon = 'info';
   let iconColor = 'text-brand-purple';
@@ -84,7 +84,7 @@ function showToast(message, type = 'info') {
     iconColor = 'text-brand-cyan';
   } else if (type === 'error') {
     icon = 'error';
-    iconColor = 'text-rose-400';
+    iconColor = 'text-neutral-400';
   }
 
   toast.innerHTML = `
@@ -125,16 +125,16 @@ function setupCommandPalette() {
   modal.id = 'command-palette-modal';
   modal.className = 'fixed inset-0 z-[90] hidden flex items-start justify-center pt-24 px-4 bg-black/60 backdrop-blur-sm';
   modal.innerHTML = `
-    <div class="w-full max-w-xl bg-marga-surface border border-marga-border rounded-xl shadow-2xl overflow-hidden flex flex-col text-slate-200">
+    <div class="w-full max-w-xl bg-marga-surface border border-marga-border rounded-xl shadow-2xl overflow-hidden flex flex-col text-neutral-200">
       <div class="flex items-center px-4 py-3 border-b border-marga-border gap-3">
         <span class="material-symbols-outlined text-[20px] text-brand-purple">search</span>
-        <input id="palette-search-input" type="text" class="w-full bg-transparent text-sm font-sans placeholder:text-slate-500 focus:outline-none text-slate-100" placeholder="Buscar pantalla, tabla, commit o migración... (Escribe para filtrar)">
-        <kbd class="px-1.5 py-0.5 rounded bg-marga-card border border-marga-border text-[10px] font-mono text-slate-400">ESC</kbd>
+        <input id="palette-search-input" type="text" class="w-full bg-transparent text-sm font-sans placeholder:text-neutral-500 focus:outline-none text-neutral-100" placeholder="Buscar pantalla, tabla, commit o migración... (Escribe para filtrar)">
+        <kbd class="px-1.5 py-0.5 rounded bg-marga-card border border-marga-border text-[10px] font-mono text-neutral-400">ESC</kbd>
       </div>
       <div id="palette-results-list" class="max-h-72 overflow-y-auto p-2 space-y-1">
         <!-- Rendered items -->
       </div>
-      <div class="px-4 py-2 border-t border-marga-border-subtle bg-marga-card/50 flex items-center justify-between text-[11px] font-mono text-slate-400">
+      <div class="px-4 py-2 border-t border-marga-border-subtle bg-marga-card/50 flex items-center justify-between text-[11px] font-mono text-neutral-400">
         <span>Usa ↑ ↓ para navegar, Enter para seleccionar</span>
         <span>Marga Engine v2.4</span>
       </div>
@@ -170,7 +170,7 @@ function renderPaletteResults(filter) {
   const filtered = navigationRoutes.filter(r => r.name.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q));
 
   if (filtered.length === 0) {
-    list.innerHTML = `<div class="p-4 text-center text-xs text-slate-500">No se encontraron resultados para "${filter}".</div>`;
+    list.innerHTML = `<div class="p-4 text-center text-xs text-neutral-500">No se encontraron resultados para "${filter}".</div>`;
     return;
   }
 
@@ -181,11 +181,11 @@ function renderPaletteResults(filter) {
           <span class="material-symbols-outlined text-[16px]">${item.icon}</span>
         </div>
         <div>
-          <div class="text-xs font-semibold text-slate-200 group-hover:text-white">${item.name}</div>
-          <div class="text-[11px] text-slate-400 font-sans">${item.desc}</div>
+          <div class="text-xs font-semibold text-neutral-200 group-hover:text-white">${item.name}</div>
+          <div class="text-[11px] text-neutral-400 font-sans">${item.desc}</div>
         </div>
       </div>
-      <span class="material-symbols-outlined text-[14px] text-slate-500 group-hover:text-brand-purple transition-colors">arrow_forward</span>
+      <span class="material-symbols-outlined text-[14px] text-neutral-500 group-hover:text-brand-purple transition-colors">arrow_forward</span>
     </a>
   `).join('');
 }

@@ -16,23 +16,23 @@
       theme: {
         extend: {
           colors: {
-            "marga-bg": "#0B0F19",
-            "marga-surface": "#111827",
-            "marga-card": "#151D31",
-            "marga-card-hover": "#1C2642",
-            "marga-border": "#232F4D",
-            "marga-border-subtle": "#1B243B",
-            "marga-border-active": "#6366F1",
-            "brand-purple": "#8B5CF6",
-            "brand-violet": "#7C3AED",
-            "brand-indigo": "#6366F1",
-            "brand-cyan": "#38BDF8",
-            "brand-blue": "#0284C7",
-            "brand-sky": "#60A5FA",
-            "diff-add": "#6366F1",
-            "diff-add-bg": "rgba(99, 102, 241, 0.12)",
-            "diff-del": "#F43F5E",
-            "diff-del-bg": "rgba(244, 63, 94, 0.12)"
+            "marga-bg": "#0A0A0A",
+            "marga-surface": "#111111",
+            "marga-card": "#171717",
+            "marga-card-hover": "#1F1F1F",
+            "marga-border": "#262626",
+            "marga-border-subtle": "#1C1C1C",
+            "marga-border-active": "#737373",
+            "brand-purple": "#A3A3A3",
+            "brand-violet": "#FAFAFA",
+            "brand-indigo": "#737373",
+            "brand-cyan": "#F5F5F5",
+            "brand-blue": "#737373",
+            "brand-sky": "#A3A3A3",
+            "diff-add": "#737373",
+            "diff-add-bg": "rgba(255, 255, 255, 0.05)",
+            "diff-del": "#A3A3A3",
+            "diff-del-bg": "rgba(255, 255, 255, 0.02)"
           },
           fontFamily: {
             sans: ["Geist", "Inter", "system-ui", "sans-serif"],
@@ -44,10 +44,10 @@
   </script>
   <link rel="stylesheet" href="../assets/css/marga-shared.css">
 </head>
-<body class="bg-marga-bg text-slate-200 antialiased selection:bg-brand-violet selection:text-white min-h-screen flex flex-col">
+<body class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex flex-col">
 
   <!-- TOP HEADER / NAV BAR -->
-  <header class="sticky top-0 z-50 bg-[#0B0F19]/95 backdrop-blur-xl border-b border-marga-border select-none">
+  <header class="sticky top-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-marga-border select-none">
     <div class="h-16 w-full px-5 lg:px-8 flex items-center justify-between gap-4">
       
       <!-- Brand & Project Switcher -->
@@ -56,7 +56,7 @@
           <img src="../assets/icons/marga-logo.svg" alt="Marga Logo" class="h-8 w-8 object-contain">
           <div class="flex items-center gap-2">
             <span class="text-lg font-bold text-white tracking-wide">Marga</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-brand-violet/20 text-brand-purple border border-brand-violet/30">v2.4</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/10 text-brand-purple border border-white/10">v2.4</span>
           </div>
         </a>
 
@@ -64,52 +64,52 @@
 
         <!-- Project Badge & Quick Dropdown -->
         <div class="flex items-center gap-2">
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-surface border border-marga-border hover:border-brand-indigo/50 transition-colors cursor-pointer group" onclick="window.location.href='proyectos.html'">
-            <span class="w-2 h-2 rounded-full bg-brand-purple shadow-[0_0_8px_rgba(139,92,246,0.6)]"></span>
-            <span class="font-medium text-xs sm:text-sm text-slate-100 group-hover:text-white">FinTech Core Engine</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-marga-card text-brand-sky border border-brand-sky/20">3 DBs</span>
-            <span class="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-slate-200">unfold_more</span>
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-surface border border-marga-border hover:border-white/20 transition-colors cursor-pointer group" onclick="window.location.href='proyectos.html'">
+            <span class="w-2 h-2 rounded-full bg-brand-purple shadow-[0_0_8px_rgba(255, 255, 255, 0.24)]"></span>
+            <span class="font-medium text-xs sm:text-sm text-neutral-100 group-hover:text-white">FinTech Core Engine</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-marga-card text-brand-sky border border-white/10">3 DBs</span>
+            <span class="material-symbols-outlined text-[16px] text-neutral-400 group-hover:text-neutral-200">unfold_more</span>
           </div>
         </div>
 
         <!-- Cluster Status Tag -->
-        <div class="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-md bg-marga-surface/60 border border-marga-border-subtle text-xs font-mono text-slate-300">
-          <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-pulse"></span>
+        <div class="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-md bg-marga-surface/60 border border-marga-border-subtle text-xs font-mono text-neutral-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>
           <span>production-pg-cluster</span>
-          <span class="text-slate-500 font-normal">#8f4a1c2</span>
+          <span class="text-neutral-500 font-normal">#8f4a1c2</span>
         </div>
       </div>
 
       <!-- Quick Global Search Bar -->
       <div class="flex-1 max-w-md mx-4 hidden md:block">
         <div class="relative flex items-center w-full cursor-pointer" onclick="openCommandPalette()">
-          <span class="material-symbols-outlined absolute left-3 text-[18px] text-slate-500 pointer-events-none">search</span>
-          <input class="w-full h-9 pl-9 pr-14 bg-marga-surface border border-marga-border rounded-lg text-slate-200 font-mono text-xs placeholder:text-slate-500 cursor-pointer focus:outline-none focus:border-brand-indigo focus:ring-1 focus:ring-brand-indigo transition-all" placeholder="Buscar commits, esquemas, tablas o migraciones..." readonly type="text">
+          <span class="material-symbols-outlined absolute left-3 text-[18px] text-neutral-500 pointer-events-none">search</span>
+          <input class="w-full h-9 pl-9 pr-14 bg-marga-surface border border-marga-border rounded-lg text-neutral-200 font-mono text-xs placeholder:text-neutral-500 cursor-pointer focus:outline-none focus:border-brand-indigo focus:ring-1 focus:ring-brand-indigo transition-all" placeholder="Buscar commits, esquemas, tablas o migraciones..." readonly type="text">
           <div class="absolute right-2.5 flex items-center gap-1 pointer-events-none">
-            <kbd class="px-1.5 py-0.5 bg-marga-card border border-marga-border rounded text-[10px] font-mono text-slate-400">⌘K</kbd>
+            <kbd class="px-1.5 py-0.5 bg-marga-card border border-marga-border rounded text-[10px] font-mono text-neutral-400">⌘K</kbd>
           </div>
         </div>
       </div>
 
       <!-- Header Action Controls & User Profile -->
       <div class="flex items-center gap-3 shrink-0">
-        <button onclick="showToast('CLI Marga conectado: puerto 5432 activo', 'info')" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-marga-surface border border-marga-border text-xs font-mono text-slate-300 hover:text-white hover:bg-marga-card transition-colors">
+        <button onclick="showToast('CLI Marga conectado: puerto 5432 activo', 'info')" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-marga-surface border border-marga-border text-xs font-mono text-neutral-300 hover:text-white hover:bg-marga-card transition-colors">
           <span class="material-symbols-outlined text-[15px] text-brand-purple">terminal</span>
           <span>CLI</span>
         </button>
 
         <!-- Theme Switcher -->
         <div class="flex items-center p-1 bg-marga-surface border border-marga-border rounded-lg">
-          <button class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-colors" id="theme-light-btn" onclick="toggleTheme(false)" title="Cambiar a modo claro" type="button">
+          <button class="p-1 rounded text-neutral-400 hover:text-neutral-200 hover:bg-marga-card transition-colors" id="theme-light-btn" onclick="toggleTheme(false)" title="Cambiar a modo claro" type="button">
             <span class="material-symbols-outlined text-[16px]">light_mode</span>
           </button>
-          <button class="p-1 rounded bg-brand-violet text-white shadow-sm transition-colors" id="theme-dark-btn" onclick="toggleTheme(true)" title="Modo oscuro activo" type="button">
+          <button class="p-1 rounded bg-brand-violet text-neutral-950 shadow-sm transition-colors" id="theme-dark-btn" onclick="toggleTheme(true)" title="Modo oscuro activo" type="button">
             <span class="material-symbols-outlined text-[16px]">dark_mode</span>
           </button>
         </div>
 
         <!-- User Profile -->
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-violet to-brand-cyan p-[1px] flex items-center justify-center cursor-pointer shadow-sm hover:opacity-90 transition-opacity">
+        <div class="w-8 h-8 rounded-lg p-[1px] flex items-center justify-center cursor-pointer shadow-sm hover:opacity-90 transition-opacity">
           <div class="w-full h-full bg-marga-surface rounded-[7px] flex items-center justify-center text-xs font-bold font-mono text-brand-cyan" id="user-initials">ZT</div>
         </div>
       </div>
@@ -119,7 +119,7 @@
     <!-- Secondary Minimal Navigation Subbar (Integrated Navigation) -->
     <div class="h-10 px-5 lg:px-8 border-t border-marga-border-subtle bg-marga-bg/80 backdrop-blur-md flex items-center overflow-x-auto text-xs shrink-0">
       <nav class="flex items-center gap-6 h-full font-medium whitespace-nowrap">
-        <a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="proyectos.html">
+        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="proyectos.html">
           <span class="material-symbols-outlined text-[15px]">dataset</span>
           <span>Proyectos</span>
         </a>
@@ -127,16 +127,16 @@
           <span class="material-symbols-outlined text-[15px] text-brand-purple">code</span>
           <span>Código &amp; Esquemas</span>
         </a>
-        <a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="commits.html">
+        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="commits.html">
           <span class="material-symbols-outlined text-[15px]">conversion_path</span>
           <span>Commits &amp; Migraciones</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-brand-violet/20 text-brand-cyan border border-brand-violet/30">14 ACT</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-white/10 text-brand-cyan border border-white/10">14 ACT</span>
         </a>
-        <a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="visualizador-sql.html">
+        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="visualizador-sql.html">
           <span class="material-symbols-outlined text-[15px]">account_tree</span>
           <span>Schema Graph (PostgreSQL)</span>
         </a>
-        <a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="visualizador-nosql.html">
+        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="visualizador-nosql.html">
           <span class="material-symbols-outlined text-[15px]">schema</span>
           <span>Schema Graph (NoSQL)</span>
         </a>
@@ -156,13 +156,13 @@
             <span class="material-symbols-outlined text-brand-cyan text-2xl">database</span>
             <div class="flex items-center gap-1.5 text-base sm:text-lg">
               <a class="text-brand-cyan hover:underline font-mono" href="proyectos.html">zara-te05</a>
-              <span class="text-slate-500 font-mono">/</span>
+              <span class="text-neutral-500 font-mono">/</span>
               <a class="text-white font-bold hover:text-brand-purple transition-colors font-mono" href="#">Motor-Marga</a>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-marga-card text-brand-cyan text-xs font-mono border border-marga-border">
               Público · PostgreSQL 16.2
             </span>
-            <span class="px-2 py-0.5 rounded-full bg-brand-violet/20 text-brand-purple text-xs font-mono border border-brand-violet/30 flex items-center gap-1">
+            <span class="px-2 py-0.5 rounded-full bg-white/10 text-brand-purple text-xs font-mono border border-white/10 flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>
               WAL Replay: OK
             </span>
@@ -170,48 +170,48 @@
 
           <!-- Quick Actions -->
           <div class="flex items-center gap-2">
-            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-slate-200 text-xs transition-all shadow-sm" onclick="showToast('Suscrito a notificaciones de drift', 'info')" type="button">
+            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-neutral-200 text-xs transition-all shadow-sm" onclick="showToast('Suscrito a notificaciones de drift', 'info')" type="button">
               <span class="material-symbols-outlined text-[16px] text-brand-cyan">visibility</span>
               <span>Seguir</span>
               <span class="px-1.5 py-0.2 rounded bg-marga-surface text-brand-cyan font-mono text-[10px]">12</span>
             </button>
-            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-slate-200 text-xs transition-all shadow-sm" onclick="showToast('Rama derivada creada en sandbox', 'success')" type="button">
+            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-neutral-200 text-xs transition-all shadow-sm" onclick="showToast('Rama derivada creada en sandbox', 'success')" type="button">
               <span class="material-symbols-outlined text-[16px] text-brand-sky">fork_right</span>
               <span>Bifurcar</span>
               <span class="px-1.5 py-0.2 rounded bg-marga-surface text-brand-sky font-mono text-[10px]">4</span>
             </button>
-            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-violet hover:bg-brand-purple text-white text-xs font-semibold transition-all shadow-md shadow-brand-violet/20" onclick="showToast('Repositorio guardado en favoritos', 'success')" type="button">
+            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-xs font-semibold transition-all shadow-md" onclick="showToast('Repositorio guardado en favoritos', 'success')" type="button">
               <span class="material-symbols-outlined text-[16px]">star</span>
               <span>Destacar</span>
-              <span class="px-1.5 py-0.2 rounded bg-white/20 text-white font-mono text-[10px]">48</span>
+              <span class="px-1.5 py-0.2 rounded bg-black/10 text-neutral-950 font-mono text-[10px]">48</span>
             </button>
           </div>
         </div>
 
         <!-- Navigation Tabs (Inner) -->
         <div class="flex items-center gap-2 overflow-x-auto pt-2 border-t border-marga-border-subtle">
-          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-violet text-white text-xs font-semibold shadow-sm transition-colors" id="tab-files" onclick="switchRepoTab('files')" type="button">
+          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-violet text-neutral-950 text-xs font-semibold shadow-sm transition-colors" id="tab-files" onclick="switchRepoTab('files')" type="button">
             <span class="material-symbols-outlined text-[17px] text-brand-cyan">terminal</span>
             <span>Código &amp; Esquemas</span>
           </button>
-          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-slate-400 hover:text-slate-200 text-xs transition-colors group relative" id="tab-graph" onclick="switchRepoTab('graph')" type="button">
+          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-neutral-400 hover:text-neutral-200 text-xs transition-colors group relative" id="tab-graph" onclick="switchRepoTab('graph')" type="button">
             <span class="material-symbols-outlined text-[17px] text-brand-cyan group-hover:text-brand-purple transition-colors">account_tree</span>
             <span class="group-hover:text-white transition-colors">Schema Graph (ERD)</span>
-            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-brand-violet/30 text-brand-cyan border border-brand-violet/30 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-pulse"></span> 4 Tablas
+            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-white/10 text-brand-cyan border border-white/10 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span> 4 Tablas
             </span>
           </button>
-          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-slate-400 hover:text-slate-200 text-xs transition-colors" id="tab-migrations" onclick="switchRepoTab('migrations')" type="button">
+          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-neutral-400 hover:text-neutral-200 text-xs transition-colors" id="tab-migrations" onclick="switchRepoTab('migrations')" type="button">
             <span class="material-symbols-outlined text-[17px]">timeline</span>
             <span>Commits &amp; Migraciones</span>
             <span class="px-1.5 py-0.2 rounded-full bg-marga-card text-brand-cyan font-mono text-[10px]">38</span>
           </button>
-          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-slate-400 hover:text-slate-200 text-xs transition-colors" id="tab-prs" onclick="showToast('Sin pull requests pendientes', 'info')" type="button">
+          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-neutral-400 hover:text-neutral-200 text-xs transition-colors" id="tab-prs" onclick="showToast('Sin pull requests pendientes', 'info')" type="button">
             <span class="material-symbols-outlined text-[17px]">merge</span>
             <span>Pull Requests</span>
-            <span class="px-1.5 py-0.2 rounded-full bg-marga-card text-slate-400 font-mono text-[10px]">2</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-marga-card text-neutral-400 font-mono text-[10px]">2</span>
           </button>
-          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-slate-400 hover:text-slate-200 text-xs transition-colors" onclick="showToast('Pipeline de Staging activo: 0 errores DDL', 'success')" type="button">
+          <button class="tab-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent hover:bg-marga-card text-neutral-400 hover:text-neutral-200 text-xs transition-colors" onclick="showToast('Pipeline de Staging activo: 0 errores DDL', 'success')" type="button">
             <span class="material-symbols-outlined text-[17px]">play_circle</span>
             <span>CI / Dry-Run Pipeline</span>
           </button>
@@ -222,25 +222,25 @@
       <div class="flex flex-wrap items-center justify-between gap-3 bg-marga-surface p-3 rounded-xl border border-marga-border shadow-sm">
         <div class="flex items-center gap-3 flex-wrap">
           <div class="relative">
-            <button class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-slate-200 text-xs font-mono transition-all shadow-sm" type="button">
+            <button class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-neutral-200 text-xs font-mono transition-all shadow-sm" type="button">
               <span class="material-symbols-outlined text-[16px] text-brand-purple">fork_right</span>
               <span class="font-semibold text-white">main</span>
-              <span class="material-symbols-outlined text-[15px] text-slate-400">expand_more</span>
+              <span class="material-symbols-outlined text-[15px] text-neutral-400">expand_more</span>
             </button>
           </div>
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-card border border-marga-border text-xs font-mono text-slate-300 shadow-sm">
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-card border border-marga-border text-xs font-mono text-neutral-300 shadow-sm">
             <span class="material-symbols-outlined text-[16px] text-brand-cyan">storage</span>
             <span class="text-white font-medium">PostgreSQL 16.2</span>
-            <span class="text-slate-500 font-sans">/</span>
+            <span class="text-neutral-500 font-sans">/</span>
             <span class="text-brand-sky">primary-ro-replica</span>
           </div>
-          <div class="hidden sm:flex items-center gap-2 font-mono text-xs text-slate-400">
-            <span class="flex items-center gap-1 hover:text-slate-200 cursor-pointer" onclick="window.location.href='commits.html'">
+          <div class="hidden sm:flex items-center gap-2 font-mono text-xs text-neutral-400">
+            <span class="flex items-center gap-1 hover:text-neutral-200 cursor-pointer" onclick="window.location.href='commits.html'">
               <span class="material-symbols-outlined text-[14px]">commit</span>
               <span>1,248 commits</span>
             </span>
             <span>·</span>
-            <span class="flex items-center gap-1 hover:text-slate-200 cursor-pointer" onclick="window.location.href='commits.html'">
+            <span class="flex items-center gap-1 hover:text-neutral-200 cursor-pointer" onclick="window.location.href='commits.html'">
               <span class="material-symbols-outlined text-[14px]">label</span>
               <span>14 versiones DDL</span>
             </span>
@@ -248,11 +248,11 @@
         </div>
 
         <div class="flex items-center gap-2.5">
-          <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-slate-200 text-xs font-medium transition-all shadow-sm" onclick="showToast('Verificando conexión SSL con PostgreSQL...', 'info')" type="button">
+          <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-marga-border text-neutral-200 text-xs font-medium transition-all shadow-sm" onclick="showToast('Verificando conexión SSL con PostgreSQL...', 'info')" type="button">
             <span class="material-symbols-outlined text-[16px] text-brand-cyan">terminal</span>
             <span>Conectar DB</span>
           </button>
-          <button class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-violet hover:bg-brand-purple text-white text-xs font-semibold transition-all shadow-md shadow-brand-violet/25 active:scale-[0.98]" onclick="promptNewMigration()" type="button">
+          <button class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-xs font-semibold transition-all shadow-md active:scale-[0.98]" onclick="promptNewMigration()" type="button">
             <span class="material-symbols-outlined text-[16px]">add</span>
             <span>+ Nueva Migración</span>
           </button>
@@ -268,13 +268,13 @@
           <!-- Last Commit Ribbon -->
           <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-marga-surface border border-marga-border rounded-xl text-xs">
             <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-6 h-6 rounded-full bg-brand-violet flex items-center justify-center text-white text-[10px] font-bold">
+              <div class="w-6 h-6 rounded-full bg-brand-violet flex items-center justify-center text-neutral-950 text-[10px] font-bold">
                 DZ
               </div>
               <span class="font-semibold text-white truncate font-mono">zara-te05</span>
-              <span class="text-slate-400 truncate">Comandos basicos finalizados (CLI v1.2 engine)</span>
+              <span class="text-neutral-400 truncate">Comandos basicos finalizados (CLI v1.2 engine)</span>
             </div>
-            <div class="flex items-center gap-3 font-mono text-slate-400 shrink-0">
+            <div class="flex items-center gap-3 font-mono text-neutral-400 shrink-0">
               <span class="px-2 py-0.5 rounded bg-marga-card border border-marga-border text-brand-cyan">1b4ec5c</span>
               <span>hace 20 min</span>
               <span class="material-symbols-outlined text-[16px] text-brand-sky">history</span>
@@ -283,7 +283,7 @@
 
           <!-- FILE SYSTEM REPO BROWSER -->
           <div class="flex flex-col bg-marga-surface border border-marga-border rounded-xl overflow-hidden shadow-sm" id="repo-tree-view">
-            <div class="flex items-center justify-between px-4 py-2.5 bg-marga-card text-[11px] font-mono text-slate-400 uppercase tracking-wider border-b border-marga-border">
+            <div class="flex items-center justify-between px-4 py-2.5 bg-marga-card text-[11px] font-mono text-neutral-400 uppercase tracking-wider border-b border-marga-border">
               <span>Nombre de Objeto / Recurso DDL</span>
               <div class="flex items-center gap-8">
                 <span class="hidden sm:inline">Último Hash &amp; Mensaje</span>
@@ -296,11 +296,11 @@
                 <div class="flex items-center gap-3 min-w-0">
                   <span class="material-symbols-outlined text-brand-cyan text-[18px]">folder</span>
                   <span class="font-medium text-xs text-white group-hover:text-brand-purple transition-colors font-mono">Motor-Marga</span>
-                  <span class="px-1.5 py-0.2 rounded bg-marga-card text-brand-cyan text-[10px] font-mono border border-brand-cyan/20">core</span>
+                  <span class="px-1.5 py-0.2 rounded bg-marga-card text-brand-cyan text-[10px] font-mono border border-white/10">core</span>
                 </div>
-                <div class="flex items-center gap-8 font-mono text-xs text-slate-400">
-                  <span class="hidden sm:inline text-slate-400 truncate max-w-[260px]">Comandos basicos finalizados</span>
-                  <span class="text-slate-500">hace 20 min</span>
+                <div class="flex items-center gap-8 font-mono text-xs text-neutral-400">
+                  <span class="hidden sm:inline text-neutral-400 truncate max-w-[260px]">Comandos basicos finalizados</span>
+                  <span class="text-neutral-500">hace 20 min</span>
                 </div>
               </div>
 
@@ -308,11 +308,11 @@
                 <div class="flex items-center gap-3 min-w-0">
                   <span class="material-symbols-outlined text-brand-sky text-[18px]">folder</span>
                   <span class="font-medium text-xs text-white group-hover:text-brand-purple transition-colors font-mono">migrations/</span>
-                  <span class="px-1.5 py-0.2 rounded bg-brand-violet/20 text-brand-cyan text-[10px] font-mono border border-brand-violet/30">38 versions</span>
+                  <span class="px-1.5 py-0.2 rounded bg-white/10 text-brand-cyan text-[10px] font-mono border border-white/10">38 versions</span>
                 </div>
-                <div class="flex items-center gap-8 font-mono text-xs text-slate-400">
-                  <span class="hidden sm:inline text-slate-400 truncate max-w-[260px]">add_composite_index_transactions_idx.sql</span>
-                  <span class="text-slate-500">hace 2 horas</span>
+                <div class="flex items-center gap-8 font-mono text-xs text-neutral-400">
+                  <span class="hidden sm:inline text-neutral-400 truncate max-w-[260px]">add_composite_index_transactions_idx.sql</span>
+                  <span class="text-neutral-500">hace 2 horas</span>
                 </div>
               </div>
 
@@ -321,20 +321,20 @@
                   <span class="material-symbols-outlined text-brand-cyan text-[18px]">folder</span>
                   <span class="font-medium text-xs text-white group-hover:text-brand-purple transition-colors font-mono">schemas/public/</span>
                 </div>
-                <div class="flex items-center gap-8 font-mono text-xs text-slate-400">
-                  <span class="hidden sm:inline text-slate-400 truncate max-w-[260px]">sync wallet and ledger partition constraints</span>
-                  <span class="text-slate-500">ayer</span>
+                <div class="flex items-center gap-8 font-mono text-xs text-neutral-400">
+                  <span class="hidden sm:inline text-neutral-400 truncate max-w-[260px]">sync wallet and ledger partition constraints</span>
+                  <span class="text-neutral-500">ayer</span>
                 </div>
               </div>
 
               <div class="flex items-center justify-between px-4 py-3 hover:bg-marga-card transition-colors cursor-pointer group" onclick="showToast('Triggers PostgreSQL cargados', 'info')">
                 <div class="flex items-center gap-3 min-w-0">
-                  <span class="material-symbols-outlined text-slate-400 text-[18px]">folder</span>
+                  <span class="material-symbols-outlined text-neutral-400 text-[18px]">folder</span>
                   <span class="font-medium text-xs text-white group-hover:text-brand-purple transition-colors font-mono">triggers/</span>
                 </div>
-                <div class="flex items-center gap-8 font-mono text-xs text-slate-400">
-                  <span class="hidden sm:inline text-slate-400 truncate max-w-[260px]">immutable_audit_log_trigger.plpgsql</span>
-                  <span class="text-slate-500">hace 3 días</span>
+                <div class="flex items-center gap-8 font-mono text-xs text-neutral-400">
+                  <span class="hidden sm:inline text-neutral-400 truncate max-w-[260px]">immutable_audit_log_trigger.plpgsql</span>
+                  <span class="text-neutral-500">hace 3 días</span>
                 </div>
               </div>
 
@@ -343,20 +343,20 @@
                   <span class="material-symbols-outlined text-brand-cyan text-[18px]">data_object</span>
                   <span class="font-medium text-xs text-white group-hover:text-brand-cyan transition-colors font-mono">marga.config.json</span>
                 </div>
-                <div class="flex items-center gap-8 font-mono text-xs text-slate-400">
-                  <span class="hidden sm:inline text-slate-400 truncate max-w-[260px]">configure zero-downtime shadow db locks</span>
-                  <span class="text-slate-500">hace 1 semana</span>
+                <div class="flex items-center gap-8 font-mono text-xs text-neutral-400">
+                  <span class="hidden sm:inline text-neutral-400 truncate max-w-[260px]">configure zero-downtime shadow db locks</span>
+                  <span class="text-neutral-500">hace 1 semana</span>
                 </div>
               </div>
 
               <div class="flex items-center justify-between px-4 py-3 hover:bg-marga-card transition-colors cursor-pointer group" onclick="showToast('README.md', 'info')">
                 <div class="flex items-center gap-3 min-w-0">
-                  <span class="material-symbols-outlined text-slate-400 text-[18px]">description</span>
+                  <span class="material-symbols-outlined text-neutral-400 text-[18px]">description</span>
                   <span class="font-medium text-xs text-white group-hover:text-brand-cyan transition-colors font-mono">README.md</span>
                 </div>
-                <div class="flex items-center gap-8 font-mono text-xs text-slate-400">
-                  <span class="hidden sm:inline text-slate-400 truncate max-w-[260px]">document CLI branch commands</span>
-                  <span class="text-slate-500">hace 1 semana</span>
+                <div class="flex items-center gap-8 font-mono text-xs text-neutral-400">
+                  <span class="hidden sm:inline text-neutral-400 truncate max-w-[260px]">document CLI branch commands</span>
+                  <span class="text-neutral-500">hace 1 semana</span>
                 </div>
               </div>
             </div>
@@ -366,37 +366,37 @@
           <div class="flex flex-col bg-marga-surface border border-marga-border rounded-xl overflow-hidden shadow-sm">
             <div class="flex items-center justify-between px-4 py-3 bg-marga-card border-b border-marga-border">
               <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-slate-400 text-[18px]">menu_book</span>
+                <span class="material-symbols-outlined text-neutral-400 text-[18px]">menu_book</span>
                 <span class="text-xs font-semibold text-white">README.md</span>
               </div>
-              <span class="text-[11px] font-mono text-slate-400">Markdown · 2.4 KB</span>
+              <span class="text-[11px] font-mono text-neutral-400">Markdown · 2.4 KB</span>
             </div>
 
-            <div class="p-6 text-slate-200 space-y-4">
+            <div class="p-6 text-neutral-200 space-y-4">
               <div class="flex items-center gap-3">
                 <h2 class="text-xl font-bold text-white font-mono">Motor-Marga v2.4</h2>
-                <span class="px-2.5 py-0.5 rounded-full bg-brand-violet/20 text-brand-cyan text-xs font-mono border border-brand-violet/30 flex items-center gap-1.5">
+                <span class="px-2.5 py-0.5 rounded-full bg-white/10 text-brand-cyan text-xs font-mono border border-white/10 flex items-center gap-1.5">
                   <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span> Producción Estable
                 </span>
               </div>
 
-              <p class="text-xs text-slate-300 leading-relaxed">
+              <p class="text-xs text-neutral-300 leading-relaxed">
                 Motor central de versionado de esquemas, migraciones concurrentes y grafo dinámico para PostgreSQL y ClickHouse. Permite aislar ramas de base de datos idénticas a repositorios Git con verificación de bloqueos cero (<em class="text-brand-cyan font-medium not-italic">zero-lock dry runs</em>).
               </p>
 
               <div class="p-4 rounded-xl bg-marga-bg font-mono text-xs text-brand-cyan space-y-1 overflow-x-auto border border-marga-border-subtle shadow-inner">
-                <div class="flex items-center justify-between pb-2 border-b border-marga-border-subtle text-[11px] text-slate-400">
+                <div class="flex items-center justify-between pb-2 border-b border-marga-border-subtle text-[11px] text-neutral-400">
                   <span>Terminal / Bash</span>
-                  <button class="flex items-center gap-1 text-slate-400 hover:text-white transition-colors" onclick="copyFileContent()" type="button">
+                  <button class="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors" onclick="copyFileContent()" type="button">
                     <span class="material-symbols-outlined text-[14px]">content_copy</span>
                     <span>Copiar</span>
                   </button>
                 </div>
-                <p class="text-slate-500 pt-1"># Instalación CLI de Marga</p>
+                <p class="text-neutral-500 pt-1"># Instalación CLI de Marga</p>
                 <p><span class="text-brand-purple">$</span> curl -fsSL https://get.marga.dev | bash</p>
-                <p class="text-slate-500 pt-2"># Vinculación de base de datos activa</p>
+                <p class="text-neutral-500 pt-2"># Vinculación de base de datos activa</p>
                 <p><span class="text-brand-purple">$</span> marga link postgresql://user:secret@pg.internal:5432/core --branch main</p>
-                <p class="text-slate-500 pt-2"># Ejecución de dry-run sin downtime</p>
+                <p class="text-neutral-500 pt-2"># Ejecución de dry-run sin downtime</p>
                 <p><span class="text-brand-purple">$</span> marga migrate up --dry-run --analyze-locks</p>
               </div>
             </div>
@@ -411,9 +411,9 @@
           <div class="flex flex-col gap-3.5 bg-marga-surface p-5 rounded-xl border border-marga-border shadow-sm">
             <div class="flex items-center justify-between">
               <h3 class="text-xs font-bold text-white uppercase tracking-wider">Acerca del Proyecto</h3>
-              <span class="material-symbols-outlined text-[18px] text-slate-400 hover:text-white cursor-pointer" onclick="showToast('Ajustes del repositorio', 'info')">settings</span>
+              <span class="material-symbols-outlined text-[18px] text-neutral-400 hover:text-white cursor-pointer" onclick="showToast('Ajustes del repositorio', 'info')">settings</span>
             </div>
-            <p class="text-xs text-slate-300 leading-relaxed">
+            <p class="text-xs text-neutral-300 leading-relaxed">
               Motor de versionado de esquemas transaccionales, auditoría de llaves foráneas y reconciliación de particiones para clusters de alto rendimiento.
             </p>
 
@@ -427,7 +427,7 @@
             </div>
 
             <!-- Telemetry Details -->
-            <div class="flex flex-col gap-2 pt-3 text-xs text-slate-400 border-t border-marga-border-subtle">
+            <div class="flex flex-col gap-2 pt-3 text-xs text-neutral-400 border-t border-marga-border-subtle">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-[16px] text-brand-cyan">insights</span>
                 <span>Actividad: <strong class="text-white">32 commits este mes</strong></span>
@@ -451,41 +451,41 @@
             </div>
 
             <div class="flex flex-col gap-2.5 pt-1">
-              <div class="p-3 rounded-lg bg-marga-card border border-marga-border hover:border-brand-cyan/50 flex items-center justify-between transition-all">
+              <div class="p-3 rounded-lg bg-marga-card border border-marga-border hover:border-white/20 flex items-center justify-between transition-all">
                 <div class="flex items-center gap-2.5 min-w-0">
-                  <span class="w-2 h-2 rounded-full bg-brand-cyan shadow-[0_0_6px_rgba(56,189,248,0.6)]"></span>
+                  <span class="w-2 h-2 rounded-full bg-brand-cyan shadow-[0_0_6px_rgba(255, 255, 255, 0.24)]"></span>
                   <div class="flex flex-col min-w-0">
                     <span class="font-medium text-xs text-white truncate font-mono">production-pg-primary</span>
-                    <span class="text-[10px] font-mono text-slate-400">PostgreSQL 16.2 · us-east-1</span>
+                    <span class="text-[10px] font-mono text-neutral-400">PostgreSQL 16.2 · us-east-1</span>
                   </div>
                 </div>
-                <span class="px-2 py-0.5 rounded bg-brand-cyan/10 text-brand-cyan font-mono text-[10px] border border-brand-cyan/20">LIVE</span>
+                <span class="px-2 py-0.5 rounded bg-white/5 text-brand-cyan font-mono text-[10px] border border-white/10">LIVE</span>
               </div>
 
-              <div class="p-3 rounded-lg bg-marga-card border border-marga-border hover:border-brand-purple/50 flex items-center justify-between transition-all">
+              <div class="p-3 rounded-lg bg-marga-card border border-marga-border hover:border-white/20 flex items-center justify-between transition-all">
                 <div class="flex items-center gap-2.5 min-w-0">
-                  <span class="w-2 h-2 rounded-full bg-brand-purple shadow-[0_0_6px_rgba(139,92,246,0.6)]"></span>
+                  <span class="w-2 h-2 rounded-full bg-brand-purple shadow-[0_0_6px_rgba(255, 255, 255, 0.24)]"></span>
                   <div class="flex flex-col min-w-0">
                     <span class="font-medium text-xs text-white truncate font-mono">analytics-ch-olap</span>
-                    <span class="text-[10px] font-mono text-slate-400">ClickHouse v24 · eu-central-1</span>
+                    <span class="text-[10px] font-mono text-neutral-400">ClickHouse v24 · eu-central-1</span>
                   </div>
                 </div>
-                <span class="px-2 py-0.5 rounded bg-brand-purple/10 text-brand-purple font-mono text-[10px] border border-brand-purple/20">SYNC</span>
+                <span class="px-2 py-0.5 rounded bg-white/5 text-brand-purple font-mono text-[10px] border border-white/10">SYNC</span>
               </div>
 
-              <div class="p-3 rounded-lg bg-marga-card border border-marga-border hover:border-slate-500 flex items-center justify-between transition-all">
+              <div class="p-3 rounded-lg bg-marga-card border border-marga-border hover:border-neutral-500 flex items-center justify-between transition-all">
                 <div class="flex items-center gap-2.5 min-w-0">
-                  <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                  <span class="w-2 h-2 rounded-full bg-neutral-500"></span>
                   <div class="flex flex-col min-w-0">
                     <span class="font-medium text-xs text-white truncate font-mono">session-cache-redis</span>
-                    <span class="text-[10px] font-mono text-slate-400">Redis Cluster v7.2</span>
+                    <span class="text-[10px] font-mono text-neutral-400">Redis Cluster v7.2</span>
                   </div>
                 </div>
-                <span class="px-2 py-0.5 rounded bg-marga-surface text-slate-400 font-mono text-[10px]">IDLE</span>
+                <span class="px-2 py-0.5 rounded bg-marga-surface text-neutral-400 font-mono text-[10px]">IDLE</span>
               </div>
             </div>
 
-            <button class="w-full mt-1 py-2 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-brand-cyan/30 text-brand-cyan text-xs font-medium transition-colors text-center flex items-center justify-center gap-1.5" onclick="showToast('Iniciando asistente SSL para nuevo cluster', 'info')" type="button">
+            <button class="w-full mt-1 py-2 rounded-lg bg-marga-card hover:bg-marga-card-hover border border-white/10 text-brand-cyan text-xs font-medium transition-colors text-center flex items-center justify-center gap-1.5" onclick="showToast('Iniciando asistente SSL para nuevo cluster', 'info')" type="button">
               <span class="material-symbols-outlined text-[15px]">add_circle</span>
               <span>Conectar otra instancia</span>
             </button>
@@ -502,9 +502,9 @@
               <div class="flex flex-col gap-1">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-xs text-white">Release v1.0.4</span>
-                  <span class="px-1.5 py-0.2 rounded bg-brand-violet text-white text-[10px] font-mono">LATEST</span>
+                  <span class="px-1.5 py-0.2 rounded bg-brand-violet text-neutral-950 text-[10px] font-mono">LATEST</span>
                 </div>
-                <p class="text-xs text-slate-400">38 migraciones aplicadas sin bloqueo de transacciones.</p>
+                <p class="text-xs text-neutral-400">38 migraciones aplicadas sin bloqueo de transacciones.</p>
                 <span class="text-[10px] font-mono text-brand-cyan">hace 2 horas · #1b4ec5c</span>
               </div>
             </div>
@@ -514,10 +514,10 @@
           <div class="flex flex-col gap-3 bg-marga-surface p-5 rounded-xl border border-marga-border shadow-sm">
             <div class="flex items-center justify-between">
               <h3 class="text-xs font-bold text-white uppercase tracking-wider">Colaboradores</h3>
-              <span class="text-[11px] font-mono text-slate-400">4 activos</span>
+              <span class="text-[11px] font-mono text-neutral-400">4 activos</span>
             </div>
             <div class="flex items-center gap-2 pt-1">
-              <div class="w-8 h-8 rounded-full bg-brand-violet flex items-center justify-center text-white text-xs font-bold font-mono" title="Diego Zarate (Maintainer)">DZ</div>
+              <div class="w-8 h-8 rounded-full bg-brand-violet flex items-center justify-center text-neutral-950 text-xs font-bold font-mono" title="Diego Zarate (Maintainer)">DZ</div>
               <div class="w-8 h-8 rounded-full bg-marga-card border border-marga-border flex items-center justify-center text-brand-cyan text-xs font-bold font-mono" title="Miguel Angel (Lead DBA)">MA</div>
               <div class="w-8 h-8 rounded-full bg-marga-card border border-marga-border flex items-center justify-center text-brand-purple text-xs font-bold font-mono" title="Sofia Ramos (Infra)">SR</div>
               <div class="w-8 h-8 rounded-full bg-marga-card border border-marga-border flex items-center justify-center text-brand-sky text-xs font-bold font-mono" title="Alex Chen (Data Arch)">AC</div>
