@@ -39,10 +39,6 @@ async function initLiveCommits() {
   liveRepoId = repo.id;
   MargaAPI.setCurrentRepo(repo.id);
 
-  setText('repo-motor', MargaAPI.MOTORES[repo.motor] || repo.motor);
-  setText('repo-entorno', repo.entorno);
-  setText('repo-nombre', `${repo.nombre} · ${repo.slug}`);
-  document.title = `Marga — Commits · ${repo.nombre}`;
   const btnRevert = document.getElementById('btn-revert');
   if (btnRevert && repo.permiso === 'lectura') btnRevert.classList.add('hidden');
 
@@ -72,7 +68,7 @@ async function initLiveCommits() {
 
 async function loadHistory() {
   const h = await MargaAPI.get(`/repos/${liveRepoId}/commits?branch=${encodeURIComponent(liveBranch)}&limit=200`);
-  setText('pill-total', `Todas (${h.total})`);
+  setText('pill-total', `${h.total} commit${h.total === 1 ? '' : 's'}`);
   setText('branch-estado', h.head ? 'HEAD ' + h.head.slice(0, 7) : 'Sin commits');
   setText('catalogo-activo', h.commits[0] ? firstLine(h.commits[0].mensaje) : 'vacío');
 
@@ -260,12 +256,9 @@ async function selectCommitItem(hash, filename, author, time, duration) {
     const meta = document.getElementById('inspector-meta');
     if (meta) meta.innerHTML = `Commit <code class="font-mono text-brand-cyan font-bold">${e(c.hash_corto)}</code> · ${e(c.autor || '—')} · ${e(new Date(c.fecha).toLocaleString('es-MX'))}` +
       (c.padre_hash ? ` · padre <code class="font-mono text-neutral-300">${e(c.padre_hash.slice(0, 7))}</code>` : ' · commit raíz');
-    setText('down-status', c.reversible ? firstLine(c.sql_down) : 'Sin script DOWN');
-    const det = document.getElementById('down-detalle');
-    if (det) {
-      det.textContent = c.reversible ? 'Reversible · revert disponible' : 'No reversible automáticamente';
-      det.className = 'font-mono text-[10px] ' + (c.reversible ? 'text-brand-cyan' : 'text-neutral-400');
-    }
+    setText('sql-up', c.sql_up);
+    setText('down-sql', c.reversible ? c.sql_down : '-- Este commit no tiene script de reversión.');
+    setText('down-detalle', c.reversible ? 'revert disponible' : 'no reversible');
     renderDiff(d);
   } catch (err) {
     showToast(err.message, 'error');

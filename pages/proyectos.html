@@ -44,208 +44,48 @@
   </script>
   <link rel="stylesheet" href="../assets/css/marga-shared.css">
 </head>
-<body class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex flex-col">
+<body data-scope="workspace" class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex flex-col">
 
-  <!-- TOP HEADER / NAV BAR -->
-  <header class="sticky top-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-marga-border select-none">
-    <div class="h-16 w-full px-5 lg:px-8 flex items-center justify-between gap-4">
-      
-      <!-- Brand & Project Switcher -->
-      <div class="flex items-center gap-4 shrink-0">
-        <a class="flex items-center gap-2 group transition-opacity hover:opacity-90" href="proyectos.html">
-          <img src="../assets/icons/marga-logo.svg" alt="Marga Logo" class="h-8 w-8 object-contain">
-          <div class="flex items-center gap-2">
-            <span class="text-lg font-bold text-white tracking-wide">Marga</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/10 text-brand-purple border border-white/10">v2.4</span>
-          </div>
-        </a>
+  <header id="marga-header" class="sticky top-0 z-50 shrink-0 h-16"></header>
 
-        <div class="h-4 w-px bg-marga-border hidden sm:block"></div>
+  <main class="flex-1 w-full max-w-[1400px] mx-auto px-5 lg:px-8 py-8 flex flex-col gap-6">
 
-        <!-- Project Badge & Quick Dropdown -->
-        <div class="flex items-center gap-2">
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-surface border border-marga-border hover:border-white/20 transition-colors cursor-pointer group" onclick="openCreateDrawer()">
-            <span class="w-2 h-2 rounded-full bg-brand-purple shadow-[0_0_8px_rgba(255, 255, 255, 0.24)]"></span>
-            <span class="font-medium text-xs sm:text-sm text-neutral-100 group-hover:text-white">FinTech Core Engine</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-marga-card text-brand-sky border border-white/10">3 DBs</span>
-            <span class="material-symbols-outlined text-[16px] text-neutral-400 group-hover:text-neutral-200">unfold_more</span>
-          </div>
-        </div>
-
-        <!-- Cluster Status Tag -->
-        <div class="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-md bg-marga-surface/60 border border-marga-border-subtle text-xs font-mono text-neutral-300">
-          <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>
-          <span>production-pg-cluster</span>
-          <span class="text-neutral-500 font-normal">#8f4a1c2</span>
-        </div>
+    <!-- Encabezado -->
+    <section class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold text-white tracking-tight">Proyectos</h1>
+        <p class="text-sm text-neutral-400 mt-1">Cada proyecto guarda el historial de migraciones de una base de datos.</p>
       </div>
+      <button class="flex items-center gap-2 h-9 px-4 rounded-md bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-sm font-medium transition-colors" onclick="openCreateDrawer()" type="button">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        <span>Nuevo proyecto</span>
+      </button>
+    </section>
 
-      <!-- Quick Global Search Bar -->
-      <div class="flex-1 max-w-md mx-4 hidden md:block">
-        <div class="relative flex items-center w-full cursor-pointer" onclick="openCommandPalette()">
-          <span class="material-symbols-outlined absolute left-3 text-[18px] text-neutral-500 pointer-events-none">search</span>
-          <input class="w-full h-9 pl-9 pr-14 bg-marga-surface border border-marga-border rounded-lg text-neutral-200 font-mono text-xs placeholder:text-neutral-500 cursor-pointer focus:outline-none focus:border-brand-indigo focus:ring-1 focus:ring-brand-indigo transition-all" placeholder="Buscar commits, esquemas, tablas o migraciones..." readonly type="text">
-          <div class="absolute right-2.5 flex items-center gap-1 pointer-events-none">
-            <kbd class="px-1.5 py-0.5 bg-marga-card border border-marga-border rounded text-[10px] font-mono text-neutral-400">⌘K</kbd>
-          </div>
-        </div>
+    <!-- Resumen numérico -->
+    <section class="grid grid-cols-2 md:grid-cols-4 rounded-lg border border-marga-border divide-x divide-marga-border bg-marga-surface">
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Proyectos</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-repos">—</div></div>
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Commits</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-commits">—</div></div>
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Ramas</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-branches">—</div></div>
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Compartidos contigo</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-shared">—</div></div>
+    </section>
+
+    <!-- Filtros -->
+    <section class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="flex items-center gap-1 p-1 rounded-md bg-marga-surface border border-marga-border w-fit">
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-950 bg-brand-violet" onclick="filterByEnvironment('all', this)" type="button">Todos</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Producción', this)" type="button">Producción</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Staging', this)" type="button">Staging</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Desarrollo', this)" type="button">Desarrollo</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Sandbox', this)" type="button">Sandbox</button>
       </div>
-
-      <!-- Header Action Controls & User Profile -->
-      <div class="flex items-center gap-3 shrink-0">
-        <button onclick="showToast('CLI Marga conectado: puerto 5432 activo', 'info')" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-marga-surface border border-marga-border text-xs font-mono text-neutral-300 hover:text-white hover:bg-marga-card transition-colors">
-          <span class="material-symbols-outlined text-[15px] text-brand-purple">terminal</span>
-          <span>CLI</span>
-        </button>
-
-        <!-- Theme Switcher -->
-        <div class="flex items-center p-1 bg-marga-surface border border-marga-border rounded-lg">
-          <button class="p-1 rounded text-neutral-400 hover:text-neutral-200 hover:bg-marga-card transition-colors" id="theme-light-btn" onclick="toggleTheme(false)" title="Cambiar a modo claro" type="button">
-            <span class="material-symbols-outlined text-[16px]">light_mode</span>
-          </button>
-          <button class="p-1 rounded bg-brand-violet text-neutral-950 shadow-sm transition-colors" id="theme-dark-btn" onclick="toggleTheme(true)" title="Modo oscuro activo" type="button">
-            <span class="material-symbols-outlined text-[16px]">dark_mode</span>
-          </button>
-        </div>
-
-        <!-- User Profile -->
-        <div class="w-8 h-8 rounded-lg p-[1px] flex items-center justify-center cursor-pointer shadow-sm hover:opacity-90 transition-opacity">
-          <div class="w-full h-full bg-marga-surface rounded-[7px] flex items-center justify-center text-xs font-bold font-mono text-brand-cyan" id="user-initials">ZT</div>
-        </div>
+      <div class="relative flex items-center">
+        <span class="material-symbols-outlined absolute left-2.5 text-[16px] text-neutral-500 pointer-events-none">search</span>
+        <input class="bg-marga-card border border-marga-border focus:border-brand-violet pl-8 pr-3 py-1.5 rounded-lg text-xs font-sans text-neutral-200 placeholder:text-neutral-500 w-44 focus:outline-none focus:ring-1 focus:ring-brand-violet transition-all" oninput="filterProjects(this.value)" placeholder="Filtrar por nombre..." type="text">
       </div>
+    </section>
 
-    </div>
-
-    <!-- Secondary Minimal Navigation Subbar (Integrated Navigation) -->
-    <div class="h-10 px-5 lg:px-8 border-t border-marga-border-subtle bg-marga-bg/80 backdrop-blur-md flex items-center overflow-x-auto text-xs shrink-0">
-      <nav class="flex items-center gap-6 h-full font-medium whitespace-nowrap">
-        <a class="h-full flex items-center px-1 font-semibold text-white border-b-2 border-brand-purple gap-1.5" href="proyectos.html">
-          <span class="material-symbols-outlined text-[15px] text-brand-purple">dataset</span>
-          <span>Proyectos</span>
-        </a>
-        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="code.html">
-          <span class="material-symbols-outlined text-[15px]">code</span>
-          <span>Código &amp; Esquemas</span>
-        </a>
-        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="commits.html">
-          <span class="material-symbols-outlined text-[15px]">conversion_path</span>
-          <span>Commits &amp; Migraciones</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-white/10 text-brand-cyan border border-white/10">14 ACT</span>
-        </a>
-        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="visualizador-sql.html">
-          <span class="material-symbols-outlined text-[15px]">account_tree</span>
-          <span>Schema Graph (PostgreSQL)</span>
-        </a>
-        <a class="h-full flex items-center px-1 text-neutral-400 hover:text-neutral-200 transition-colors gap-1.5" href="visualizador-nosql.html">
-          <span class="material-symbols-outlined text-[15px]">schema</span>
-          <span>Schema Graph (NoSQL)</span>
-        </a>
-      </nav>
-    </div>
-  </header>
-
-  <!-- MAIN DASHBOARD CONTENT -->
-  <main class="flex-1 w-full max-w-[1600px] mx-auto p-5 lg:p-8 space-y-6">
-    <div class="flex flex-col w-full">
-      
-      <!-- AMBIENT BACKDROP LIGHT -->
-      <div class="relative w-full overflow-hidden">
-
-        <div class="relative flex flex-col gap-6 pb-16">
-          
-          <!-- SECTION 1: TELEMETRY OVERVIEW STATS -->
-          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="p-4 rounded-xl bg-marga-surface border border-marga-border flex items-center justify-between">
-              <div>
-                <span class="text-xs font-mono text-neutral-400 uppercase tracking-wider block" id="stat-repos-label">Bases Conectadas</span>
-                <span class="text-2xl font-bold font-mono text-white mt-1 block" id="stat-repos">12</span>
-                <span class="text-[11px] text-brand-cyan flex items-center gap-1 mt-1">
-                  <span class="material-symbols-outlined text-[13px]">check_circle</span>
-                  100% en sincronía WAL
-                </span>
-              </div>
-              <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-purple">
-                <span class="material-symbols-outlined text-[20px]">database</span>
-              </div>
-            </div>
-
-            <div class="p-4 rounded-xl bg-marga-surface border border-marga-border flex items-center justify-between">
-              <div>
-                <span class="text-xs font-mono text-neutral-400 uppercase tracking-wider block" id="stat-commits-label">Migraciones Activas</span>
-                <span class="text-2xl font-bold font-mono text-white mt-1 block" id="stat-commits">142</span>
-                <span class="text-[11px] text-brand-purple flex items-center gap-1 mt-1">
-                  <span class="material-symbols-outlined text-[13px]">verified</span>
-                  Zero-downtime validado
-                </span>
-              </div>
-              <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-purple">
-                <span class="material-symbols-outlined text-[20px]">conversion_path</span>
-              </div>
-            </div>
-
-            <div class="p-4 rounded-xl bg-marga-surface border border-marga-border flex items-center justify-between">
-              <div>
-                <span class="text-xs font-mono text-neutral-400 uppercase tracking-wider block">Drift de Esquema</span>
-                <span class="text-2xl font-bold font-mono text-white mt-1 block">0%</span>
-                <span class="text-[11px] text-brand-cyan flex items-center gap-1 mt-1">
-                  <span class="material-symbols-outlined text-[13px]">published_with_changes</span>
-                  Sin divergencia DDL
-                </span>
-              </div>
-              <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-cyan">
-                <span class="material-symbols-outlined text-[20px]">sync</span>
-              </div>
-            </div>
-
-            <div class="p-4 rounded-xl bg-marga-surface border border-marga-border flex items-center justify-between">
-              <div>
-                <span class="text-xs font-mono text-neutral-400 uppercase tracking-wider block">Latencia DDL p99</span>
-                <span class="text-2xl font-bold font-mono text-white mt-1 block" id="stat-latencia">18ms</span>
-                <span class="text-[11px] text-neutral-400 flex items-center gap-1 mt-1">
-                  <span class="material-symbols-outlined text-[13px]">speed</span>
-                  Atlas US-East Cluster
-                </span>
-              </div>
-              <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-sky">
-                <span class="material-symbols-outlined text-[20px]">bolt</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- SECTION 2: CONTROL TOOLBAR (FILTERS, SEARCH, CREATION CTA) -->
-          <section class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-3 rounded-xl bg-marga-surface border border-marga-border shadow-sm">
-            <div class="flex items-center gap-3">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-[20px] text-brand-purple">folder_special</span>
-                <h1 class="text-base text-white font-semibold">Proyectos Activos</h1>
-              </div>
-              <span class="px-2 py-0.5 rounded-full font-mono text-xs bg-marga-card text-neutral-300 border border-marga-border" id="workspaces-count">5 workspaces</span>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-              <!-- Filter Pills -->
-              <div class="flex items-center gap-1 bg-marga-card p-1 rounded-lg border border-marga-border">
-                <button class="px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-950 bg-brand-violet shadow-sm" onclick="filterByEnvironment('all', this)" type="button">Todos</button>
-                <button class="px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors" onclick="filterByEnvironment('Producción', this)" type="button">Producción</button>
-                <button class="px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors" onclick="filterByEnvironment('Staging', this)" type="button">Staging</button>
-                <button class="px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors" onclick="filterByEnvironment('Desarrollo', this)" type="button">Desarrollo</button>
-              </div>
-
-              <!-- Quick Search Filter -->
-              <div class="relative flex items-center">
-                <span class="material-symbols-outlined absolute left-2.5 text-[15px] text-neutral-400 pointer-events-none">search</span>
-                <input class="bg-marga-card border border-marga-border focus:border-brand-violet pl-8 pr-3 py-1.5 rounded-lg text-xs font-sans text-neutral-200 placeholder:text-neutral-500 w-44 focus:outline-none focus:ring-1 focus:ring-brand-violet transition-all" oninput="filterProjects(this.value)" placeholder="Filtrar por nombre..." type="text">
-              </div>
-
-              <button class="flex items-center gap-2 h-9 px-4 rounded-lg bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-xs font-semibold shadow-md transition-all active:scale-[0.98]" onclick="openCreateDrawer()" type="button">
-                <span class="material-symbols-outlined text-[18px]">add_circle</span>
-                <span>Crear Proyecto</span>
-              </button>
-            </div>
-          </section>
-
-          <!-- SECTION 3: PROJECTS GRID -->
-          <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="projects-grid">
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="projects-grid">
             
             <!-- CARD 1: FinTech Core Engine -->
             <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-white/20 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Producción" data-name="FinTech Core Engine" data-slug="fintech-core-prod">
@@ -609,9 +449,6 @@
             </article>
 
           </section>
-        </div>
-      </div>
-    </div>
   </main>
 
   <!-- SLIDE-OVER DRAWER (CREATION & EDITING) -->
@@ -638,7 +475,6 @@
       <!-- Drawer Tabs -->
       <div class="flex items-center px-6 gap-2 bg-marga-surface/50 border-b border-marga-border">
         <button class="py-2.5 px-3 font-semibold text-xs text-brand-purple bg-marga-card rounded-t-lg border-b-2 border-brand-violet" onclick="switchDrawerTab('general', this)" type="button">General</button>
-        <button class="py-2.5 px-3 font-medium text-xs text-neutral-400 hover:text-neutral-200 rounded-t-lg transition-colors" onclick="switchDrawerTab('databases', this)" type="button">Bases de Datos</button>
         <button class="py-2.5 px-3 font-medium text-xs text-neutral-400 hover:text-neutral-200 rounded-t-lg transition-colors" onclick="switchDrawerTab('danger', this)" type="button">Zona Peligrosa</button>
       </div>
 
@@ -661,7 +497,7 @@
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-neutral-300">Entorno Activo</label>
+              <label class="text-xs font-semibold text-neutral-300">Entorno</label>
               <select class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer" id="form-env">
                 <option value="Producción">Producción</option>
                 <option value="Staging">Staging</option>
@@ -670,41 +506,23 @@
               </select>
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-neutral-300">Rama Principal</label>
-              <input class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border font-mono text-xs text-white focus:outline-none" type="text" value="main">
+              <label class="text-xs font-semibold text-neutral-300">Motor de base de datos</label>
+              <select class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer" id="form-motor">
+                <option value="postgresql">PostgreSQL</option>
+                <option value="mysql">MySQL</option>
+                <option value="sqlserver">SQL Server</option>
+                <option value="sqlite">SQLite</option>
+                <option value="mongodb">MongoDB</option>
+              </select>
             </div>
           </div>
-        </div>
-
-        <!-- TAB 2: DATABASES -->
-        <div class="hidden flex flex-col gap-4" id="tab-databases">
-          <span class="text-xs text-neutral-400">Clusters de bases de datos vinculados:</span>
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between p-3 rounded-xl bg-marga-card border border-marga-border">
-              <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-brand-cyan text-[20px]">database</span>
-                <div class="flex flex-col">
-                  <span class="text-xs font-semibold text-white">prod-postgres-main</span>
-                  <span class="font-mono text-[10px] text-neutral-400">PostgreSQL 16.2 · 5432</span>
-                </div>
-              </div>
-              <span class="font-mono text-[10px] text-brand-cyan bg-white/5 px-2 py-0.5 rounded border border-white/10">Sincronizado</span>
-            </div>
-            <div class="flex items-center justify-between p-3 rounded-xl bg-marga-card border border-marga-border">
-              <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-brand-purple text-[20px]">analytics</span>
-                <div class="flex flex-col">
-                  <span class="text-xs font-semibold text-white">clickhouse-analytics</span>
-                  <span class="font-mono text-[10px] text-neutral-400">ClickHouse Cloud · 8123</span>
-                </div>
-              </div>
-              <span class="font-mono text-[10px] text-brand-purple bg-white/5 px-2 py-0.5 rounded border border-white/10">Activo</span>
-            </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-neutral-300">Visibilidad</label>
+            <select class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer" id="form-vis">
+              <option value="privado">Privado — solo tú y tus colaboradores</option>
+              <option value="publico">Público — cualquier usuario puede verlo</option>
+            </select>
           </div>
-          <button class="flex items-center justify-center gap-2 p-3 rounded-xl bg-marga-card hover:bg-marga-card-hover border border-marga-border font-semibold text-xs text-brand-cyan transition-colors" onclick="showToast('Asistente de conexión SSL iniciado', 'info')" type="button">
-            <span class="material-symbols-outlined text-[18px]">add_link</span>
-            <span>Vincular Cluster Adicional</span>
-          </button>
         </div>
 
         <!-- TAB 3: DANGER ZONE -->
@@ -770,6 +588,7 @@
   <!-- Scripts -->
   <script src="../assets/js/marga-common.js"></script>
   <script src="../assets/js/marga-api.js"></script>
+  <script src="../assets/js/marga-layout.js"></script>
   <script src="../assets/js/proyectos.js"></script>
 </body>
 </html>

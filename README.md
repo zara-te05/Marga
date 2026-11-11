@@ -14,7 +14,7 @@ Marga Sun/
 ├── pages/                       # Vistas completas e integradas
 │   ├── login.html               # Inicio de sesión / registro
 │   ├── proyectos.html           # Dashboard de proyectos, clusters y métricas
-│   ├── code.html                # Explorador de esquemas DDL y árbol de archivos
+│   ├── code.html                # Resumen del proyecto: tablas, DDL, ramas y personas
 │   ├── commits.html             # Historial de commits DDL, AST diffs y reversión
 │   ├── visualizador-sql.html    # Schema Graph interactivo ERD para PostgreSQL
 │   └── visualizador-nosql.html  # Schema Graph interactivo para MongoDB/NoSQL
@@ -25,7 +25,8 @@ Marga Sun/
 │   │   ├── marga-api.js         # Cliente REST, sesión y usuario
 │   │   ├── marga-common.js      # Cambio de tema (Oscuro/Claro), Command Palette (⌘K) y Toasts
 │   │   ├── proyectos.js         # Drawer de proyectos, modales de confirmación y filtros
-│   │   ├── code-viewer.js       # Explorador de esquemas DDL y generación de migraciones
+│   │   ├── marga-layout.js      # Cabecera: fuera de un proyecto / dentro de un proyecto
+│   │   ├── resumen.js           # Lógica de la página Resumen
 │   │   ├── commits-viewer.js    # Selección de commits, visualizador diff y dry-runs
 │   │   ├── visualizador-sql.js  # Motor canvas ERD (zoom, pan, centrado e inspector)
 │   │   └── visualizador-nosql.js# Motor canvas NoSQL (zoom, colecciones, minimapa y BSON)

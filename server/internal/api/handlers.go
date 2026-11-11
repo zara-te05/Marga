@@ -365,3 +365,12 @@ func (s *Server) auditoria(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, ev)
 }
+
+func (s *Server) esquema(w http.ResponseWriter, r *http.Request) {
+	e, err := s.store.EsquemaActual(r.Context(), repoID(r), r.URL.Query().Get("ref"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, e)
+}

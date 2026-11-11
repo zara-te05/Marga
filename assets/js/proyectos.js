@@ -25,9 +25,7 @@ function isLive() {
 }
 
 async function loadProjects() {
-  const t0 = performance.now();
   const repos = await MargaAPI.get('/repos');
-  const latency = Math.round(performance.now() - t0);
   liveRepos.clear();
   repos.forEach(r => liveRepos.set(r.id, r));
 
@@ -43,12 +41,17 @@ async function loadProjects() {
   }
 
   const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setText('stat-repos-label', 'Proyectos');
   setText('stat-repos', repos.length);
-  setText('stat-commits-label', 'Commits Totales');
   setText('stat-commits', repos.reduce((n, r) => n + r.total_commits, 0));
-  setText('stat-latencia', latency + 'ms');
-  setText('workspaces-count', `${repos.length} workspace${repos.length === 1 ? '' : 's'}`);
+  setText('stat-branches', repos.reduce((n, r) => n + r.total_branches, 0));
+  setText('stat-shared', repos.filter(r => r.propietario_id !== MargaAPI.me.id).length);
+
+  // Desde la pestaña "Ajustes" de un proyecto: proyectos.html?editar=ID
+  const editar = Number(new URLSearchParams(location.search).get('editar'));
+  if (editar && liveRepos.has(editar)) {
+    history.replaceState(null, '', 'proyectos.html');
+    openEditDrawerById(editar);
+  }
 }
 
 function renderProjectCard(r) {
@@ -112,7 +115,7 @@ function renderProjectCard(r) {
         <span>Configurar</span>
       </button>` : `<span class="text-[11px] font-mono text-neutral-500">propietario: ${e(r.propietario)}</span>`}
       <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-violet text-brand-purple hover:text-neutral-950 text-xs font-semibold border border-white/10 transition-all" onclick="quickLaunch(${r.id})" type="button">
-        <span>Ver commits</span>
+        <span>Abrir</span>
         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
       </button>
     </div>
@@ -133,7 +136,11 @@ function openEditDrawerById(id) {
   const r = liveRepos.get(id);
   if (!r) return;
   openEditDrawer(r.nombre, r.slug, r.descripcion, r.entorno, id);
+  setField('form-motor', r.motor);
+  setField('form-vis', r.visibilidad);
 }
+
+function setField(id, v) { const el = document.getElementById(id); if (el) el.value = v; }
 
 function confirmDeleteById(id) {
   const r = liveRepos.get(id);
@@ -159,7 +166,10 @@ function openCreateDrawer() {
   document.getElementById('form-name').value = "";
   document.getElementById('form-slug').value = "";
   document.getElementById('form-desc').value = "";
-  document.getElementById('drawer-save-text').innerText = "Crear Proyecto";
+  setField('form-env', 'Desarrollo');
+  setField('form-motor', 'postgresql');
+  setField('form-vis', 'privado');
+  document.getElementById('drawer-save-text').innerText = "Crear proyecto";
 
   switchDrawerTab('general', null);
 
@@ -229,7 +239,9 @@ async function saveProjectChanges() {
     const body = {
       nombre: name,
       descripcion: document.getElementById('form-desc').value.trim(),
-      entorno: document.getElementById('form-env').value
+      entorno: document.getElementById('form-env').value,
+      motor: document.getElementById('form-motor')?.value,
+      visibilidad: document.getElementById('form-vis')?.value
     };
     try {
       if (currentTargetId) {
@@ -340,9 +352,9 @@ function filterByEnvironment(env, btn) {
   if (btn) {
     const parent = btn.parentElement;
     parent.querySelectorAll('button').forEach(b => {
-      b.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors";
+      b.className = "px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100";
     });
-    btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-950 bg-brand-violet shadow-sm";
+    btn.className = "px-3 py-1 rounded text-xs font-medium text-neutral-950 bg-brand-violet";
   }
 }
 
@@ -350,7 +362,7 @@ function filterByEnvironment(env, btn) {
 function quickLaunch(idOrName) {
   if (typeof idOrName === 'number') {
     MargaAPI.setCurrentRepo(idOrName);
-    window.location.href = "commits.html?repo=" + idOrName;
+    window.location.href = "code.html?repo=" + idOrName;
     return;
   }
   window.location.href = "code.html";

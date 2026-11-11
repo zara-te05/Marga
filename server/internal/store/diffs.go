@@ -228,3 +228,67 @@ func (s *Store) DiffDeCommit(ctx context.Context, repoID int64, ref string) (Res
 	}
 	return s.Diff(ctx, repoID, padre.String, hash)
 }
+
+// ---------------------------------------------------------------- Esquema actual
+
+type TablaEsquema struct {
+	Tabla  string        `json:"tabla"`
+	DDL    string        `json:"ddl"`
+	Commit CommitResumen `json:"commit"` // último commit que tocó la tabla
+}
+
+type Esquema struct {
+	Ref    string         `json:"ref"`
+	Head   *string        `json:"head"`
+	Modo   string         `json:"modo"` // "snapshots" o "sql"
+	Tablas []TablaEsquema `json:"tablas"`
+	SQL    string         `json:"sql,omitempty"` // SQL acumulado si no hay snapshots
+}
+
+// EsquemaActual devuelve el estado del esquema en una rama o commit.
+func (s *Store) EsquemaActual(ctx context.Context, repoID int64, ref string) (Esquema, error) {
+	if ref == "" {
+		ref = "main"
+	}
+	e := Esquema{Ref: ref, Modo: "snapshots", Tablas: []TablaEsquema{}}
+	head, err := s.resolverRef(ctx, s.DB, repoID, ref)
+	if err != nil || head == nil {
+		return e, err
+	}
+	e.Head = head
+	rows, err := s.DB.QueryContext(ctx, `
+		WITH RECURSIVE hist AS (
+		    SELECT hash_id, padre_hash, 0 AS d FROM commit WHERE hash_id = $1
+		    UNION ALL
+		    SELECT c.hash_id, c.padre_hash, hist.d + 1
+		    FROM commit c JOIN hist ON c.hash_id = hist.padre_hash
+		)
+		SELECT * FROM (
+		    SELECT DISTINCT ON (s.tabla) s.tabla, s.ddl, c.hash_id, c.mensaje, c.fecha, u.nombre
+		    FROM hist
+		    JOIN snapshot_esquema s ON s.commit_hash_id = hist.hash_id
+		    JOIN commit c           ON c.hash_id = hist.hash_id
+		    LEFT JOIN usuario u     ON u.usuario_id = c.autor_id
+		    ORDER BY s.tabla, hist.d
+		) t WHERE t.ddl <> '' ORDER BY t.tabla`, *head)
+	if err != nil {
+		return e, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var t TablaEsquema
+		if err := rows.Scan(&t.Tabla, &t.DDL, &t.Commit.Hash, &t.Commit.Mensaje, &t.Commit.Fecha, &t.Commit.Autor); err != nil {
+			return e, err
+		}
+		t.Commit.HashCorto = corto(t.Commit.Hash)
+		e.Tablas = append(e.Tablas, t)
+	}
+	if err := rows.Err(); err != nil {
+		return e, err
+	}
+	if len(e.Tablas) == 0 {
+		e.Modo = "sql"
+		e.SQL, err = sqlAcumulado(ctx, s.DB, *head)
+	}
+	return e, err
+}

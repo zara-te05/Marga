@@ -65,6 +65,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/repos/{id}/commits/{hash}/revert", s.repo("escritura", s.revertirCommit))
 	mux.HandleFunc("GET /api/repos/{id}/diff", s.repo("lectura", s.diff))
 	mux.HandleFunc("GET /api/repos/{id}/buscar", s.repo("lectura", s.buscar))
+	mux.HandleFunc("GET /api/repos/{id}/esquema", s.repo("lectura", s.esquema))
 	mux.HandleFunc("GET /api/repos/{id}/auditoria", s.repo("admin", s.auditoria))
 
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
