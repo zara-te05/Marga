@@ -43,7 +43,7 @@
       <button type="button" data-n="${e(x.nombre)}" class="e-item text-left rounded-lg border border-marga-border bg-marga-surface px-4 py-3 hover:border-neutral-600 transition-colors">
         <div class="flex items-center justify-between gap-2">
           <span class="font-mono text-sm text-white truncate">${e(x.nombre)}</span>
-          <span class="text-[10px] uppercase tracking-wider text-neutral-500 shrink-0">${x.compartido ? 'compartido' : 'personal'}</span>
+          <span class="text-[10px] uppercase tracking-wider text-neutral-500 shrink-0">${x.requiere_aprobacion ? 'protegido · ' : ''}${x.compartido ? 'compartido' : 'personal'}</span>
         </div>
         <div class="flex items-center gap-1.5 mt-2 text-xs ${st.fuerte ? 'text-white' : 'text-neutral-400'}">
           <span class="material-symbols-outlined text-[15px]">${st.icon}</span>${e(st.txt)}
@@ -127,6 +127,30 @@
           </tr>`).join('')}</tbody></table></div>`
       : '<div class="px-4 py-4 text-sm text-neutral-400">Aún no se ha aplicado ninguna migración.</div>');
 
-    $('e-detalle').innerHTML = cabecera + drift + pendientes + aplicadas;
+    const esAdmin = repo.permiso === 'admin';
+    const proteccion = `
+      <section class="rounded-lg border border-marga-border bg-marga-surface px-4 py-3 flex items-center justify-between gap-4">
+        <div>
+          <div class="text-sm text-white font-medium flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]">verified_user</span>Requiere aprobación</div>
+          <p class="text-xs text-neutral-500 mt-1">${d.requiere_aprobacion
+            ? '<span class="font-mono text-neutral-300">marga up</span> solo aplicará migraciones que otra persona aprobó en Commits → Revisiones.'
+            : 'Cualquiera con permiso de escritura puede aplicar migraciones aquí.'}</p>
+        </div>
+        ${esAdmin ? `<button type="button" id="e-proteger" role="switch" aria-checked="${d.requiere_aprobacion}"
+            class="relative w-11 h-6 rounded-full shrink-0 transition-colors ${d.requiere_aprobacion ? 'bg-neutral-100' : 'bg-marga-border'}">
+            <span class="absolute top-0.5 ${d.requiere_aprobacion ? 'left-[22px] bg-neutral-950' : 'left-0.5 bg-neutral-400'} w-5 h-5 rounded-full transition-all"></span>
+          </button>` : `<span class="text-xs text-neutral-400 shrink-0">${d.requiere_aprobacion ? 'Activado' : 'Desactivado'}</span>`}
+      </section>`;
+
+    $('e-detalle').innerHTML = cabecera + proteccion + drift + pendientes + aplicadas;
+    $('e-proteger')?.addEventListener('click', async () => {
+      try {
+        await API.patch(`/repos/${repo.id}/entornos/${encodeURIComponent(d.nombre)}`, { requiere_aprobacion: !d.requiere_aprobacion });
+        showToast(!d.requiere_aprobacion ? `${d.nombre} ahora requiere aprobación` : `${d.nombre} ya no requiere aprobación`, 'success');
+        entornos = await API.get(`/repos/${repo.id}/entornos`);
+        pintarLista();
+        seleccionar(d.nombre);
+      } catch (err) { showToast(err.message, 'error'); }
+    });
   }
 })();

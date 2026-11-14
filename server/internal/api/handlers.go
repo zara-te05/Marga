@@ -472,3 +472,72 @@ func (s *Server) eliminarEntorno(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
+
+func (s *Server) configurarEntorno(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		RequiereAprobacion bool `json:"requiere_aprobacion"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	if err := s.store.ConfigurarEntorno(r.Context(), usuario(r), repoID(r), r.PathValue("nombre"), body.RequiereAprobacion); err != nil {
+		s.fail(w, err)
+		return
+	}
+	e, err := s.store.ObtenerEntorno(r.Context(), repoID(r), r.PathValue("nombre"), "")
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, e)
+}
+
+// ---------------------------------------------------------------- Revisiones
+
+func (s *Server) revisar(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Estado     string `json:"estado"`
+		Comentario string `json:"comentario"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	if err := s.store.Revisar(r.Context(), usuario(r), repoID(r), r.PathValue("hash"), body.Estado, body.Comentario); err != nil {
+		s.fail(w, err)
+		return
+	}
+	c, err := s.store.ObtenerCommit(r.Context(), repoID(r), r.PathValue("hash"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
+}
+
+func (s *Server) quitarRevision(w http.ResponseWriter, r *http.Request) {
+	if err := s.store.QuitarRevision(r.Context(), usuario(r), repoID(r), r.PathValue("hash")); err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// ---------------------------------------------------------------- Fusión de ramas
+
+func (s *Server) fusionar(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Desde   string `json:"desde"`
+		Hacia   string `json:"hacia"`
+		Simular bool   `json:"simular"`
+		Forzar  bool   `json:"forzar"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	res, err := s.store.Fusionar(r.Context(), usuario(r), repoID(r), strings.TrimSpace(body.Desde), strings.TrimSpace(body.Hacia), !body.Simular, body.Forzar)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
+}

@@ -78,6 +78,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/repos/{id}/entornos/{nombre}", s.repo("lectura", s.obtenerEntorno))
 	mux.HandleFunc("PUT /api/repos/{id}/entornos/{nombre}", s.repo("escritura", s.reportarEntorno))
 	mux.HandleFunc("DELETE /api/repos/{id}/entornos/{nombre}", s.repo("admin", s.eliminarEntorno))
+	mux.HandleFunc("PATCH /api/repos/{id}/entornos/{nombre}", s.repo("admin", s.configurarEntorno))
+
+	// --- Revisiones y fusión de ramas
+	mux.HandleFunc("POST /api/repos/{id}/commits/{hash}/revisiones", s.repo("escritura", s.revisar))
+	mux.HandleFunc("DELETE /api/repos/{id}/commits/{hash}/revisiones", s.repo("escritura", s.quitarRevision))
+	mux.HandleFunc("POST /api/repos/{id}/fusionar", s.repo("escritura", s.fusionar))
 
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "ruta de API no encontrada")

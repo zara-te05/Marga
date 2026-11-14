@@ -69,7 +69,10 @@ Es tu diagrama traducido a PostgreSQL, con estos ajustes:
 
 **Tablas agregadas después del diagrama:** `token_api` (tokens personales de la CLI),
 `entorno_bd` (cada base reportada por la CLI: esquema real en JSON y drift) y
-`migracion_aplicada` (qué migraciones tiene cada entorno, enlazadas a su commit por hash o por checksum del SQL).
+`migracion_aplicada` (qué migraciones tiene cada entorno, enlazadas a su commit por hash o por checksum del SQL),
+`aprobacion` (revisiones de cada commit) y `commit.checksum` (sha256 del SQL: la identidad de una migración
+entre ramas). Donde la API recibe un commit (`{ref}`) acepta hash, prefijo de hash o nombre de la migración.
+Cada commit incluye su análisis de riesgo (`internal/riesgo`, el mismo paquete que usa la CLI).
 
 **Permisos por repositorio:** propietario o admin global → `admin`; colaborador → su `permiso`
 (`lectura` / `escritura` / `admin`); repo `publico` → `lectura`; resto → no lo ve (404).
@@ -107,6 +110,9 @@ Las peticiones que modifican datos deben enviar `Content-Type: application/json`
 | GET | `/api/repos/{id}/entornos/{nombre}` | lectura | detalle: lista de aplicadas y pendientes, esquema real |
 | PUT | `/api/repos/{id}/entornos/{nombre}` | escritura | lo usa la CLI para reportar el estado de un entorno |
 | DELETE | `/api/repos/{id}/entornos/{nombre}` | admin | olvida un entorno |
+| PATCH | `/api/repos/{id}/entornos/{nombre}` | admin | `{requiere_aprobacion}`: protege el entorno |
+| POST / DELETE | `/api/repos/{id}/commits/{ref}/revisiones` | escritura | `{estado: aprobado\|cambios, comentario}`; nadie aprueba lo suyo |
+| POST | `/api/repos/{id}/fusionar` | escritura | `{desde, hacia, simular, forzar}` → fast_forward / copia / conflicto |
 | GET | `/api/repos/{id}/auditoria` | admin | |
 
 ### Conectar la CLI (Marga Moon)

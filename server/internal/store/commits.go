@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/zarat/Marga-Sun/server/internal/diff"
+	"github.com/zarat/Marga-Sun/server/internal/riesgo"
 )
 
 func corto(h string) string {
@@ -24,8 +25,41 @@ func corto(h string) string {
 
 var reHex = regexp.MustCompile(`^[0-9a-fA-F]{4,64}$`)
 
-// resolverHash acepta un prefijo de al menos 4 caracteres (como `git show 8f3b`).
-func (s *Store) resolverHash(ctx context.Context, q Querier, repoID int64, prefijo string) (string, error) {
+// resolverHash identifica un commit por prefijo de hash (como `git show 8f3b`) o,
+// si no hay coincidencia, por el número o nombre de la migración ("0010", "0010_agregar_rfc").
+func (s *Store) resolverHash(ctx context.Context, q Querier, repoID int64, ref string) (string, error) {
+	h, err := s.resolverPrefijo(ctx, q, repoID, ref)
+	if err == nil || errors.Is(err, ErrConflicto) {
+		return h, err
+	}
+	rows, err := q.QueryContext(ctx, `
+		SELECT hash_id FROM commit
+		WHERE repositorio_id = $1
+		  AND (split_part(mensaje, E'\n', 1) = $2 OR split_part(mensaje, E'\n', 1) LIKE $2 || '\_%')
+		ORDER BY fecha DESC LIMIT 2`, repoID, ref)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var hs []string
+	for rows.Next() {
+		var x string
+		if err := rows.Scan(&x); err != nil {
+			return "", err
+		}
+		hs = append(hs, x)
+	}
+	switch len(hs) {
+	case 1:
+		return hs[0], nil
+	case 0:
+		return "", errf(ErrNoEncontrado, "'"+ref+"' no es una rama, un commit ni una migración de este repositorio")
+	default:
+		return "", errf(ErrConflicto, "'"+ref+"' coincide con varias migraciones (en distintas ramas); usa el nombre completo o el hash")
+	}
+}
+
+func (s *Store) resolverPrefijo(ctx context.Context, q Querier, repoID int64, prefijo string) (string, error) {
 	if !reHex.MatchString(prefijo) {
 		return "", errf(ErrInvalido, "hash inválido")
 	}
@@ -63,22 +97,28 @@ type Snapshot struct {
 }
 
 type Commit struct {
-	Numero         int        `json:"numero,omitempty"` // posición en la historia (1 = primer commit)
-	Hash           string     `json:"hash"`
-	HashCorto      string     `json:"hash_corto"`
-	Mensaje        string     `json:"mensaje"`
-	Fecha          time.Time  `json:"fecha"`
-	AutorID        *int64     `json:"autor_id"`
-	Autor          *string    `json:"autor"`
-	Branch         *string    `json:"branch"`
-	PadreHash      *string    `json:"padre_hash"`
-	PadreMergeHash *string    `json:"padre_merge_hash,omitempty"`
-	SQLUp          string     `json:"sql_up,omitempty"`
-	SQLDown        string     `json:"sql_down,omitempty"`
-	Reversible     bool       `json:"reversible"`
-	Tablas         []string   `json:"tablas"`
-	Entornos       []string   `json:"entornos"` // entornos donde está aplicado
-	Snapshots      []Snapshot `json:"snapshots,omitempty"`
+	Numero         int               `json:"numero,omitempty"` // posición en la historia (1 = primer commit)
+	Hash           string            `json:"hash"`
+	HashCorto      string            `json:"hash_corto"`
+	Mensaje        string            `json:"mensaje"`
+	Fecha          time.Time         `json:"fecha"`
+	AutorID        *int64            `json:"autor_id"`
+	Autor          *string           `json:"autor"`
+	Branch         *string           `json:"branch"`
+	PadreHash      *string           `json:"padre_hash"`
+	PadreMergeHash *string           `json:"padre_merge_hash,omitempty"`
+	SQLUp          string            `json:"sql_up,omitempty"`
+	SQLDown        string            `json:"sql_down,omitempty"`
+	Reversible     bool              `json:"reversible"`
+	Tablas         []string          `json:"tablas"`
+	Entornos       []string          `json:"entornos"` // entornos donde está aplicado
+	Checksum       string            `json:"checksum"` // sha256 del sql_up normalizado: identidad entre ramas
+	NivelRiesgo    string            `json:"nivel_riesgo"`
+	Riesgo         []riesgo.Hallazgo `json:"riesgo"`
+	Aprobaciones   int               `json:"aprobaciones"` // de personas distintas al autor
+	CambiosPedidos int               `json:"cambios_pedidos"`
+	Revisiones     []Revision        `json:"revisiones"`
+	Snapshots      []Snapshot        `json:"snapshots,omitempty"`
 }
 
 // ---------------------------------------------------------------- Historial
@@ -115,7 +155,7 @@ func (s *Store) ListarCommits(ctx context.Context, repoID int64, ref string, lim
 		       c.padre_hash, c.padre_merge_hash, (c.sql_down <> '') AS reversible,
 		       coalesce((SELECT array_to_string(array_agg(s.tabla ORDER BY s.tabla), ',')
 		                 FROM snapshot_esquema s WHERE s.commit_hash_id = c.hash_id), ''),
-		       `+selEntornosDeCommit+`
+		       `+selEntornosDeCommit+`, c.checksum, c.sql_up, c.sql_down, `+selRevisiones+`
 		FROM hist
 		JOIN commit c       ON c.hash_id = hist.hash_id
 		LEFT JOIN usuario u ON u.usuario_id = c.autor_id
@@ -128,14 +168,16 @@ func (s *Store) ListarCommits(ctx context.Context, repoID int64, ref string, lim
 	defer rows.Close()
 	for rows.Next() {
 		var c Commit
-		var tablas, entornos string
+		var tablas, entornos, up, down string
 		if err := rows.Scan(&c.Numero, &h.Total, &c.Hash, &c.Mensaje, &c.Fecha, &c.AutorID, &c.Autor,
-			&c.Branch, &c.PadreHash, &c.PadreMergeHash, &c.Reversible, &tablas, &entornos); err != nil {
+			&c.Branch, &c.PadreHash, &c.PadreMergeHash, &c.Reversible, &tablas, &entornos,
+			&c.Checksum, &up, &down, &c.Aprobaciones, &c.CambiosPedidos); err != nil {
 			return h, err
 		}
 		c.HashCorto = corto(c.Hash)
 		c.Tablas = splitNoVacio(tablas)
 		c.Entornos = splitNoVacio(entornos)
+		c.NivelRiesgo = riesgo.Nivel(riesgo.Analizar(up, down))
 		h.Commits = append(h.Commits, c)
 	}
 	return h, rows.Err()
@@ -158,16 +200,25 @@ func (s *Store) ObtenerCommit(ctx context.Context, repoID int64, ref string) (Co
 	var entornos string
 	err = s.DB.QueryRowContext(ctx, `
 		SELECT c.hash_id, c.mensaje, c.fecha, c.autor_id, u.nombre, b.nombre,
-		       c.padre_hash, c.padre_merge_hash, c.sql_up, c.sql_down, `+selEntornosDeCommit+`
+		       c.padre_hash, c.padre_merge_hash, c.sql_up, c.sql_down, `+selEntornosDeCommit+`,
+		       c.checksum, `+selRevisiones+`
 		FROM commit c
 		LEFT JOIN usuario u ON u.usuario_id = c.autor_id
 		LEFT JOIN branch b  ON b.branch_id = c.branch_id
 		WHERE c.hash_id = $1`, hash).Scan(&c.Hash, &c.Mensaje, &c.Fecha, &c.AutorID, &c.Autor, &c.Branch,
-		&c.PadreHash, &c.PadreMergeHash, &c.SQLUp, &c.SQLDown, &entornos)
+		&c.PadreHash, &c.PadreMergeHash, &c.SQLUp, &c.SQLDown, &entornos,
+		&c.Checksum, &c.Aprobaciones, &c.CambiosPedidos)
 	if err != nil {
 		return c, err
 	}
 	c.Entornos = splitNoVacio(entornos)
+	if c.Riesgo = riesgo.Analizar(c.SQLUp, c.SQLDown); c.Riesgo == nil {
+		c.Riesgo = []riesgo.Hallazgo{}
+	}
+	c.NivelRiesgo = riesgo.Nivel(c.Riesgo)
+	if c.Revisiones, err = s.ListarRevisiones(ctx, hash); err != nil {
+		return c, err
+	}
 	c.HashCorto = corto(c.Hash)
 	c.Reversible = c.SQLDown != ""
 	rows, err := s.DB.QueryContext(ctx,
@@ -257,9 +308,9 @@ func (s *Store) CrearCommit(ctx context.Context, u Usuario, repoID int64, n Nuev
 			padre = head.String
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO commit (hash_id, repositorio_id, mensaje, fecha, autor_id, branch_id, padre_hash, sql_up, sql_down)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			hash, repoID, n.Mensaje, fecha, u.ID, branchID, padre, n.SQLUp, n.SQLDown); err != nil {
+			INSERT INTO commit (hash_id, repositorio_id, mensaje, fecha, autor_id, branch_id, padre_hash, sql_up, sql_down, checksum)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			hash, repoID, n.Mensaje, fecha, u.ID, branchID, padre, n.SQLUp, n.SQLDown, checksumDe(n.SQLUp)); err != nil {
 			return err
 		}
 
@@ -394,9 +445,18 @@ func ParseLimite(s string, def, max int) int {
 	return n
 }
 
-const selEntornosDeCommit = `coalesce((SELECT array_to_string(array_agg(e.nombre ORDER BY e.compartido DESC, e.nombre), ',')
+// Entornos donde está aplicado: por hash, o por checksum (p. ej. tras fusionar ramas
+// el commit cambia de hash pero es la misma migración).
+const selEntornosDeCommit = `coalesce((SELECT array_to_string(array_agg(DISTINCT e.nombre ORDER BY e.nombre), ',')
 		        FROM migracion_aplicada m JOIN entorno_bd e ON e.entorno_bd_id = m.entorno_bd_id
-		        WHERE m.commit_hash = c.hash_id), '')`
+		        WHERE e.repositorio_id = c.repositorio_id
+		          AND (m.commit_hash = c.hash_id OR m.checksum = c.checksum)), '')`
+
+// Aprobaciones de personas distintas al autor, y pedidos de cambios.
+const selRevisiones = `
+		       (SELECT count(*) FROM aprobacion a WHERE a.commit_hash = c.hash_id AND a.estado = 'aprobado'
+		          AND a.usuario_id IS DISTINCT FROM c.autor_id),
+		       (SELECT count(*) FROM aprobacion a WHERE a.commit_hash = c.hash_id AND a.estado = 'cambios')`
 
 // checksumDe replica proyecto.Checksum de la CLI (sha256 del SQL normalizado).
 func checksumDe(sqlText string) string {

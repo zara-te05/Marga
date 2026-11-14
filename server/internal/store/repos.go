@@ -414,7 +414,7 @@ func (s *Store) resolverRef(ctx context.Context, q Querier, repoID int64, ref st
 	}
 	h, err := s.resolverHash(ctx, q, repoID, ref)
 	if err != nil {
-		return nil, errf(ErrNoEncontrado, "'"+ref+"' no es una rama ni un commit de este repositorio")
+		return nil, err
 	}
 	return &h, nil
 }

@@ -64,7 +64,12 @@
           <span class="font-mono text-xs text-neutral-400" id="branch-estado"></span>
           <span class="text-xs text-neutral-500" id="pill-total"></span>
         </div>
-        <p class="text-xs text-neutral-500">Las migraciones se suben con <span class="font-mono text-neutral-300">marga push</span>.</p>
+        <div class="flex items-center gap-3">
+          <p class="hidden md:block text-xs text-neutral-500">Las migraciones se suben con <span class="font-mono text-neutral-300">marga push</span>.</p>
+          <button type="button" id="btn-merge" class="hidden items-center gap-1.5 h-9 px-3 rounded-md border border-marga-border text-sm text-neutral-200 hover:border-neutral-500 transition-colors">
+            <span class="material-symbols-outlined text-[17px]">merge</span>Fusionar ramas
+          </button>
+        </div>
       </div>
 
       <!-- SECTION 2: 2-COLUMN TIMELINE + DIFF WORKSPACE -->
@@ -379,6 +384,9 @@
             </div>
           </div>
 
+          <!-- Riesgo y revisiones (los llena commits-viewer.js) -->
+          <div id="panel-revision" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
+
         </div>
 
       </div>
@@ -388,6 +396,38 @@
 
 
   <!-- Scripts -->
+  <!-- Modal: fusionar ramas -->
+  <div id="merge-modal" class="fixed inset-0 z-[80] hidden items-center justify-center p-4 bg-black/70">
+    <div class="w-full max-w-lg rounded-xl bg-marga-surface border border-marga-border shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between px-5 h-14 border-b border-marga-border shrink-0">
+        <h3 class="text-base font-semibold text-white">Fusionar ramas</h3>
+        <button type="button" id="merge-cerrar" class="text-neutral-400 hover:text-white"><span class="material-symbols-outlined text-[20px]">close</span></button>
+      </div>
+      <div class="p-5 flex flex-col gap-4 overflow-y-auto">
+        <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+          <label class="flex flex-col gap-1.5 text-xs text-neutral-400">Traer migraciones de
+            <select id="merge-desde" class="h-9 px-2 rounded-md bg-marga-card border border-marga-border text-sm font-mono text-white focus:outline-none"></select>
+          </label>
+          <span class="material-symbols-outlined text-[18px] text-neutral-500 pb-2">arrow_forward</span>
+          <label class="flex flex-col gap-1.5 text-xs text-neutral-400">hacia
+            <select id="merge-hacia" class="h-9 px-2 rounded-md bg-marga-card border border-marga-border text-sm font-mono text-white focus:outline-none"></select>
+          </label>
+        </div>
+        <p class="text-xs text-neutral-500 leading-relaxed">Las migraciones se aplican en orden, así que la historia queda lineal: si el destino también avanzó, las migraciones se copian encima y se renumeran si su versión ya existe. Si ambas ramas tocaron la misma tabla, Marga se detiene.</p>
+        <div id="merge-resultado" class="text-sm"></div>
+      </div>
+      <div class="flex items-center justify-between gap-3 px-5 py-4 border-t border-marga-border shrink-0">
+        <label class="hidden items-center gap-2 text-xs text-neutral-300" id="merge-forzar-wrap">
+          <input type="checkbox" id="merge-forzar" class="rounded bg-marga-card border-marga-border text-neutral-200 focus:ring-0"> Fusionar de todos modos
+        </label>
+        <div class="flex items-center gap-2 ml-auto">
+          <button type="button" id="merge-simular" class="h-9 px-4 rounded-md border border-marga-border text-sm text-neutral-200 hover:border-neutral-500">Revisar</button>
+          <button type="button" id="merge-aplicar" disabled class="h-9 px-4 rounded-md bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Fusionar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="../assets/js/marga-common.js"></script>
   <script src="../assets/js/marga-api.js"></script>
   <script src="../assets/js/marga-layout.js"></script>
