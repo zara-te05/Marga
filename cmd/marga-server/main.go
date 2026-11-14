@@ -1,14 +1,15 @@
-// Marga Sun · servidor web
+// marga-server: la web y la API de Marga (el front va embebido en el binario).
 //
-//	go run .            -> migra la BD y levanta el servidor en :8080
-//	go run . -seed      -> además crea datos de demostración
-//	go run . -migrate   -> solo aplica migraciones y termina
+//	go run ./cmd/marga-server            -> migra la BD y levanta el servidor en :8080
+//	go run ./cmd/marga-server -seed      -> además crea datos de demostración
+//	go run ./cmd/marga-server -migrate   -> solo aplica migraciones y termina
 package main
 
 import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -16,17 +17,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/zarat/Marga-Sun/server/internal/api"
-	"github.com/zarat/Marga-Sun/server/internal/config"
-	"github.com/zarat/Marga-Sun/server/internal/database"
-	"github.com/zarat/Marga-Sun/server/internal/security"
-	"github.com/zarat/Marga-Sun/server/internal/store"
+	"github.com/zara-te05/Marga/internal/api"
+	"github.com/zara-te05/Marga/internal/config"
+	"github.com/zara-te05/Marga/internal/database"
+	"github.com/zara-te05/Marga/internal/security"
+	"github.com/zara-te05/Marga/internal/store"
+	"github.com/zara-te05/Marga/internal/version"
 )
 
 func main() {
 	seed := flag.Bool("seed", false, "crear datos de demostración")
 	soloMigrar := flag.Bool("migrate", false, "solo aplicar migraciones y salir")
+	verVersion := flag.Bool("version", false, "muestra la versión y termina")
 	flag.Parse()
+	if *verVersion {
+		fmt.Println("marga-server", version.Texto())
+		return
+	}
 
 	cfg := config.Load()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -34,7 +41,7 @@ func main() {
 
 	db, err := database.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("✗ %v\n  Revisa MARGA_DB_URL en server/.env", err)
+		log.Fatalf("✗ %v\n  Revisa MARGA_DB_URL (variable de entorno o archivo .env)", err)
 	}
 	defer db.Close()
 	log.Println("✓ conectado a PostgreSQL")
@@ -82,7 +89,11 @@ func main() {
 		IdleTimeout:       120 * time.Second,
 	}
 	go func() {
-		log.Printf("✓ Marga Sun en http://localhost%s  (front: %s)", cfg.Addr, cfg.WebDir)
+		front := "embebido"
+		if cfg.WebDir != "" {
+			front = cfg.WebDir
+		}
+		log.Printf("✓ Marga %s en http://localhost%s  (front: %s)", version.Texto(), cfg.Addr, front)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err)
 		}

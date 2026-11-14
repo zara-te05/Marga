@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -14,8 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarat/Marga-Sun/server/internal/config"
-	"github.com/zarat/Marga-Sun/server/internal/store"
+	"github.com/zara-te05/Marga/internal/config"
+	"github.com/zara-te05/Marga/internal/store"
+	"github.com/zara-te05/Marga/web"
 )
 
 type Server struct {
@@ -283,11 +285,15 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 // ---------------------------------------------------------------- Front estático
 
 func (s *Server) static(mux *http.ServeMux) {
-	dir := s.cfg.WebDir
-	if _, err := os.Stat(filepath.Join(dir, "pages")); err != nil {
-		log.Printf("⚠ no encuentro el front en %q (define MARGA_WEB_DIR)", dir)
+	var front fs.FS = web.FS
+	if dir := s.cfg.WebDir; dir != "" {
+		if _, err := os.Stat(filepath.Join(dir, "pages")); err != nil {
+			log.Printf("⚠ no encuentro el front en %q; uso el embebido", dir)
+		} else {
+			front = os.DirFS(dir)
+		}
 	}
-	files := http.FileServer(http.Dir(dir))
+	files := http.FileServerFS(front)
 	noCache := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-cache")

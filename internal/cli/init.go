@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"errors"
@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/zarat/Motor-Marga/internal/proyecto"
-	"github.com/zarat/Motor-Marga/internal/remoto"
+	"github.com/zara-te05/Marga/internal/proyecto"
+	"github.com/zara-te05/Marga/internal/remoto"
 )
 
 var initFlags struct {

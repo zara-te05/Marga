@@ -1,0 +1,12 @@
+# Configuración local con contraseñas
+.env
+
+# Binarios y compilados
+/bin/
+/dist/
+*.exe
+/marga
+/marga-server
+
+# Registros
+*.log

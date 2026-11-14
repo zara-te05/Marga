@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarat/Marga-Sun/server/internal/riesgo"
+	"github.com/zara-te05/Marga/internal/riesgo"
 )
 
 // Fusionar ramas de migraciones.

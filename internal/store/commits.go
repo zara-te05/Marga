@@ -1,6 +1,8 @@
 package store
 
 import (
+	"github.com/zara-te05/Marga/internal/checksum"
+
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -12,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarat/Marga-Sun/server/internal/diff"
-	"github.com/zarat/Marga-Sun/server/internal/riesgo"
+	"github.com/zara-te05/Marga/internal/diff"
+	"github.com/zara-te05/Marga/internal/riesgo"
 )
 
 func corto(h string) string {
@@ -458,9 +460,4 @@ const selRevisiones = `
 		          AND a.usuario_id IS DISTINCT FROM c.autor_id),
 		       (SELECT count(*) FROM aprobacion a WHERE a.commit_hash = c.hash_id AND a.estado = 'cambios')`
 
-// checksumDe replica proyecto.Checksum de la CLI (sha256 del SQL normalizado).
-func checksumDe(sqlText string) string {
-	sqlText = strings.TrimRight(strings.ReplaceAll(sqlText, "\r\n", "\n"), " \t\n") + "\n"
-	sum := sha256.Sum256([]byte(sqlText))
-	return hex.EncodeToString(sum[:])
-}
+func checksumDe(sqlText string) string { return checksum.SQL(sqlText) }

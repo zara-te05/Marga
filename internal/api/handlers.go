@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarat/Marga-Sun/server/internal/security"
-	"github.com/zarat/Marga-Sun/server/internal/store"
+	"github.com/zara-te05/Marga/internal/security"
+	"github.com/zara-te05/Marga/internal/store"
+	"github.com/zara-te05/Marga/internal/version"
 )
 
 func hashToken(t string) string { return security.HashToken(t) }
@@ -20,10 +21,10 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	if err := s.store.DB.PingContext(ctx); err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "bd": "sin conexión"})
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "bd": "sin conexión", "version": version.Texto()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "bd": "conectada"})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "bd": "conectada", "version": version.Texto()})
 }
 
 // ---------------------------------------------------------------- Auth

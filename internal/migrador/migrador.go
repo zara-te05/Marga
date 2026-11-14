@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/zarat/Motor-Marga/internal/introspeccion"
-	"github.com/zarat/Motor-Marga/internal/proyecto"
+	"github.com/zara-te05/Marga/internal/introspeccion"
+	"github.com/zara-te05/Marga/internal/proyecto"
 )
 
 const tabla = "marga_history"

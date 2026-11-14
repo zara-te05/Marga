@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zarat/Motor-Marga/internal/proyecto"
+	"github.com/zara-te05/Marga/internal/proyecto"
 )
 
 var newCmd = &cobra.Command{

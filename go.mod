@@ -1,4 +1,4 @@
-module github.com/zarat/Motor-Marga
+module github.com/zara-te05/Marga
 
 go 1.27.0
 

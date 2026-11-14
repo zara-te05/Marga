@@ -5,7 +5,6 @@ package config
 import (
 	"bufio"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -13,7 +12,7 @@ import (
 type Config struct {
 	DatabaseURL  string        // MARGA_DB_URL
 	Addr         string        // MARGA_ADDR
-	WebDir       string        // MARGA_WEB_DIR: carpeta con index.html, pages/ y assets/
+	WebDir       string        // MARGA_WEB_DIR: carpeta del front en disco; vacío = el front embebido
 	SessionTTL   time.Duration // MARGA_SESSION_TTL (ej. 72h)
 	DiffTTL      time.Duration // MARGA_DIFF_TTL   (ej. 24h)
 	SecureCookie bool          // MARGA_SECURE_COOKIE=true detrás de HTTPS
@@ -25,23 +24,12 @@ func Load() Config {
 	cfg := Config{
 		DatabaseURL:  get("MARGA_DB_URL", "postgres://marga:marga@localhost:5432/marga?sslmode=disable"),
 		Addr:         get("MARGA_ADDR", ":8080"),
-		WebDir:       get("MARGA_WEB_DIR", detectWebDir()),
+		WebDir:       get("MARGA_WEB_DIR", ""),
 		SessionTTL:   duration("MARGA_SESSION_TTL", 72*time.Hour),
 		DiffTTL:      duration("MARGA_DIFF_TTL", 24*time.Hour),
 		SecureCookie: get("MARGA_SECURE_COOKIE", "false") == "true",
 	}
 	return cfg
-}
-
-// detectWebDir busca la carpeta del front: primero "..", luego ".".
-func detectWebDir() string {
-	for _, c := range []string{"..", "."} {
-		if _, err := os.Stat(filepath.Join(c, "pages")); err == nil {
-			abs, _ := filepath.Abs(c)
-			return abs
-		}
-	}
-	return ".."
 }
 
 func get(key, def string) string {

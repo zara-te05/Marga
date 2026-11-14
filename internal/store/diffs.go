@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarat/Marga-Sun/server/internal/diff"
+	"github.com/zara-te05/Marga/internal/diff"
 )
 
 // esquemaEn reconstruye el estado del esquema en un commit: para cada tabla,

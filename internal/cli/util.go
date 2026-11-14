@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"context"
@@ -13,10 +13,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/zarat/Motor-Marga/internal/introspeccion"
-	"github.com/zarat/Motor-Marga/internal/migrador"
-	"github.com/zarat/Motor-Marga/internal/proyecto"
-	"github.com/zarat/Motor-Marga/internal/remoto"
+	"github.com/zara-te05/Marga/internal/introspeccion"
+	"github.com/zara-te05/Marga/internal/migrador"
+	"github.com/zara-te05/Marga/internal/proyecto"
+	"github.com/zara-te05/Marga/internal/remoto"
 )
 
 // Interactivo es true cuando el comando corre dentro de la TUI (no hay stdin libre).

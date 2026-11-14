@@ -1,11 +1,11 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"regexp"
 
 	"github.com/spf13/cobra"
-	"github.com/zarat/Motor-Marga/internal/proyecto"
+	"github.com/zara-te05/Marga/internal/proyecto"
 )
 
 var envCmd = &cobra.Command{

@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/zarat/Motor-Marga/internal/introspeccion"
+	"github.com/zara-te05/Marga/internal/introspeccion"
 )
 
 type Resultado struct {

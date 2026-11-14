@@ -1,10 +1,11 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/zara-te05/Marga/internal/version"
 )
 
 var RootCmd = &cobra.Command{
@@ -20,6 +21,7 @@ Flujo típico:
   marga up                      aplica lo pendiente
   marga down                    revierte la última
   marga login / push / pull / log   sincroniza con el servidor`,
+	Version:       version.Texto(),
 	SilenceUsage:  true, // ante un error no repetir la ayuda completa
 	SilenceErrors: true, // los errores los imprime Execute (o la TUI)
 }
@@ -38,10 +40,21 @@ func init() {
 		c.GroupID = "servidor"
 		RootCmd.AddCommand(c)
 	}
+	RootCmd.AddCommand(versionCmd)
+	RootCmd.SetVersionTemplate("marga {{.Version}}\n")
 	for _, c := range []*cobra.Command{&ls, cd, &mkdir, create, &clear} {
 		c.GroupID = "consola"
 		RootCmd.AddCommand(c)
 	}
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Muestra la versión de marga",
+	Args:  cobra.NoArgs,
+	Run: func(c *cobra.Command, _ []string) {
+		linea(c, "marga %s", version.Texto())
+	},
 }
 
 // Execute corre un comando desde la terminal normal (modo no interactivo).

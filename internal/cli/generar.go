@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"context"
@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zarat/Motor-Marga/internal/generador"
-	"github.com/zarat/Motor-Marga/internal/introspeccion"
-	"github.com/zarat/Motor-Marga/internal/migrador"
-	"github.com/zarat/Motor-Marga/internal/proyecto"
-	"github.com/zarat/Motor-Marga/internal/riesgo"
+	"github.com/zara-te05/Marga/internal/generador"
+	"github.com/zara-te05/Marga/internal/introspeccion"
+	"github.com/zara-te05/Marga/internal/migrador"
+	"github.com/zara-te05/Marga/internal/proyecto"
+	"github.com/zara-te05/Marga/internal/riesgo"
 )
 
 var commitDryRun bool

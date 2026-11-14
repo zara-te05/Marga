@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	// Reemplaza esta ruta con el módulo real de tu proyecto
-	"github.com/zarat/Motor-Marga/cmd"
+	"github.com/zara-te05/Marga/internal/cli"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -97,20 +96,20 @@ func (m *model) evalCommand(input string) string {
 		return ""
 	}
 
-	args := cmd.ParseInput(input)
+	args := cli.ParseInput(input)
 
 	// El árbol de Cobra se reutiliza en cada comando: limpiar flags del anterior.
-	cmd.Interactivo = true
-	cmd.ResetFlags(cmd.RootCmd)
+	cli.Interactivo = true
+	cli.ResetFlags(cli.RootCmd)
 
 	// Crear el buffer y asignarlo a Cobra
 	buf := new(bytes.Buffer)
-	cmd.RootCmd.SetOut(buf)
-	cmd.RootCmd.SetErr(buf)
-	cmd.RootCmd.SetArgs(args)
+	cli.RootCmd.SetOut(buf)
+	cli.RootCmd.SetErr(buf)
+	cli.RootCmd.SetArgs(args)
 
 	// Ejecutar comando
-	err := cmd.RootCmd.Execute()
+	err := cli.RootCmd.Execute()
 
 	// Actualizar prompt
 	pwd, _ := os.Getwd()
@@ -212,7 +211,7 @@ func main() {
 	// Con argumentos (`marga status`, `marga up --env dev`) funciona como CLI normal,
 	// apta para scripts y CI. Sin argumentos abre la consola interactiva.
 	if len(os.Args) > 1 {
-		cmd.Execute()
+		cli.Execute()
 		return
 	}
 

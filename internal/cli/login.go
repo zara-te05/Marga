@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-	"github.com/zarat/Motor-Marga/internal/remoto"
+	"github.com/zara-te05/Marga/internal/remoto"
 )
 
 var loginFlags struct {

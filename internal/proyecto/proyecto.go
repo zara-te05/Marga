@@ -3,8 +3,8 @@
 package proyecto
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"github.com/zara-te05/Marga/internal/checksum"
+
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -210,15 +210,10 @@ func (m Migracion) ID() string { return m.Version + "_" + m.Nombre }
 var reArchivo = regexp.MustCompile(`^(\d{4,})_([a-z0-9_]+)\.(up|down)\.sql$`)
 
 // Normalizar unifica saltos de línea (Windows/Linux) para que el checksum no cambie.
-func Normalizar(sql string) string {
-	sql = strings.ReplaceAll(sql, "\r\n", "\n")
-	return strings.TrimRight(sql, " \t\n") + "\n"
-}
+func Normalizar(sql string) string { return checksum.Normalizar(sql) }
 
-func Checksum(sql string) string {
-	s := sha256.Sum256([]byte(Normalizar(sql)))
-	return hex.EncodeToString(s[:])
-}
+// Checksum es la identidad de la migración (la misma que calcula el servidor).
+func Checksum(sql string) string { return checksum.SQL(sql) }
 
 // EsVacio indica si el SQL solo tiene comentarios o espacios.
 func EsVacio(sql string) bool {
