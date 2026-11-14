@@ -1,0 +1,75 @@
+/* Marga Shared Design System & Utility Styles */
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  }
+  
+  body {
+    overscroll-behavior-y: none;
+    min-height: 100vh;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+/* Light mode scrollbar adaptation */
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #F5F5F5;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #D4D4D4;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #A3A3A3;
+}
+
+/* Canvas Background Patterns */
+.canvas-grid {
+  background-size: 28px 28px;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+}
+
+.canvas-dots {
+  background-size: 24px 24px;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+}
+
+/* Líneas de relación: sin brillos, solo trazo limpio */
+.bezier-glow,
+.bezier-glow-purple {
+  filter: none;
+}
+
+/* Global Transition Utility */
+.theme-transition {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Botón principal blanco: todo su contenido en negro */
+.bg-brand-violet .text-brand-cyan,
+.bg-brand-violet .text-brand-purple,
+.bg-brand-violet .text-white {
+  color: #0A0A0A !important;
+}

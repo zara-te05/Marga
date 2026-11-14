@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="web_dashboard" name="shell-type">
+  <title>Marga — Dashboard de Proyectos &amp; Migraciones</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "marga-bg": "#0A0A0A",
+            "marga-surface": "#111111",
+            "marga-card": "#171717",
+            "marga-card-hover": "#1F1F1F",
+            "marga-border": "#262626",
+            "marga-border-subtle": "#1C1C1C",
+            "marga-border-active": "#737373",
+            "brand-purple": "#A3A3A3",
+            "brand-violet": "#FAFAFA",
+            "brand-indigo": "#737373",
+            "brand-cyan": "#F5F5F5",
+            "brand-blue": "#737373",
+            "brand-sky": "#A3A3A3",
+            "diff-add": "#737373",
+            "diff-add-bg": "rgba(255, 255, 255, 0.05)",
+            "diff-del": "#A3A3A3",
+            "diff-del-bg": "rgba(255, 255, 255, 0.02)"
+          },
+          fontFamily: {
+            sans: ["Geist", "Inter", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="../assets/css/marga-shared.css">
+</head>
+<body data-scope="workspace" class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex flex-col">
+
+  <header id="marga-header" class="sticky top-0 z-50 shrink-0 h-16"></header>
+
+  <main class="flex-1 w-full max-w-[1400px] mx-auto px-5 lg:px-8 py-8 flex flex-col gap-6">
+
+    <!-- Encabezado -->
+    <section class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold text-white tracking-tight">Proyectos</h1>
+        <p class="text-sm text-neutral-400 mt-1">Cada proyecto guarda el historial de migraciones de una base de datos.</p>
+      </div>
+      <button class="flex items-center gap-2 h-9 px-4 rounded-md bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-sm font-medium transition-colors" onclick="openCreateDrawer()" type="button">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        <span>Nuevo proyecto</span>
+      </button>
+    </section>
+
+    <!-- Resumen numérico -->
+    <section class="grid grid-cols-2 md:grid-cols-4 rounded-lg border border-marga-border divide-x divide-marga-border bg-marga-surface">
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Proyectos</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-repos">—</div></div>
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Commits</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-commits">—</div></div>
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Ramas</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-branches">—</div></div>
+      <div class="px-5 py-4"><div class="text-xs text-neutral-500">Compartidos contigo</div><div class="text-2xl font-semibold text-white mt-1 font-mono" id="stat-shared">—</div></div>
+    </section>
+
+    <!-- Filtros -->
+    <section class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="flex items-center gap-1 p-1 rounded-md bg-marga-surface border border-marga-border w-fit">
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-950 bg-brand-violet" onclick="filterByEnvironment('all', this)" type="button">Todos</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Producción', this)" type="button">Producción</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Staging', this)" type="button">Staging</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Desarrollo', this)" type="button">Desarrollo</button>
+        <button class="px-3 py-1 rounded text-xs font-medium text-neutral-400 hover:text-neutral-100" onclick="filterByEnvironment('Sandbox', this)" type="button">Sandbox</button>
+      </div>
+      <div class="relative flex items-center">
+        <span class="material-symbols-outlined absolute left-2.5 text-[16px] text-neutral-500 pointer-events-none">search</span>
+        <input class="bg-marga-card border border-marga-border focus:border-brand-violet pl-8 pr-3 py-1.5 rounded-lg text-xs font-sans text-neutral-200 placeholder:text-neutral-500 w-44 focus:outline-none focus:ring-1 focus:ring-brand-violet transition-all" oninput="filterProjects(this.value)" placeholder="Filtrar por nombre..." type="text">
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="projects-grid">
+            
+            <!-- CARD 1: FinTech Core Engine -->
+            <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-white/20 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Producción" data-name="FinTech Core Engine" data-slug="fintech-core-prod">
+              <div class="flex flex-col gap-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-brand-purple shrink-0">
+                      <span class="material-symbols-outlined text-[22px]">database</span>
+                    </div>
+                    <div>
+                      <h2 class="text-base font-semibold text-neutral-100 group-hover:text-brand-purple transition-colors">FinTech Core Engine</h2>
+                      <span class="font-mono text-xs text-neutral-400">fintech-core-prod</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="shrink-0 px-2.5 py-1 rounded-full font-mono text-[10px] bg-white/5 text-brand-cyan border border-white/10">Producción</span>
+                    <button class="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-1')" type="button">
+                      <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                    </button>
+                  </div>
+                </div>
+
+                <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">Motor transaccional de pagos, ledger contable distribuido y conciliación bancaria en tiempo real.</p>
+                
+                <div class="flex flex-col gap-1.5 pt-1">
+                  <span class="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">3 DBs Vinculadas</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>pg-primary
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>ch-analytics
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-sky"></span>redis-cache
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-mono text-xs">
+                  <div class="flex items-center gap-1.5 text-neutral-200">
+                    <span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span>
+                    <span class="text-white font-medium">main</span>
+                    <span class="text-neutral-400">#d93f8a1</span>
+                  </div>
+                  <span class="text-neutral-400">hace 20m · miguel.dev</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle">
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-neutral-200 text-xs transition-colors border border-marga-border" onclick="openEditDrawer('FinTech Core Engine', 'fintech-core-prod', 'Motor transaccional de pagos y ledger contable de alta disponibilidad.', 'Producción')" type="button">
+                  <span class="material-symbols-outlined text-[16px] text-neutral-400">tune</span>
+                  <span>Configurar</span>
+                </button>
+                <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-violet text-brand-purple hover:text-neutral-950 text-xs font-semibold border border-white/10 transition-all" onclick="quickLaunch('FinTech Core Engine')" type="button">
+                  <span>Abrir DB Hub</span>
+                  <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+
+              <!-- Context Menu -->
+              <div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-1">
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('FinTech Core Engine', 'fintech-core-prod', 'Motor transaccional de pagos...', 'Producción')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span>
+                  <span>Editar ajustes</span>
+                </button>
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-200 hover:bg-marga-card transition-colors" onclick="duplicateProject('FinTech Core Engine')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">content_copy</span>
+                  <span>Duplicar esquema</span>
+                </button>
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-200 hover:bg-marga-card transition-colors" onclick="archiveProject('FinTech Core Engine')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">archive</span>
+                  <span>Archivar</span>
+                </button>
+                <div class="h-px bg-marga-border my-1"></div>
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors" onclick="confirmDelete('FinTech Core Engine')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">delete</span>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 2: Logistics & Fleet API -->
+            <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-white/20 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Producción" data-name="Logistics &amp; Fleet API" data-slug="logistics-fleet">
+              <div class="flex flex-col gap-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-cyan shrink-0">
+                      <span class="material-symbols-outlined text-[22px]">route</span>
+                    </div>
+                    <div>
+                      <h2 class="text-base font-semibold text-neutral-100 group-hover:text-brand-cyan transition-colors">Logistics &amp; Fleet API</h2>
+                      <span class="font-mono text-xs text-neutral-400">logistics-fleet</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="shrink-0 px-2.5 py-1 rounded-full font-mono text-[10px] bg-white/5 text-brand-cyan border border-white/10">Producción</span>
+                    <button class="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-2')" type="button">
+                      <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                    </button>
+                  </div>
+                </div>
+
+                <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">Rastreo de telemetría geoespacial, cálculo de ETA en tiempo real y asignación de despachos autónomos.</p>
+                
+                <div class="flex flex-col gap-1.5 pt-1">
+                  <span class="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">3 DBs Vinculadas</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>pg-postgis
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>redis-pubsub
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-sky"></span>timescale-events
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-mono text-xs">
+                  <div class="flex items-center gap-1.5 text-neutral-200">
+                    <span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span>
+                    <span class="text-white font-medium">main</span>
+                    <span class="text-neutral-400">#a412cf3</span>
+                  </div>
+                  <span class="text-neutral-400">hace 2h · sara.infra</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle">
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-neutral-200 text-xs transition-colors border border-marga-border" onclick="openEditDrawer('Logistics &amp; Fleet API', 'logistics-fleet', 'Rastreo de telemetría y ruteo de envíos.', 'Producción')" type="button">
+                  <span class="material-symbols-outlined text-[16px] text-neutral-400">tune</span>
+                  <span>Configurar</span>
+                </button>
+                <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-violet text-brand-purple hover:text-neutral-950 text-xs font-semibold border border-white/10 transition-all" onclick="quickLaunch('Logistics &amp; Fleet API')" type="button">
+                  <span>Abrir DB Hub</span>
+                  <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+
+              <div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-2">
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('Logistics &amp; Fleet API', 'logistics-fleet', 'Rastreo...', 'Producción')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span>
+                  <span>Editar ajustes</span>
+                </button>
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors" onclick="confirmDelete('Logistics &amp; Fleet API')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">delete</span>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 3: User Identity & Auth Engine -->
+            <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-white/20 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Staging" data-name="User Identity &amp; Auth Engine" data-slug="auth-engine-stg">
+              <div class="flex flex-col gap-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-purple shrink-0">
+                      <span class="material-symbols-outlined text-[22px]">fingerprint</span>
+                    </div>
+                    <div>
+                      <h2 class="text-base font-semibold text-neutral-100 group-hover:text-brand-purple transition-colors">User Identity &amp; Auth Engine</h2>
+                      <span class="font-mono text-xs text-neutral-400">auth-engine-stg</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="shrink-0 px-2.5 py-1 rounded-full font-mono text-[10px] bg-white/5 text-brand-purple border border-white/10">Staging</span>
+                    <button class="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-3')" type="button">
+                      <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                    </button>
+                  </div>
+                </div>
+
+                <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">Gestor de tokens OAuth2, Single Sign-On empresarial y almacenamiento de credenciales blindadas por Zero-Knowledge.</p>
+                
+                <div class="flex flex-col gap-1.5 pt-1">
+                  <span class="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">2 DBs Vinculadas</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>pg-identity
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>redis-session-jwt
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-mono text-xs">
+                  <div class="flex items-center gap-1.5 text-neutral-200">
+                    <span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span>
+                    <span class="text-white font-medium">staging</span>
+                    <span class="text-neutral-400">#7f89b1c</span>
+                  </div>
+                  <span class="text-neutral-400">hace 5h · carlos.sec</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle">
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-neutral-200 text-xs transition-colors border border-marga-border" onclick="openEditDrawer('User Identity &amp; Auth Engine', 'auth-engine-stg', 'Servicios OAuth2, SSO.', 'Staging')" type="button">
+                  <span class="material-symbols-outlined text-[16px] text-neutral-400">tune</span>
+                  <span>Configurar</span>
+                </button>
+                <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-violet text-brand-purple hover:text-neutral-950 text-xs font-semibold border border-white/10 transition-all" onclick="quickLaunch('User Identity &amp; Auth Engine')" type="button">
+                  <span>Abrir DB Hub</span>
+                  <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+
+              <div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-3">
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-200 hover:bg-marga-card transition-colors" onclick="openEditDrawer('User Identity &amp; Auth Engine', 'auth-engine-stg', 'Servicios...', 'Staging')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-brand-sky">edit</span>
+                  <span>Editar ajustes</span>
+                </button>
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors" onclick="confirmDelete('User Identity &amp; Auth Engine')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">delete</span>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 4: Billing & Subscriptions -->
+            <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-white/20 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Producción" data-name="Billing &amp; Subscriptions" data-slug="billing-sub">
+              <div class="flex flex-col gap-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-brand-purple shrink-0">
+                      <span class="material-symbols-outlined text-[22px]">receipt_long</span>
+                    </div>
+                    <div>
+                      <h2 class="text-base font-semibold text-neutral-100 group-hover:text-brand-purple transition-colors">Billing &amp; Subscriptions</h2>
+                      <span class="font-mono text-xs text-neutral-400">billing-sub</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="shrink-0 px-2.5 py-1 rounded-full font-mono text-[10px] bg-white/5 text-brand-cyan border border-white/10">Producción</span>
+                    <button class="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-4')" type="button">
+                      <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                    </button>
+                  </div>
+                </div>
+
+                <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">Facturación electrónica recurrente, integraciones Stripe/Adyen y control estricto de suscripciones SaaS.</p>
+                
+                <div class="flex flex-col gap-1.5 pt-1">
+                  <span class="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">2 DBs Vinculadas</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>pg-billing-ledger
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-purple"></span>clickhouse-invoices
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-mono text-xs">
+                  <div class="flex items-center gap-1.5 text-neutral-200">
+                    <span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span>
+                    <span class="text-white font-medium">main</span>
+                    <span class="text-neutral-400">#e291f0a</span>
+                  </div>
+                  <span class="text-neutral-400">ayer · elena.core</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle">
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-neutral-200 text-xs transition-colors border border-marga-border" onclick="openEditDrawer('Billing &amp; Subscriptions', 'billing-sub', 'Conciliación bancaria.', 'Producción')" type="button">
+                  <span class="material-symbols-outlined text-[16px] text-neutral-400">tune</span>
+                  <span>Configurar</span>
+                </button>
+                <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-violet text-brand-purple hover:text-neutral-950 text-xs font-semibold border border-white/10 transition-all" onclick="quickLaunch('Billing &amp; Subscriptions')" type="button">
+                  <span>Abrir DB Hub</span>
+                  <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+
+              <div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-4">
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors" onclick="confirmDelete('Billing &amp; Subscriptions')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">delete</span>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 5: Marketing & Growth Analytics -->
+            <article class="project-card group relative flex flex-col justify-between p-6 rounded-2xl bg-marga-surface/90 border border-marga-border hover:border-white/20 hover:bg-marga-card transition-all shadow-lg hover:shadow-xl" data-env="Desarrollo" data-name="Marketing &amp; Growth Analytics" data-slug="mkt-analytics-dev">
+              <div class="flex flex-col gap-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-sky shrink-0">
+                      <span class="material-symbols-outlined text-[22px]">monitoring</span>
+                    </div>
+                    <div>
+                      <h2 class="text-base font-semibold text-neutral-100 group-hover:text-brand-sky transition-colors">Marketing &amp; Growth Analytics</h2>
+                      <span class="font-mono text-xs text-neutral-400">mkt-analytics-dev</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="shrink-0 px-2.5 py-1 rounded-full font-mono text-[10px] bg-marga-card text-neutral-300 border border-marga-border">Desarrollo</span>
+                    <button class="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-marga-surface transition-colors" onclick="toggleContextMenu('menu-5')" type="button">
+                      <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                    </button>
+                  </div>
+                </div>
+
+                <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">Ingesta masiva de logs de navegación, segmentación de cohortes e integración con data lake columnar.</p>
+                
+                <div class="flex flex-col gap-1.5 pt-1">
+                  <span class="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">1 DB Vinculada</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-bg border border-marga-border-subtle font-mono text-xs text-neutral-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-sky"></span>clickhouse-events
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-marga-bg border border-marga-border-subtle font-mono text-xs">
+                  <div class="flex items-center gap-1.5 text-neutral-200">
+                    <span class="material-symbols-outlined text-[14px] text-brand-purple">call_split</span>
+                    <span class="text-white font-medium">feat/event-stream</span>
+                    <span class="text-neutral-400">#551bc42</span>
+                  </div>
+                  <span class="text-neutral-400">hace 3d · diego.data</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 pt-4 mt-2 border-t border-marga-border-subtle">
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-marga-surface hover:bg-marga-border text-neutral-200 text-xs transition-colors border border-marga-border" onclick="openEditDrawer('Marketing &amp; Growth Analytics', 'mkt-analytics-dev', 'Pipeline de eventos.', 'Desarrollo')" type="button">
+                  <span class="material-symbols-outlined text-[16px] text-neutral-400">tune</span>
+                  <span>Configurar</span>
+                </button>
+                <button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-violet text-brand-purple hover:text-neutral-950 text-xs font-semibold border border-white/10 transition-all" onclick="quickLaunch('Marketing &amp; Growth Analytics')" type="button">
+                  <span>Abrir DB Hub</span>
+                  <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+
+              <div class="hidden absolute top-12 right-4 z-20 w-44 rounded-xl bg-marga-surface border border-marga-border p-1.5 shadow-2xl flex flex-col gap-0.5" id="menu-5">
+                <button class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-left text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors" onclick="confirmDelete('Marketing &amp; Growth Analytics')" type="button">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">delete</span>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 6: INTUITIVE NEW PROJECT CREATION CARD -->
+            <article class="group flex flex-col items-center justify-center p-8 rounded-2xl bg-[#0F0F0F]/60 hover:bg-marga-card/80 border-2 border-dashed border-marga-border hover:border-brand-violet transition-all cursor-pointer shadow-sm hover:shadow-xl text-center min-h-[320px]" onclick="openCreateDrawer()">
+              <div class="flex flex-col items-center justify-center h-full gap-4 text-center my-auto">
+                <div class="w-14 h-14 rounded-2xl bg-white/5 group-hover:bg-brand-violet border border-white/10 text-brand-purple group-hover:text-neutral-950 flex items-center justify-center transition-all shadow-md">
+                  <span class="material-symbols-outlined text-[28px]">add</span>
+                </div>
+                <div>
+                  <h3 class="text-base font-semibold text-neutral-200 group-hover:text-white transition-colors">Crear Nuevo Proyecto</h3>
+                  <p class="text-xs text-neutral-400 mt-1 max-w-xs leading-relaxed">Configura un espacio aislado, conecta clusters de PostgreSQL o ClickHouse y versiona tus esquemas.</p>
+                </div>
+                <span class="px-4 py-2 rounded-lg bg-marga-surface border border-marga-border font-mono text-xs text-brand-sky group-hover:bg-white/10 group-hover:border-white/20 transition-colors inline-flex items-center gap-1.5">
+                  Presiona para configurar <span class="material-symbols-outlined text-[15px]">arrow_forward</span>
+                </span>
+              </div>
+            </article>
+
+          </section>
+  </main>
+
+  <!-- SLIDE-OVER DRAWER (CREATION & EDITING) -->
+  <div class="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm hidden transition-opacity" id="drawer-backdrop" onclick="closeAllDrawers()"></div>
+  
+  <aside class="fixed top-0 right-0 z-50 h-full w-full max-w-xl bg-marga-surface border-l border-marga-border shadow-2xl flex flex-col justify-between translate-x-full transition-transform duration-300 ease-out overflow-y-auto" id="project-drawer">
+    <div class="flex flex-col">
+      <!-- Drawer Top Header -->
+      <div class="sticky top-0 z-10 flex items-center justify-between p-6 bg-marga-surface border-b border-marga-border shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-brand-purple">
+            <span class="material-symbols-outlined text-[20px]" id="drawer-icon">tune</span>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white" id="drawer-title">Configurar Proyecto</h3>
+            <span class="font-mono text-xs text-neutral-400" id="drawer-subtitle">Ajustes generales y control de bases de datos</span>
+          </div>
+        </div>
+        <button class="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-marga-card transition-colors" onclick="closeAllDrawers()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Drawer Tabs -->
+      <div class="flex items-center px-6 gap-2 bg-marga-surface/50 border-b border-marga-border">
+        <button class="py-2.5 px-3 font-semibold text-xs text-brand-purple bg-marga-card rounded-t-lg border-b-2 border-brand-violet" onclick="switchDrawerTab('general', this)" type="button">General</button>
+        <button class="py-2.5 px-3 font-medium text-xs text-neutral-400 hover:text-neutral-200 rounded-t-lg transition-colors" onclick="switchDrawerTab('danger', this)" type="button">Zona Peligrosa</button>
+      </div>
+
+      <!-- Drawer Body -->
+      <div class="p-6 flex flex-col gap-6">
+        <!-- TAB 1: GENERAL -->
+        <div class="flex flex-col gap-4" id="tab-general">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-neutral-300">Nombre del Proyecto</label>
+            <input class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet transition-colors" id="form-name" oninput="syncSlug(this.value)" placeholder="ej. Payments Microservice" type="text" value="FinTech Core Engine">
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-neutral-300">Slug Identificador (Inmutable)</label>
+            <input class="h-10 px-3.5 rounded-lg bg-marga-bg border border-marga-border font-mono text-xs text-brand-cyan focus:outline-none transition-colors" id="form-slug" placeholder="ej. payments-microservice" readonly type="text" value="fintech-core-prod">
+            <span class="text-[11px] text-neutral-500">Se utiliza para URLs internas, logs de migración y CLI hooks.</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-neutral-300">Descripción</label>
+            <textarea class="p-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet transition-colors" id="form-desc" placeholder="Describe la función de este repositorio DDL..." rows="3">Motor transaccional de pagos, ledger contable distribuido y conciliación bancaria.</textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-semibold text-neutral-300">Entorno</label>
+              <select class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer" id="form-env">
+                <option value="Producción">Producción</option>
+                <option value="Staging">Staging</option>
+                <option value="Desarrollo">Desarrollo</option>
+                <option value="Sandbox">Sandbox / QA</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-semibold text-neutral-300">Motor de base de datos</label>
+              <select class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer" id="form-motor">
+                <option value="postgresql">PostgreSQL</option>
+                <option value="mysql">MySQL</option>
+                <option value="sqlserver">SQL Server</option>
+                <option value="sqlite">SQLite</option>
+                <option value="mongodb">MongoDB</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold text-neutral-300">Visibilidad</label>
+            <select class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer" id="form-vis">
+              <option value="privado">Privado — solo tú y tus colaboradores</option>
+              <option value="publico">Público — cualquier usuario puede verlo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- TAB 3: DANGER ZONE -->
+        <div class="hidden flex flex-col gap-4" id="tab-danger">
+          <div class="p-4 rounded-xl bg-neutral-500/10 border border-neutral-500/30 flex flex-col gap-3">
+            <div class="flex items-center gap-2 text-neutral-400">
+              <span class="material-symbols-outlined text-[20px]">warning</span>
+              <span class="text-xs font-bold">Zona de Destrucción y Purga</span>
+            </div>
+            <p class="text-xs text-neutral-300 leading-relaxed">
+              Eliminar este proyecto destruirá las configuraciones de esquema, el historial de commits y el mapeo de reversiones en Marga. Tus servidores de base de datos no sufrirán alteraciones directas.
+            </p>
+            <div class="pt-2">
+              <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-950 text-xs font-semibold transition-colors" onclick="triggerDeleteFromDrawer()" type="button">
+                <span class="material-symbols-outlined text-[18px]">delete_forever</span>
+                <span>Eliminar Proyecto Completo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="sticky bottom-0 p-6 bg-marga-surface border-t border-marga-border shadow-lg flex items-center justify-between">
+      <button class="px-4 py-2 rounded-lg bg-marga-card hover:bg-marga-card-hover text-xs text-neutral-300 transition-colors" onclick="closeAllDrawers()" type="button">
+        Cancelar
+      </button>
+      <button class="flex items-center gap-2 px-5 py-2 rounded-lg bg-brand-violet hover:bg-neutral-300 text-xs font-semibold text-neutral-950 shadow-md transition-all" id="drawer-save-btn" onclick="saveProjectChanges()" type="button">
+        <span class="material-symbols-outlined text-[18px]">check</span>
+        <span id="drawer-save-text">Guardar Cambios</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONFIRMATION MODAL: DELETION GUARD -->
+  <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4" id="delete-modal">
+    <div class="max-w-md w-full p-6 rounded-2xl bg-marga-surface border border-marga-border shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center gap-3 text-neutral-400">
+        <div class="w-10 h-10 rounded-xl bg-neutral-500/20 border border-neutral-500/30 flex items-center justify-center text-neutral-400 shrink-0">
+          <span class="material-symbols-outlined text-[22px]">delete</span>
+        </div>
+        <div>
+          <h4 class="text-base font-bold text-white">¿Confirmar Eliminación?</h4>
+          <span class="font-mono text-xs text-neutral-400">Esta acción no puede revertirse</span>
+        </div>
+      </div>
+      <p class="text-xs text-neutral-300 leading-relaxed">
+        Estás a punto de desvincular el proyecto <strong class="text-white" id="delete-target-name">FinTech Core Engine</strong> de Marga. Para proceder, escribe <code class="font-mono text-brand-cyan bg-marga-card px-1.5 py-0.5 rounded border border-marga-border">ELIMINAR</code> a continuación:
+      </p>
+      <input class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border font-mono text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500 transition-colors" id="delete-confirm-input" oninput="validateDeleteInput(this.value)" placeholder="Escribe ELIMINAR" type="text">
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button class="px-4 py-2 rounded-lg bg-marga-card hover:bg-marga-card-hover text-xs text-neutral-300 transition-colors" onclick="closeDeleteModal()" type="button">
+          Cancelar
+        </button>
+        <button class="px-4 py-2 rounded-lg bg-neutral-900/40 text-neutral-300/60 font-medium text-xs cursor-not-allowed transition-all" disabled="" id="delete-execute-btn" onclick="executeProjectDeletion()" type="button">
+          Destruir Proyecto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../assets/js/marga-common.js"></script>
+  <script src="../assets/js/marga-api.js"></script>
+  <script src="../assets/js/marga-layout.js"></script>
+  <script src="../assets/js/proyectos.js"></script>
+</body>
+</html>
