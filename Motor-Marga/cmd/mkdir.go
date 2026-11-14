@@ -8,8 +8,8 @@ import (
 
 var mkdir = cobra.Command{
 	Use:   "mkdir [name]",
-	Short: "This command have the capacity to create folders",
-	Args:  cobra.MaximumNArgs(1),
+	Short: "Crea una carpeta",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 
 		err := os.MkdirAll(args[0], 0755)

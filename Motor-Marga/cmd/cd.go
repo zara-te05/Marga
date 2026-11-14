@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -9,7 +8,7 @@ import (
 
 var cd = &cobra.Command{
 	Use:   "cd [path] [..]",
-	Short: "Chagens to the selected dictionary",
+	Short: "Cambia de carpeta",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -21,7 +20,7 @@ var cd = &cobra.Command{
 		err := os.Chdir(targetDir)
 
 		if err != nil {
-			fmt.Printf("Error al cambiar de directorio: %s\n", err)
+			cmd.PrintErrf("Error al cambiar de directorio: %s\n", err)
 			return
 		}
 

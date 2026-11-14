@@ -11,7 +11,7 @@ import (
 var clear = cobra.Command{
 	Use:     "clear",
 	Aliases: []string{"cls"},
-	Short:   "This command clear all the text in the terminal",
+	Short:   "Limpia la pantalla",
 	Run: func(cmd *cobra.Command, args []string) {
 		CallClear()
 	},
@@ -27,8 +27,4 @@ func CallClear() {
 	}
 	c.Stdout = os.Stdout
 	_ = c.Run()
-}
-
-func init() {
-	RootCmd.AddCommand(&clear)
 }

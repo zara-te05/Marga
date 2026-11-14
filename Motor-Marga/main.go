@@ -99,6 +99,10 @@ func (m *model) evalCommand(input string) string {
 
 	args := cmd.ParseInput(input)
 
+	// El árbol de Cobra se reutiliza en cada comando: limpiar flags del anterior.
+	cmd.Interactivo = true
+	cmd.ResetFlags(cmd.RootCmd)
+
 	// Crear el buffer y asignarlo a Cobra
 	buf := new(bytes.Buffer)
 	cmd.RootCmd.SetOut(buf)
@@ -192,7 +196,7 @@ func (m model) View() string {
 
 	content.WriteString(m.textInput.View())
 	content.WriteString("\n")
-	content.WriteString(helpStyle.Render("Escribe 'exit' o presiona [Ctrl+C] para salir"))
+	content.WriteString(helpStyle.Render("'help' para ver los comandos · 'exit' o [Ctrl+C] para salir"))
 
 	card := containerStyle.Render(content.String())
 	return lipgloss.Place(
@@ -205,13 +209,22 @@ func (m model) View() string {
 }
 
 func main() {
+	// Con argumentos (`marga status`, `marga up --env dev`) funciona como CLI normal,
+	// apta para scripts y CI. Sin argumentos abre la consola interactiva.
+	if len(os.Args) > 1 {
+		cmd.Execute()
+		return
+	}
+
 	m := New()
 
-	f, err := tea.LogToFile("debug.log", "debug")
-	if err != nil {
-		log.Fatalf("error: %v", err)
+	if os.Getenv("MARGA_DEBUG") != "" {
+		f, err := tea.LogToFile("debug.log", "debug")
+		if err != nil {
+			log.Fatalf("error: %v", err)
+		}
+		defer f.Close()
 	}
-	defer f.Close()
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

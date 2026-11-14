@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -16,10 +15,10 @@ var create = &cobra.Command{
 		file, err := os.Create(args[0])
 
 		if err != nil {
-			fmt.Println("Error al crear el archivo:", err)
+			cmd.PrintErrln("Error al crear el archivo:", err)
 			return
 		}
 		file.Close() // Es muy importante cerrarlo inmediatamente después de crearlo
-		cmd.Println("Archivo creado exitosamente: ", file)
+		cmd.Println("Archivo creado:", file.Name())
 	},
 }

@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 // Estructura para mapear puertos con sus respectivos motores de BD
@@ -12,8 +15,8 @@ type DBEngine struct {
 	Port int
 }
 
-func Scaneo() {
-
+// Scaneo busca motores de bases de datos escuchando en localhost.
+func Scaneo(w io.Writer) {
 	databases := []DBEngine{
 		{"MySQL / MariaDB", 3306},
 		{"PostgreSQL", 5432},
@@ -21,26 +24,30 @@ func Scaneo() {
 		{"Oracle Database", 1521},
 		{"MongoDB", 27017},
 		{"Redis", 6379},
-		{"SQLite", 0}, // SQLite es un archivo, no usa puerto de red
 		{"Cassandra", 9042},
 	}
 
-	fmt.Println("Buscando motores de bases de datos instalados/activos en localhost...\n")
+	fmt.Fprintln(w, "Buscando motores de bases de datos activos en localhost...")
 
 	for _, db := range databases {
-		if db.Port == 0 {
-			continue // Omitimos los que no usan red por ahora
-		}
-
 		address := fmt.Sprintf("127.0.0.1:%d", db.Port)
 
 		// Intentamos conectar con un tiempo límite corto (500ms)
 		conn, err := net.DialTimeout("tcp", address, 500*time.Millisecond)
 		if err == nil {
 			_ = conn.Close()
-			fmt.Printf("[DETECTADO] %s está activo en el puerto %d\n", db.Name, db.Port)
+			fmt.Fprintf(w, "  %s %s en el puerto %d\n", sAcento.Render("●"), db.Name, db.Port)
 		} else {
-			fmt.Printf("[NO DETECTADO] %s (Puerto %d cerrado o sin servicio)\n", db.Name, db.Port)
+			fmt.Fprintf(w, "  %s %s (puerto %d cerrado)\n", sTenue.Render("○"), db.Name, db.Port)
 		}
 	}
+}
+
+var detectarCmd = &cobra.Command{
+	Use:   "detectar",
+	Short: "Detecta motores de bases de datos activos en esta máquina",
+	Args:  cobra.NoArgs,
+	Run: func(c *cobra.Command, args []string) {
+		Scaneo(c.OutOrStdout())
+	},
 }
