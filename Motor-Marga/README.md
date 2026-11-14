@@ -31,6 +31,8 @@ marga status           # qué está aplicado y qué falta
 marga up --dry-run     # ver el SQL sin ejecutarlo
 marga up               # aplicar
 marga down             # revertir la última
+marga drift            # cambios hechos a mano en la base (fuera de Marga)
+marga esquema [tabla]  # el esquema real, o el DDL de una tabla
 
 # 5. Compartirla con el equipo
 marga push             # sube tus migraciones al servidor
@@ -45,9 +47,11 @@ marga log              # historial de la rama en el servidor
 | `.marga/config.json` | sí | servidor, ID del proyecto, rama, motor, carpeta de migraciones |
 | `.marga/remoto.json` | sí | qué migración local corresponde a qué commit del servidor |
 | `.marga/entornos.json` | **no** (`.marga/.gitignore`) | cadenas de conexión con contraseña |
+| `.marga/snapshots/<entorno>/*.json` | **no** | esquema que dejó cada migración (lo usa `push`) |
 | `migrations/*.sql` | sí | tus migraciones |
 | `~/.marga/credenciales.json` | — | token de acceso por servidor (permisos 600). Tu contraseña nunca se guarda |
 | tabla `marga_history` en **tu** BD | — | qué se aplicó, cuándo, cuánto tardó, quién y con qué checksum |
+| tabla `marga_esquema` en **tu** BD | — | el esquema tal como lo dejó Marga (línea base para detectar drift) |
 
 ## Garantías
 
@@ -61,6 +65,34 @@ marga log              # historial de la rama en el servidor
 - **Equipos**: si tú y un compañero crean la misma versión (p. ej. `0006`) sin saberlo, `push` te pide
   hacer `pull` primero y `pull` renumera **tu** migración sin enviar. Así todos tienen la misma numeración.
 
+## Drift: cambios hechos fuera de Marga
+
+Después de cada `up`/`down`, Marga guarda el esquema resultante en `marga_esquema`.
+`marga status` lo compara con el esquema real y lista cualquier diferencia:
+
+```
+! 2 cambios hechos fuera de Marga en staging:
+    + columna cupones.vence date
+    + índice idx_pedidos_total en pedidos
+```
+
+Mientras haya drift, `up` y `down` no hacen nada (para no construir sobre algo desconocido).
+Si los cambios son correctos: `marga drift --aceptar --env staging`. La primera vez que Marga ve
+una base, toma su estado actual como línea base.
+
+## Entornos y la web
+
+Cada `status`, `up`, `down` y `drift` envía a Marga Sun el estado del entorno: qué tiene aplicado,
+su esquema real y su drift. Con eso la web muestra la pestaña **Entornos** (aplicadas y pendientes
+por entorno), el **diagrama ER real** en Esquema y en qué entornos está cada commit.
+
+- `dev` y `local` son **personales**: se reportan como `dev@tu-usuario`, para no mezclar la base de cada quien.
+- El resto (`staging`, `prod`…) son **compartidos**. Se puede forzar con `env add --personal` o `--compartido`.
+- Si no hay sesión o el proyecto no está vinculado, simplemente no se reporta.
+
+`marga up` también guarda el esquema que dejó cada migración; `marga push` lo usa para enviar el
+DDL de las tablas que cambió. Por eso conviene aplicar (`up`) antes de hacer `push`.
+
 ## Variables útiles (CI)
 
 ```bash
@@ -73,4 +105,4 @@ marga up --env prod --si
 
 - Aplicar migraciones: solo PostgreSQL (`env probar` también funciona con MySQL y SQL Server).
 - `push`/`pull` trabajan sobre una rama (`--rama`); todavía no hay merge entre ramas.
-- El servidor aún no sabe qué está aplicado en cada entorno (eso es la fase 2).
+- La introspección y el drift solo funcionan en PostgreSQL.

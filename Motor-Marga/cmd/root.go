@@ -30,7 +30,7 @@ func init() {
 		&cobra.Group{ID: "servidor", Title: "Servidor:"},
 		&cobra.Group{ID: "consola", Title: "Consola:"},
 	)
-	for _, c := range []*cobra.Command{initCmd, envCmd, newCmd, statusCmd, upCmd, downCmd, detectarCmd} {
+	for _, c := range []*cobra.Command{initCmd, envCmd, newCmd, statusCmd, upCmd, downCmd, driftCmd, esquemaCmd, detectarCmd} {
 		c.GroupID = "migraciones"
 		RootCmd.AddCommand(c)
 	}

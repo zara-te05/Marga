@@ -5,6 +5,7 @@ package migrador
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/zarat/Motor-Marga/internal/introspeccion"
 	"github.com/zarat/Motor-Marga/internal/proyecto"
 )
 
@@ -29,6 +31,15 @@ CREATE TABLE IF NOT EXISTS marga_history (
     aplicada_en  TIMESTAMPTZ NOT NULL DEFAULT now(),
     duracion_ms  INTEGER     NOT NULL,
     aplicada_por TEXT        NOT NULL
+)`
+
+// marga_esquema guarda el esquema tal como lo dejó la última migración de Marga.
+// Compararlo con el esquema real revela cambios hechos a mano (drift).
+const ddlEsquema = `
+CREATE TABLE IF NOT EXISTS marga_esquema (
+    id             INTEGER     PRIMARY KEY CHECK (id = 1),
+    esquema        JSONB       NOT NULL,
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 )`
 
 type Aplicada struct {
@@ -162,7 +173,8 @@ func Comparar(locales []proyecto.Migracion, aplicadas []Aplicada) []Fila {
 // ---------------------------------------------------------------- Aplicar / revertir
 
 // Evento informa el resultado de cada migración mientras se aplica.
-type Evento func(mig proyecto.Migracion, dur time.Duration, err error)
+// esquema es el esquema justo después de esa migración (nil si falló).
+type Evento func(mig proyecto.Migracion, dur time.Duration, esquema *introspeccion.Esquema, err error)
 
 func (m *Migrador) bloquear(ctx context.Context) (*sql.Conn, error) {
 	conn, err := m.db.Conn(ctx)
@@ -194,23 +206,29 @@ func (m *Migrador) Subir(ctx context.Context, migs []proyecto.Migracion, autor s
 		return err
 	}
 	defer liberar(conn)
-	if _, err := conn.ExecContext(ctx, ddlHistorial); err != nil {
-		return fmt.Errorf("no se pudo crear %s: %w", tabla, err)
+	if err := asegurarTablas(ctx, conn); err != nil {
+		return err
 	}
 	for _, mig := range migs {
 		inicio := time.Now()
+		var snap *introspeccion.Esquema
 		err := ejecutar(ctx, conn, mig.SinTransaccion, mig.Up, func(q execer) error {
-			_, err := q.ExecContext(ctx, `
+			if _, err := q.ExecContext(ctx, `
 				INSERT INTO marga_history (version, nombre, checksum, duracion_ms, aplicada_por)
 				VALUES ($1, $2, $3, $4, $5)`,
-				mig.Version, mig.Nombre, mig.Checksum, int(time.Since(inicio).Milliseconds()), autor)
+				mig.Version, mig.Nombre, mig.Checksum, int(time.Since(inicio).Milliseconds()), autor); err != nil {
+				return err
+			}
+			var err error
+			snap, err = guardarLineaBase(ctx, q)
 			return err
 		})
 		if err != nil {
 			err = explicar(err, mig.Up)
+			snap = nil
 		}
 		if ev != nil {
-			ev(mig, time.Since(inicio), err)
+			ev(mig, time.Since(inicio), snap, err)
 		}
 		if err != nil {
 			return fmt.Errorf("%s: %w", mig.ID(), err)
@@ -226,22 +244,31 @@ func (m *Migrador) Bajar(ctx context.Context, migs []proyecto.Migracion, ev Even
 		return err
 	}
 	defer liberar(conn)
+	if err := asegurarTablas(ctx, conn); err != nil {
+		return err
+	}
 	for _, mig := range migs {
 		inicio := time.Now()
 		var err error
+		var snap *introspeccion.Esquema
 		if mig.Down == "" {
 			err = errors.New("no tiene script DOWN (archivo .down.sql vacío)")
 		} else {
 			err = ejecutar(ctx, conn, mig.SinTransaccion, mig.Down, func(q execer) error {
-				_, err := q.ExecContext(ctx, `DELETE FROM marga_history WHERE version = $1`, mig.Version)
+				if _, err := q.ExecContext(ctx, `DELETE FROM marga_history WHERE version = $1`, mig.Version); err != nil {
+					return err
+				}
+				var err error
+				snap, err = guardarLineaBase(ctx, q)
 				return err
 			})
 			if err != nil {
 				err = explicar(err, mig.Down)
+				snap = nil
 			}
 		}
 		if ev != nil {
-			ev(mig, time.Since(inicio), err)
+			ev(mig, time.Since(inicio), snap, err)
 		}
 		if err != nil {
 			return fmt.Errorf("%s: %w", mig.ID(), err)
@@ -252,6 +279,89 @@ func (m *Migrador) Bajar(ctx context.Context, migs []proyecto.Migracion, ev Even
 
 type execer interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func asegurarTablas(ctx context.Context, q execer) error {
+	if _, err := q.ExecContext(ctx, ddlHistorial); err != nil {
+		return fmt.Errorf("no se pudo crear %s: %w", tabla, err)
+	}
+	if _, err := q.ExecContext(ctx, ddlEsquema); err != nil {
+		return fmt.Errorf("no se pudo crear marga_esquema: %w", err)
+	}
+	return nil
+}
+
+// guardarLineaBase lee el esquema actual y lo guarda como "lo que dejó Marga".
+func guardarLineaBase(ctx context.Context, q execer) (*introspeccion.Esquema, error) {
+	e, err := introspeccion.Leer(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo leer el esquema: %w", err)
+	}
+	b, _ := json.Marshal(e)
+	if _, err := q.ExecContext(ctx, `
+		INSERT INTO marga_esquema (id, esquema) VALUES (1, $1)
+		ON CONFLICT (id) DO UPDATE SET esquema = EXCLUDED.esquema, actualizado_en = now()`, string(b)); err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
+// ---------------------------------------------------------------- Esquema y drift
+
+// EsquemaReal lee el esquema tal como está ahora en la base.
+func (m *Migrador) EsquemaReal(ctx context.Context) (introspeccion.Esquema, error) {
+	return introspeccion.Leer(ctx, m.db)
+}
+
+// LineaBase devuelve el esquema que dejó la última operación de Marga (nil si no hay).
+func (m *Migrador) LineaBase(ctx context.Context) (*introspeccion.Esquema, error) {
+	var existe bool
+	if err := m.db.QueryRowContext(ctx, `SELECT to_regclass('marga_esquema') IS NOT NULL`).Scan(&existe); err != nil || !existe {
+		return nil, err
+	}
+	var raw []byte
+	err := m.db.QueryRowContext(ctx, `SELECT esquema FROM marga_esquema WHERE id = 1`).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var e introspeccion.Esquema
+	return &e, json.Unmarshal(raw, &e)
+}
+
+// AceptarEsquema toma el esquema actual como nueva línea base (acepta el drift).
+func (m *Migrador) AceptarEsquema(ctx context.Context) (*introspeccion.Esquema, error) {
+	conn, err := m.db.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	if err := asegurarTablas(ctx, conn); err != nil {
+		return nil, err
+	}
+	return guardarLineaBase(ctx, conn)
+}
+
+// Drift compara la línea base con el esquema real.
+// nuevaBase=true si no había línea base y se acaba de crear con el estado actual.
+func (m *Migrador) Drift(ctx context.Context) (cambios []string, real introspeccion.Esquema, nuevaBase bool, err error) {
+	if real, err = m.EsquemaReal(ctx); err != nil {
+		return
+	}
+	base, err := m.LineaBase(ctx)
+	if err != nil {
+		return
+	}
+	if base == nil {
+		// Primera vez (o base creada antes de la fase 2): se adopta el estado actual.
+		_, err = m.AceptarEsquema(ctx)
+		return nil, real, true, err
+	}
+	return introspeccion.Comparar(*base, real), real, false, nil
 }
 
 // ejecutar corre el SQL y el registro en el historial juntos: o pasan los dos o ninguno.

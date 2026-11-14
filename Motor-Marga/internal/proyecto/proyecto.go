@@ -31,7 +31,15 @@ type Config struct {
 type Entorno struct {
 	URL   string `json:"url"` // cadena de conexión o "$VARIABLE"
 	Motor string `json:"motor"`
+	// Compartido: la usa todo el equipo (staging, prod). Si es false es la base
+	// personal de quien ejecuta la CLI y se reporta como "dev@usuario".
+	Compartido bool `json:"compartido"`
 }
+
+var reEntornoPersonal = regexp.MustCompile(`(?i)^(dev|local|desarrollo|development)$`)
+
+// EsPersonalPorNombre: "dev" o "local" se asumen personales; el resto, compartidos.
+func EsPersonalPorNombre(nombre string) bool { return reEntornoPersonal.MatchString(nombre) }
 
 type Proyecto struct {
 	Raiz   string
@@ -80,7 +88,7 @@ func Iniciar(raiz string, cfg Config) (*Proyecto, error) {
 	if err := os.MkdirAll(p.DirMigraciones(), 0o755); err != nil {
 		return nil, err
 	}
-	gi := "# Generado por Marga: las cadenas de conexión no se versionan\nentornos.json\n"
+	gi := "# Generado por Marga: las cadenas de conexión no se versionan\nentornos.json\nsnapshots/\n"
 	if err := os.WriteFile(filepath.Join(raiz, Dir, ".gitignore"), []byte(gi), 0o644); err != nil {
 		return nil, err
 	}
@@ -338,4 +346,66 @@ func (p *Proyecto) RenombrarVersion(m Migracion, nueva string) error {
 		}
 	}
 	return nil
+}
+
+// ---------------------------------------------------------------- Snapshots locales
+
+// Al aplicar una migración, la CLI guarda el esquema resultante en
+// .marga/snapshots/<entorno>/<id>.json (por entorno: cada base puede diferir).
+// `marga push` los usa para enviar al servidor el DDL de las tablas que cambió.
+
+func (p *Proyecto) rutaSnapshot(entorno, id string) string {
+	return filepath.Join(p.Raiz, Dir, "snapshots", entorno, id+".json")
+}
+
+func (p *Proyecto) GuardarSnapshot(entorno, id string, v any) error {
+	if err := os.MkdirAll(filepath.Join(p.Raiz, Dir, "snapshots", entorno), 0o755); err != nil {
+		return err
+	}
+	p.asegurarIgnorado("snapshots/")
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(p.rutaSnapshot(entorno, id), b, 0o644)
+}
+
+// LeerSnapshot devuelve false si esa migración no tiene snapshot en ese entorno.
+func (p *Proyecto) LeerSnapshot(entorno, id string, v any) (bool, error) {
+	b, err := os.ReadFile(p.rutaSnapshot(entorno, id))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, json.Unmarshal(b, v)
+}
+
+// EntornosConSnapshots lista los entornos que tienen snapshots guardados.
+func (p *Proyecto) EntornosConSnapshots() []string {
+	ents, _ := os.ReadDir(filepath.Join(p.Raiz, Dir, "snapshots"))
+	var out []string
+	for _, e := range ents {
+		if e.IsDir() {
+			out = append(out, e.Name())
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// asegurarIgnorado agrega una línea a .marga/.gitignore si falta (proyectos creados antes).
+func (p *Proyecto) asegurarIgnorado(linea string) {
+	ruta := filepath.Join(p.Raiz, Dir, ".gitignore")
+	b, _ := os.ReadFile(ruta)
+	for _, l := range strings.Split(strings.ReplaceAll(string(b), "\r\n", "\n"), "\n") {
+		if strings.TrimSpace(l) == linea {
+			return
+		}
+	}
+	if len(b) > 0 && !strings.HasSuffix(string(b), "\n") {
+		b = append(b, '\n')
+	}
+	_ = os.WriteFile(ruta, append(b, []byte(linea+"\n")...), 0o644)
 }

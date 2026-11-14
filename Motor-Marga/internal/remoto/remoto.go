@@ -186,12 +186,44 @@ type Historial struct {
 	Commits []Commit `json:"commits"`
 }
 
+type NuevoSnapshot struct {
+	Tabla     string `json:"tabla"`
+	DDL       string `json:"ddl"`
+	Eliminada bool   `json:"eliminada,omitempty"`
+}
+
 type NuevoCommit struct {
-	Branch        string  `json:"branch"`
-	Mensaje       string  `json:"mensaje"`
-	SQLUp         string  `json:"sql_up"`
-	SQLDown       string  `json:"sql_down"`
-	PadreEsperado *string `json:"padre_esperado"`
+	Branch        string          `json:"branch"`
+	Mensaje       string          `json:"mensaje"`
+	SQLUp         string          `json:"sql_up"`
+	SQLDown       string          `json:"sql_down"`
+	PadreEsperado *string         `json:"padre_esperado"`
+	Snapshots     []NuevoSnapshot `json:"snapshots,omitempty"`
+}
+
+// ---------------------------------------------------------------- Reporte de entornos
+
+type MigracionAplicada struct {
+	Version     string    `json:"version"`
+	Nombre      string    `json:"nombre"`
+	Checksum    string    `json:"checksum"`
+	Commit      *string   `json:"commit"`
+	AplicadaEn  time.Time `json:"aplicada_en"`
+	DuracionMs  int       `json:"duracion_ms"`
+	AplicadaPor string    `json:"aplicada_por"`
+}
+
+type ReporteEntorno struct {
+	Motor      string              `json:"motor"`
+	Compartido bool                `json:"compartido"`
+	Aplicadas  []MigracionAplicada `json:"aplicadas"`
+	Esquema    any                 `json:"esquema"`
+	Drift      []string            `json:"drift"`
+}
+
+// ReportarEntorno envía al servidor el estado real de un entorno.
+func (c *Cliente) ReportarEntorno(repo int64, nombre string, r ReporteEntorno) error {
+	return c.do("PUT", fmt.Sprintf("/repos/%d/entornos/%s", repo, url.PathEscape(nombre)), r, nil)
 }
 
 // ---------------------------------------------------------------- Llamadas

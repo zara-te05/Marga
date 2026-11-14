@@ -17,6 +17,7 @@ Puedes usar "$VARIABLE" en lugar de la cadena para leerla de una variable de ent
 }
 
 var envMotor string
+var envCompartido, envPersonal bool
 
 var reNombreEnv = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]{0,31}$`)
 
@@ -45,8 +46,18 @@ var envAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if envCompartido && envPersonal {
+			return fmt.Errorf("usa --compartido o --personal, no los dos")
+		}
+		// dev/local se asumen personales (la base de cada desarrollador); el resto, compartidos.
+		compartido := !proyecto.EsPersonalPorNombre(args[0])
+		if envCompartido {
+			compartido = true
+		} else if envPersonal {
+			compartido = false
+		}
 		_, existia := m[args[0]]
-		m[args[0]] = proyecto.Entorno{URL: args[1], Motor: motor}
+		m[args[0]] = proyecto.Entorno{URL: args[1], Motor: motor, Compartido: compartido}
 		if err := p.GuardarEntornos(m); err != nil {
 			return err
 		}
@@ -54,7 +65,11 @@ var envAddCmd = &cobra.Command{
 		if existia {
 			accion = "actualizado"
 		}
-		linea(c, "%s Entorno %s %s. Pruébalo con: marga env probar %s", sAcento.Render("✓"), sNegri.Render(args[0]), accion, args[0])
+		tipo := "personal: se reporta a la web como " + args[0] + "@<tu usuario>"
+		if compartido {
+			tipo = "compartido por el equipo"
+		}
+		linea(c, "%s Entorno %s %s (%s). Pruébalo con: marga env probar %s", sAcento.Render("✓"), sNegri.Render(args[0]), accion, tipo, args[0])
 		return nil
 	},
 }
@@ -79,7 +94,11 @@ var envLsCmd = &cobra.Command{
 		}
 		for _, n := range proyecto.NombresEntornos(m) {
 			e := m[n]
-			linea(c, "  %s %s %s", relleno(sNegri.Render(n), 12), relleno(sTenue.Render(e.Motor), 11), e.URLOculta())
+			tipo := "personal"
+			if e.Compartido {
+				tipo = "compartido"
+			}
+			linea(c, "  %s %s %s %s", relleno(sNegri.Render(n), 12), relleno(sTenue.Render(e.Motor), 11), relleno(sTenue.Render(tipo), 11), e.URLOculta())
 		}
 		return nil
 	},
@@ -145,5 +164,7 @@ var envProbarCmd = &cobra.Command{
 
 func init() {
 	envAddCmd.Flags().StringVar(&envMotor, "motor", "", "motor (por defecto el del proyecto)")
+	envAddCmd.Flags().BoolVar(&envCompartido, "compartido", false, "la base la usa todo el equipo (staging, prod…)")
+	envAddCmd.Flags().BoolVar(&envPersonal, "personal", false, "es tu base local (se reporta como nombre@usuario)")
 	envCmd.AddCommand(envAddCmd, envLsCmd, envRmCmd, envProbarCmd)
 }

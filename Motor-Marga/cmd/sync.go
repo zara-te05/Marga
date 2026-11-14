@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/zarat/Motor-Marga/internal/introspeccion"
 	"github.com/zarat/Motor-Marga/internal/proyecto"
 	"github.com/zarat/Motor-Marga/internal/remoto"
 )
@@ -116,13 +118,18 @@ var pushCmd = &cobra.Command{
 			head = *s.hist.Head
 		}
 		linea(c, "Enviando %s a %s…", plural(len(s.porEnviar), "migración", "migraciones"), sNegri.Render(s.rama))
+		var sinEsquema []string
 		for _, l := range s.porEnviar {
+			snaps, ok := snapshotsDe(s.p, s.locales, l.ID())
+			if !ok {
+				sinEsquema = append(sinEsquema, l.ID())
+			}
 			if proyecto.EsVacio(l.Up) {
 				return fmt.Errorf("%s: el archivo .up.sql está vacío", l.ID())
 			}
 			padre := head
 			cm, err := s.cli.CrearCommit(s.p.Config.RepoID, remoto.NuevoCommit{
-				Branch: s.rama, Mensaje: l.ID(), SQLUp: l.Up, SQLDown: l.Down, PadreEsperado: &padre,
+				Branch: s.rama, Mensaje: l.ID(), SQLUp: l.Up, SQLDown: l.Down, PadreEsperado: &padre, Snapshots: snaps,
 			})
 			if err != nil {
 				_ = s.p.GuardarRemoto(s.mapa)
@@ -134,6 +141,10 @@ var pushCmd = &cobra.Command{
 				return err
 			}
 			linea(c, "  %s %s %s", sAcento.Render("↑"), relleno(l.ID(), 40), sTenue.Render(cm.HashCorto))
+		}
+		if len(sinEsquema) > 0 {
+			linea(c, "%s Sin esquema: %s. Aplícalas con `marga up` antes de `push` para que la web vea sus tablas.",
+				sAviso.Render("!"), strings.Join(sinEsquema, ", "))
 		}
 		linea(c, "%s Listo. Haz commit de .marga/remoto.json en tu repositorio", sAcento.Render("✓"))
 		return nil
@@ -279,4 +290,63 @@ func init() {
 	for _, cm := range []*cobra.Command{pushCmd, pullCmd, logCmd} {
 		cm.Flags().StringVarP(&syncRama, "rama", "b", "", "rama del servidor (por defecto la del proyecto)")
 	}
+}
+
+// snapshotsDe calcula qué tablas cambió una migración comparando el esquema
+// guardado tras aplicarla con el de la migración anterior. ok=false si falta alguno.
+func snapshotsDe(p *proyecto.Proyecto, locales []proyecto.Migracion, id string) ([]remoto.NuevoSnapshot, bool) {
+	idx := -1
+	for i, l := range locales {
+		if l.ID() == id {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		return nil, false
+	}
+	// Ambos esquemas (antes y después) deben venir del MISMO entorno.
+	var despues, antes introspeccion.Esquema
+	encontrado := false
+	for _, env := range p.EntornosConSnapshots() {
+		despues, antes = introspeccion.Esquema{}, introspeccion.Esquema{}
+		if ok, err := p.LeerSnapshot(env, id, &despues); !ok || err != nil {
+			continue
+		}
+		if idx > 0 {
+			if ok, err := p.LeerSnapshot(env, locales[idx-1].ID(), &antes); !ok || err != nil {
+				continue
+			}
+		}
+		encontrado = true
+		break
+	}
+	if !encontrado {
+		return nil, false
+	}
+	nombres := map[string]bool{}
+	for _, t := range antes.Tablas {
+		nombres[t.Nombre] = true
+	}
+	for _, t := range despues.Tablas {
+		nombres[t.Nombre] = true
+	}
+	var out []remoto.NuevoSnapshot
+	for n := range nombres {
+		var ddlA, ddlD string
+		if t := antes.Buscar(n); t != nil {
+			ddlA = t.DDL()
+		}
+		if t := despues.Buscar(n); t != nil {
+			ddlD = t.DDL()
+		}
+		switch {
+		case ddlA == ddlD:
+		case ddlD == "":
+			out = append(out, remoto.NuevoSnapshot{Tabla: n, Eliminada: true})
+		default:
+			out = append(out, remoto.NuevoSnapshot{Tabla: n, DDL: ddlD})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Tabla < out[j].Tabla })
+	return out, true
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/zarat/Motor-Marga/internal/introspeccion"
+	"github.com/zarat/Motor-Marga/internal/migrador"
 	"github.com/zarat/Motor-Marga/internal/proyecto"
 	"github.com/zarat/Motor-Marga/internal/remoto"
 )
@@ -109,4 +112,83 @@ func plural(n int, uno, varios string) string {
 		return "1 " + uno
 	}
 	return fmt.Sprintf("%d %s", n, varios)
+}
+
+// ---------------------------------------------------------------- Reporte a Marga Sun
+
+// nombreReporte: los entornos personales se reportan como "dev@usuario" para que
+// la base local de cada quien no se mezcle con la de sus compañeros.
+func nombreReporte(nombre string, e proyecto.Entorno, cred remoto.Credencial) string {
+	if e.Compartido {
+		return nombre
+	}
+	u := cred.Nombre
+	if u == "" {
+		u, _, _ = strings.Cut(cred.Email, "@")
+	}
+	u = regexp.MustCompile(`[^a-zA-Z0-9._-]+`).ReplaceAllString(strings.ToLower(u), "-")
+	if u == "" {
+		return nombre
+	}
+	return nombre + "@" + u
+}
+
+// reportar envía al servidor qué tiene aplicado el entorno, su esquema real y su drift.
+// Es opcional: si el proyecto no está vinculado o no hay sesión, no hace nada.
+func reportar(c *cobra.Command, p *proyecto.Proyecto, nombre string, e proyecto.Entorno, m *migrador.Migrador,
+	real *introspeccion.Esquema, drift []string) {
+	if p == nil || p.Config.Servidor == "" || p.Config.RepoID == 0 {
+		return
+	}
+	cli, cred, err := remoto.Conectado(p.Config.Servidor)
+	if err != nil {
+		return
+	}
+	ctx := context.Background()
+	hist, err := m.Historial(ctx)
+	if err != nil {
+		linea(c, "%s No se pudo leer el historial para reportarlo: %v", sAviso.Render("!"), err)
+		return
+	}
+	if real == nil {
+		if r, err := m.EsquemaReal(ctx); err == nil {
+			real = &r
+		}
+	}
+	if drift == nil {
+		drift = []string{}
+	}
+	mapa, _ := p.Remoto()
+	aplicadas := make([]remoto.MigracionAplicada, 0, len(hist))
+	for _, a := range hist {
+		var commit *string
+		if h, ok := mapa[a.Version+"_"+a.Nombre]; ok {
+			commit = &h
+		}
+		aplicadas = append(aplicadas, remoto.MigracionAplicada{
+			Version: a.Version, Nombre: a.Nombre, Checksum: a.Checksum, Commit: commit,
+			AplicadaEn: a.AplicadaEn, DuracionMs: a.DuracionMs, AplicadaPor: a.AplicadaPor,
+		})
+	}
+	nombreRep := nombreReporte(nombre, e, cred)
+	err = cli.ReportarEntorno(p.Config.RepoID, nombreRep, remoto.ReporteEntorno{
+		Motor: e.Motor, Compartido: e.Compartido, Aplicadas: aplicadas, Esquema: real, Drift: drift,
+	})
+	if err != nil {
+		linea(c, "%s No se pudo enviar el estado a Marga Sun: %v", sAviso.Render("!"), err)
+		return
+	}
+	linea(c, "%s", sTenue.Render("↗ estado de "+nombreRep+" enviado a Marga Sun"))
+}
+
+// mostrarDrift imprime los cambios hechos fuera de Marga (máximo `limite`; 0 = todos).
+func mostrarDrift(c *cobra.Command, nombre string, cambios []string, limite int) {
+	linea(c, "%s %s en %s:", sAviso.Render("!"), plural(len(cambios), "cambio hecho fuera de Marga", "cambios hechos fuera de Marga"), sNegri.Render(nombre))
+	for i, ch := range cambios {
+		if limite > 0 && i == limite {
+			linea(c, "    …y %d más (marga drift --env %s)", len(cambios)-limite, nombre)
+			break
+		}
+		linea(c, "    %s", ch)
+	}
 }

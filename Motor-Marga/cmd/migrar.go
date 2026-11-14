@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/zarat/Motor-Marga/internal/introspeccion"
 	"github.com/zarat/Motor-Marga/internal/migrador"
 	"github.com/zarat/Motor-Marga/internal/proyecto"
 )
@@ -101,8 +102,44 @@ var statusCmd = &cobra.Command{
 			resumen += sAviso.Render(fmt.Sprintf(" · %d con problemas", n))
 		}
 		linea(c, "%s", resumen)
+
+		cambios, real, nuevaBase, err := m.Drift(ctx)
+		switch {
+		case err != nil:
+			linea(c, "%s No se pudo revisar el drift: %v", sAviso.Render("!"), err)
+		case nuevaBase:
+			linea(c, "%s", sTenue.Render("Se guardó el esquema actual como línea base: desde ahora se detectan cambios hechos fuera de Marga."))
+		case len(cambios) > 0:
+			mostrarDrift(c, nombre, cambios, 8)
+		default:
+			linea(c, "%s", sTenue.Render("Sin drift: el esquema coincide con lo que dejó Marga."))
+		}
+		if err == nil {
+			reportar(c, p, nombre, e, m, &real, cambios)
+		}
 		return nil
 	},
+}
+
+// revisarDrift detiene up/down si alguien cambió la base a mano.
+func revisarDrift(ctx context.Context, c *cobra.Command, m *migrador.Migrador, nombre string) error {
+	cambios, _, nuevaBase, err := m.Drift(ctx)
+	if err != nil {
+		return fmt.Errorf("no se pudo revisar el drift: %w", err)
+	}
+	if nuevaBase {
+		linea(c, "%s", sTenue.Render("Se guardó el esquema actual como línea base."))
+	}
+	if len(cambios) == 0 {
+		return nil
+	}
+	mostrarDrift(c, nombre, cambios, 8)
+	if migFlags.dryRun {
+		return nil // la simulación no toca nada: solo avisa
+	}
+	return errors.New("no se hizo nada: la base tiene cambios hechos fuera de Marga.\n" +
+		"  Si son correctos: marga drift --aceptar --env " + nombre + "\n" +
+		"  Si no: deshazlos a mano y vuelve a intentarlo")
 }
 
 // ---------------------------------------------------------------- up
@@ -117,7 +154,7 @@ var upCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		p, locales, nombre, _, m, err := conectar(ctx)
+		p, locales, nombre, e, m, err := conectar(ctx)
 		if err != nil {
 			return err
 		}
@@ -161,6 +198,9 @@ var upCmd = &cobra.Command{
 			linea(c, "%s La base %s ya está al día", sAcento.Render("✓"), sNegri.Render(nombre))
 			return nil
 		}
+		if err := revisarDrift(ctx, c, m, nombre); err != nil {
+			return err
+		}
 
 		if migFlags.dryRun {
 			linea(c, "Se aplicaría(n) %s en %s (simulación, no se ejecuta nada):", plural(len(pendientes), "migración", "migraciones"), sNegri.Render(nombre))
@@ -174,20 +214,31 @@ var upCmd = &cobra.Command{
 			return fmt.Errorf("%q parece producción: revisa con --dry-run y confirma con --si", nombre)
 		}
 
+		guardarSnapshotPrevio(ctx, p, m, nombre, locales, pendientes[0])
+
 		linea(c, "Aplicando %s en %s…", plural(len(pendientes), "migración", "migraciones"), sNegri.Render(nombre))
 		hechas := 0
-		err = m.Subir(ctx, pendientes, autor(p), func(mig proyecto.Migracion, d time.Duration, err error) {
+		err = m.Subir(ctx, pendientes, autor(p), func(mig proyecto.Migracion, d time.Duration, snap *introspeccion.Esquema, err error) {
 			if err != nil {
 				linea(c, "  %s %s %s", sError.Render("✗"), mig.ID(), sError.Render(err.Error()))
 				return
 			}
 			hechas++
+			// El esquema que dejó esta migración: `marga push` lo envía al servidor.
+			if snap != nil {
+				if err := p.GuardarSnapshot(nombre, mig.ID(), snap); err != nil {
+					linea(c, "  %s no se pudo guardar el snapshot de %s: %v", sAviso.Render("!"), mig.ID(), err)
+				}
+			}
 			extra := ""
 			if mig.SinTransaccion {
 				extra = " (sin transacción)"
 			}
 			linea(c, "  %s %s %s", sAcento.Render("✓"), relleno(mig.ID(), 40), sTenue.Render(fmt.Sprintf("%dms%s", d.Milliseconds(), extra)))
 		})
+		if hechas > 0 {
+			reportar(c, p, nombre, e, m, nil, nil)
+		}
 		if err != nil {
 			return fmt.Errorf("se aplicaron %d de %d; la que falló se deshizo por completo", hechas, len(pendientes))
 		}
@@ -207,7 +258,7 @@ var downCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		_, locales, nombre, _, m, err := conectar(ctx)
+		p, locales, nombre, e, m, err := conectar(ctx)
 		if err != nil {
 			return err
 		}
@@ -242,6 +293,9 @@ var downCmd = &cobra.Command{
 			}
 			aRevertir = append(aRevertir, l)
 		}
+		if err := revisarDrift(ctx, c, m, nombre); err != nil {
+			return err
+		}
 
 		if migFlags.dryRun {
 			linea(c, "Se revertiría(n) %s en %s (simulación):", plural(len(aRevertir), "migración", "migraciones"), sNegri.Render(nombre))
@@ -257,7 +311,7 @@ var downCmd = &cobra.Command{
 
 		linea(c, "Revirtiendo %s en %s…", plural(len(aRevertir), "migración", "migraciones"), sNegri.Render(nombre))
 		hechas := 0
-		err = m.Bajar(ctx, aRevertir, func(mig proyecto.Migracion, d time.Duration, err error) {
+		err = m.Bajar(ctx, aRevertir, func(mig proyecto.Migracion, d time.Duration, _ *introspeccion.Esquema, err error) {
 			if err != nil {
 				linea(c, "  %s %s %s", sError.Render("✗"), mig.ID(), sError.Render(err.Error()))
 				return
@@ -265,6 +319,9 @@ var downCmd = &cobra.Command{
 			hechas++
 			linea(c, "  %s %s %s", sAcento.Render("↩"), relleno(mig.ID(), 40), sTenue.Render(fmt.Sprintf("%dms", d.Milliseconds())))
 		})
+		if hechas > 0 {
+			reportar(c, p, nombre, e, m, nil, nil)
+		}
 		if err != nil {
 			return fmt.Errorf("se revirtieron %d de %d", hechas, len(aRevertir))
 		}
@@ -274,7 +331,7 @@ var downCmd = &cobra.Command{
 }
 
 func init() {
-	for _, cm := range []*cobra.Command{statusCmd, upCmd, downCmd} {
+	for _, cm := range []*cobra.Command{statusCmd, upCmd, downCmd, driftCmd, esquemaCmd} {
 		cm.Flags().StringVarP(&migFlags.env, "env", "e", "", "entorno (dev, staging, prod…)")
 	}
 	for _, cm := range []*cobra.Command{upCmd, downCmd} {
@@ -286,3 +343,23 @@ func init() {
 }
 
 func versionNum(v string) int { n, _ := strconv.Atoi(strings.TrimSpace(v)); return n }
+
+// guardarSnapshotPrevio: para saber qué tablas cambia la primera migración pendiente,
+// `push` necesita el esquema que dejó la anterior. Si no lo tenemos (se aplicó antes
+// de que existieran los snapshots), el estado actual de la base es justamente ese.
+func guardarSnapshotPrevio(ctx context.Context, p *proyecto.Proyecto, m *migrador.Migrador, entorno string, locales []proyecto.Migracion, primera proyecto.Migracion) {
+	for i, l := range locales {
+		if l.ID() != primera.ID() || i == 0 {
+			continue
+		}
+		previa := locales[i-1].ID()
+		var tmp introspeccion.Esquema
+		if ok, _ := p.LeerSnapshot(entorno, previa, &tmp); ok {
+			return
+		}
+		if real, err := m.EsquemaReal(ctx); err == nil {
+			_ = p.GuardarSnapshot(entorno, previa, real)
+		}
+		return
+	}
+}
