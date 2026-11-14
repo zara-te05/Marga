@@ -12,6 +12,8 @@ import (
 	"github.com/zarat/Motor-Marga/internal/introspeccion"
 	"github.com/zarat/Motor-Marga/internal/migrador"
 	"github.com/zarat/Motor-Marga/internal/proyecto"
+	"github.com/zarat/Motor-Marga/internal/remoto"
+	"github.com/zarat/Motor-Marga/internal/riesgo"
 )
 
 var migFlags struct {
@@ -73,8 +75,7 @@ var statusCmd = &cobra.Command{
 
 		linea(c, "Entorno %s · %s · %s", sNegri.Render(nombre), e.Motor, sTenue.Render(e.URLOculta()))
 		if len(filas) == 0 {
-			linea(c, "  No hay migraciones todavía. Crea una con: marga new <descripción>")
-			return nil
+			linea(c, "  No hay migraciones todavía. Crea una con marga new, o cambia la base y usa marga commit.")
 		}
 		cuenta := map[migrador.Situacion]int{}
 		for _, f := range filas {
@@ -94,9 +95,11 @@ var statusCmd = &cobra.Command{
 				linea(c, "  %s %s %s", sAviso.Render("!"), id, sAviso.Render("el archivo cambió después de aplicarse"))
 			case migrador.Huerfana:
 				linea(c, "  %s %s %s", sError.Render("?"), id, sError.Render("aplicada en la base pero no existe el archivo"))
+			case migrador.Renumerada:
+				linea(c, "  %s %s %s", sAcento.Render("↻"), id, sTenue.Render("ya aplicada como "+f.Registro.Version+"_"+f.Registro.Nombre+" (renumerada; `marga up` actualiza el historial)"))
 			}
 		}
-		resumen := plural(cuenta[migrador.Aplicada_]+cuenta[migrador.Modificada], "aplicada", "aplicadas") + " · " +
+		resumen := plural(cuenta[migrador.Aplicada_]+cuenta[migrador.Modificada]+cuenta[migrador.Renumerada], "aplicada", "aplicadas") + " · " +
 			plural(cuenta[migrador.Pendiente], "pendiente", "pendientes")
 		if n := cuenta[migrador.Modificada] + cuenta[migrador.Huerfana]; n > 0 {
 			resumen += sAviso.Render(fmt.Sprintf(" · %d con problemas", n))
@@ -167,8 +170,11 @@ var upCmd = &cobra.Command{
 
 		var problemas, vacias []string
 		var pendientes []proyecto.Migracion
+		var renumeradas []migrador.Fila
 		for _, f := range filas {
 			switch f.Situacion {
+			case migrador.Renumerada:
+				renumeradas = append(renumeradas, f)
 			case migrador.Modificada:
 				problemas = append(problemas, f.ID()+": el archivo cambió después de aplicarse")
 			case migrador.Huerfana:
@@ -194,11 +200,28 @@ var upCmd = &cobra.Command{
 			return errors.New("no se aplicó nada porque el historial no cuadra:\n  - " + strings.Join(problemas, "\n  - ") +
 				"\nNunca edites una migración ya aplicada: crea una nueva con `marga new`.")
 		}
+		if len(renumeradas) > 0 && !migFlags.dryRun {
+			if err := m.Renumerar(ctx, renumeradas); err != nil {
+				return err
+			}
+			for _, f := range renumeradas {
+				linea(c, "  %s %s ya estaba aplicada como %s_%s: historial actualizado", sAcento.Render("↻"), f.ID(), f.Registro.Version, f.Registro.Nombre)
+			}
+		}
 		if len(pendientes) == 0 {
+			if len(renumeradas) > 0 && !migFlags.dryRun {
+				reportar(c, p, nombre, e, m, nil, nil)
+			}
 			linea(c, "%s La base %s ya está al día", sAcento.Render("✓"), sNegri.Render(nombre))
 			return nil
 		}
 		if err := revisarDrift(ctx, c, m, nombre); err != nil {
+			return err
+		}
+		for _, mig := range pendientes {
+			mostrarRiesgo(c, mig.ID(), riesgo.Analizar(mig.Up, mig.Down), false)
+		}
+		if err := verificarAprobaciones(c, p, nombre, e, pendientes); err != nil {
 			return err
 		}
 
@@ -362,4 +385,74 @@ func guardarSnapshotPrevio(ctx context.Context, p *proyecto.Proyecto, m *migrado
 		}
 		return
 	}
+}
+
+// mostrarRiesgo imprime los hallazgos del análisis de riesgo. Con todos=false omite los "bajo".
+func mostrarRiesgo(c *cobra.Command, id string, hs []riesgo.Hallazgo, todos bool) {
+	var visibles []riesgo.Hallazgo
+	for _, h := range hs {
+		if todos || h.Nivel != "bajo" {
+			visibles = append(visibles, h)
+		}
+	}
+	if len(visibles) == 0 {
+		return
+	}
+	linea(c, "%s %s:", sAviso.Render("!"), sNegri.Render(id))
+	for _, h := range visibles {
+		etiqueta := map[string]string{"alto": sError.Render("ALTO "), "medio": sAviso.Render("MEDIO"), "bajo": sTenue.Render("bajo ")}[h.Nivel]
+		donde := ""
+		if h.Linea > 0 {
+			donde = sTenue.Render(fmt.Sprintf(" (línea %d)", h.Linea))
+		}
+		linea(c, "    %s %s%s", etiqueta, h.Mensaje, donde)
+		if h.Sugerencia != "" {
+			linea(c, "          %s", sTenue.Render("→ "+h.Sugerencia))
+		}
+	}
+}
+
+// verificarAprobaciones: si el entorno está protegido en la web, cada migración
+// pendiente debe estar en el servidor y aprobada por alguien distinto a su autor.
+func verificarAprobaciones(c *cobra.Command, p *proyecto.Proyecto, nombre string, e proyecto.Entorno, pendientes []proyecto.Migracion) error {
+	if p.Config.Servidor == "" || p.Config.RepoID == 0 {
+		return nil
+	}
+	cli, cred, err := remoto.Conectado(p.Config.Servidor)
+	if err != nil {
+		return nil
+	}
+	est, err := cli.Entorno(p.Config.RepoID, nombreReporte(nombre, e, cred))
+	if err != nil {
+		linea(c, "%s No se pudo comprobar si %s requiere aprobación: %v", sAviso.Render("!"), nombre, err)
+		return nil
+	}
+	if est == nil || !est.RequiereAprobacion {
+		return nil
+	}
+	hist, err := cli.Historial(p.Config.RepoID, p.Config.Rama)
+	if err != nil {
+		return fmt.Errorf("%s requiere aprobación y no pude leer el historial del servidor: %w", nombre, err)
+	}
+	porChecksum := map[string]remoto.Commit{}
+	for _, cm := range hist.Commits {
+		porChecksum[cm.Checksum] = cm
+	}
+	var faltan []string
+	for _, mig := range pendientes {
+		cm, ok := porChecksum[mig.Checksum]
+		switch {
+		case !ok:
+			faltan = append(faltan, mig.ID()+": no está en el servidor (súbela con marga push)")
+		case cm.CambiosPedidos > 0 && cm.Aprobaciones == 0:
+			faltan = append(faltan, mig.ID()+": le pidieron cambios")
+		case cm.Aprobaciones == 0:
+			faltan = append(faltan, mig.ID()+": nadie la ha aprobado")
+		}
+	}
+	if len(faltan) > 0 {
+		return fmt.Errorf("%s requiere que otra persona apruebe cada migración antes de aplicarla:\n  - %s\nSe aprueban en la web: Commits → Revisiones", nombre, strings.Join(faltan, "\n  - "))
+	}
+	linea(c, "%s Todas las migraciones pendientes están aprobadas (%s requiere aprobación)", sAcento.Render("✓"), nombre)
+	return nil
 }

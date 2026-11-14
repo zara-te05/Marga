@@ -21,10 +21,12 @@ marga init --crear "Tienda Online"                  # o --repo 7 para uno que ya
 marga env add dev "postgres://usuario:clave@localhost:5432/tienda?sslmode=disable"
 marga env probar dev
 
-# 3. Escribir una migración
-marga new crear tabla clientes
+# 3. Escribir una migración (dos formas)
+marga new crear tabla clientes            # a mano: crea los archivos vacíos
 #   -> migrations/0001_crear_tabla_clientes.up.sql    (el cambio)
 #   -> migrations/0001_crear_tabla_clientes.down.sql  (cómo deshacerlo)
+marga commit crear tabla clientes         # automática: cambia tu base dev y Marga escribe el SQL
+marga revisar                             # análisis de riesgo de lo que aún no envías
 
 # 4. Aplicarla
 marga status           # qué está aplicado y qué falta
@@ -38,6 +40,12 @@ marga esquema [tabla]  # el esquema real, o el DDL de una tabla
 marga push             # sube tus migraciones al servidor
 marga pull             # baja las de tus compañeros
 marga log              # historial de la rama en el servidor
+
+# 6. Trabajar en ramas
+marga branch feature/facturas      # crea la rama en el servidor
+marga checkout feature/facturas    # push/pull/log usan esa rama
+marga merge feature/facturas --hacia main --simular
+marga merge feature/facturas --hacia main
 ```
 
 ## Qué guarda y dónde
@@ -93,6 +101,43 @@ por entorno), el **diagrama ER real** en Esquema y en qué entornos está cada c
 `marga up` también guarda el esquema que dejó cada migración; `marga push` lo usa para enviar el
 DDL de las tablas que cambió. Por eso conviene aplicar (`up`) antes de hacer `push`.
 
+## `marga commit`: la migración se escribe sola
+
+1. Cambia tu base de desarrollo como quieras (SQL, pgAdmin, DBeaver…).
+2. `marga commit agregar telefono a clientes` compara la base con lo que dejó la última
+   migración y escribe el `.up.sql` y el `.down.sql`. Como los cambios ya están en tu base,
+   la migración queda registrada como aplicada ahí.
+3. Revisa los archivos (sobre todo los avisos) y súbelos con `marga push`.
+
+Genera tablas (incluidas `serial` e `IDENTITY`), columnas (tipo, NULL, DEFAULT), llave primaria,
+llaves foráneas e índices, en un orden que no rompe dependencias. Un renombre lo ve como
+borrar + crear: corrígelo a mano con `RENAME`. No genera CHECK, vistas, funciones ni ENUM.
+
+## Análisis de riesgo
+
+`marga revisar`, `marga up` y la web avisan del SQL peligroso: `DROP TABLE`/`DROP COLUMN`,
+`NOT NULL` sin `DEFAULT` en tablas existentes, cambios de tipo, `SET NOT NULL`, índices sin
+`CONCURRENTLY`, llaves foráneas sin `NOT VALID`, renombres, `DELETE`/`UPDATE` sin `WHERE`,
+`CONCURRENTLY` sin `-- marga:sin-transaccion`, y migraciones sin `DOWN`.
+
+## Ramas y fusión
+
+La historia de una base es lineal (las migraciones se aplican en orden), así que `marga merge`:
+
+- si el destino no avanzó → **fast-forward**;
+- si avanzó → **copia** las migraciones encima; si su número ya existe en el destino, las **renumera**;
+- si ambas ramas tocaron la misma tabla → **conflicto** (no fusiona salvo `--forzar`).
+
+La identidad de una migración es su **SQL** (checksum), no su número. Cuando una migración
+que ya aplicaste cambia de número al fusionar, `marga pull` renombra tu archivo y `marga up`
+actualiza `marga_history` sin volver a ejecutarla (`status` la muestra como `↻ renumerada`).
+
+## Revisiones (entornos protegidos)
+
+En la web, un admin puede marcar un entorno (p. ej. `prod`) como **Requiere aprobación**.
+Entonces `marga up` en ese entorno solo aplica migraciones que están en el servidor y que
+**otra persona** aprobó en *Commits → Revisiones* (nadie puede aprobar las suyas).
+
 ## Variables útiles (CI)
 
 ```bash
@@ -104,5 +149,5 @@ marga up --env prod --si
 ## Limitaciones actuales
 
 - Aplicar migraciones: solo PostgreSQL (`env probar` también funciona con MySQL y SQL Server).
-- `push`/`pull` trabajan sobre una rama (`--rama`); todavía no hay merge entre ramas.
+- `marga checkout` solo cambia la rama del servidor; los archivos de `migrations/` los maneja tu git.
 - La introspección y el drift solo funcionan en PostgreSQL.

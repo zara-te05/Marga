@@ -27,6 +27,9 @@ type sincro struct {
 	porEnviar  []proyecto.Migracion
 	faltan     []remoto.Commit   // en el servidor pero no en local (orden cronológico)
 	tieneLocal map[string]string // hash -> id local
+	// renombrar: migraciones locales cuyo SQL está en el servidor con otro número
+	// (porque se fusionaron ramas). `pull` les pone el nombre del servidor.
+	renombrar map[string]remoto.Commit
 }
 
 func analizar() (*sincro, error) {
@@ -41,7 +44,8 @@ func analizar() (*sincro, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &sincro{p: p, cli: cli, rama: syncRama, enviadas: map[string]remoto.Commit{}, tieneLocal: map[string]string{}}
+	s := &sincro{p: p, cli: cli, rama: syncRama, enviadas: map[string]remoto.Commit{}, tieneLocal: map[string]string{},
+		renombrar: map[string]remoto.Commit{}}
 	if s.rama == "" {
 		s.rama = p.Config.Rama
 	}
@@ -69,13 +73,31 @@ func analizar() (*sincro, error) {
 				continue
 			}
 		}
-		if c, ok := porMensaje[l.ID()]; ok && !usados[c.Hash] {
+		if c, ok := porMensaje[l.ID()]; ok && !usados[c.Hash] && (c.Checksum == "" || c.Checksum == l.Checksum) {
 			s.enviadas[l.ID()], usados[c.Hash], s.tieneLocal[c.Hash] = c, true, l.ID()
 			s.mapa[l.ID()] = c.Hash
 			continue
 		}
 		s.porEnviar = append(s.porEnviar, l)
 	}
+	// Tercera vía: el mismo SQL (checksum) en el servidor con otro nombre.
+	var siguen []proyecto.Migracion
+	for _, l := range s.porEnviar {
+		encontrado := false
+		for i := len(s.hist.Commits) - 1; i >= 0; i-- {
+			c := s.hist.Commits[i]
+			if !usados[c.Hash] && c.Checksum == l.Checksum {
+				usados[c.Hash], s.tieneLocal[c.Hash] = true, l.ID()
+				s.renombrar[l.ID()] = c
+				encontrado = true
+				break
+			}
+		}
+		if !encontrado {
+			siguen = append(siguen, l)
+		}
+	}
+	s.porEnviar = siguen
 	for i := len(s.hist.Commits) - 1; i >= 0; i-- { // el historial viene del más nuevo al más viejo
 		if c := s.hist.Commits[i]; !usados[c.Hash] {
 			s.faltan = append(s.faltan, c)
@@ -95,8 +117,8 @@ var pushCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if len(s.faltan) > 0 {
-			return fmt.Errorf("el servidor tiene %d commit(s) en %s que no tienes. Ejecuta `marga pull` primero", len(s.faltan), s.rama)
+		if len(s.faltan) > 0 || len(s.renombrar) > 0 {
+			return fmt.Errorf("el servidor tiene cambios en %s que no tienes. Ejecuta `marga pull` primero", s.rama)
 		}
 		// Avisar si alguien editó una migración que ya se había enviado.
 		for id, cm := range s.enviadas {
@@ -163,6 +185,34 @@ var pullCmd = &cobra.Command{
 		s, err := analizar()
 		if err != nil {
 			return err
+		}
+		// Primero: migraciones que el servidor renumeró al fusionar ramas.
+		for id, cm := range s.renombrar {
+			m := reIDMigracion.FindStringSubmatch(cm.PrimeraLinea())
+			var local proyecto.Migracion
+			for _, l := range s.locales {
+				if l.ID() == id {
+					local = l
+				}
+			}
+			if m == nil || id == cm.PrimeraLinea() {
+				s.mapa[id] = cm.Hash
+				continue
+			}
+			if err := s.p.Renombrar(local, m[1], m[2]); err != nil {
+				return fmt.Errorf("no se pudo renombrar %s: %w", id, err)
+			}
+			delete(s.mapa, id)
+			s.mapa[cm.PrimeraLinea()] = cm.Hash
+			linea(c, "  %s %s ahora es %s %s", sAcento.Render("↻"), id, sNegri.Render(cm.PrimeraLinea()), sTenue.Render("(renumerada al fusionar ramas)"))
+		}
+		if len(s.renombrar) > 0 {
+			if err := s.p.GuardarRemoto(s.mapa); err != nil {
+				return err
+			}
+			if s.locales, err = s.p.Migraciones(); err != nil {
+				return err
+			}
 		}
 		if len(s.faltan) == 0 {
 			linea(c, "%s Ya tienes todo lo de %s", sAcento.Render("✓"), s.rama)

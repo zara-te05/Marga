@@ -168,6 +168,11 @@ type Commit struct {
 	PadreHash *string   `json:"padre_hash"`
 	SQLUp     string    `json:"sql_up"`
 	SQLDown   string    `json:"sql_down"`
+	Checksum  string    `json:"checksum"`
+	// Revisiones: aprobaciones de personas distintas al autor.
+	Aprobaciones   int    `json:"aprobaciones"`
+	CambiosPedidos int    `json:"cambios_pedidos"`
+	NivelRiesgo    string `json:"nivel_riesgo"`
 }
 
 func (c Commit) PrimeraLinea() string { return strings.SplitN(c.Mensaje, "\n", 2)[0] }
@@ -280,4 +285,64 @@ func (c *Cliente) Commit(repo int64, hash string) (Commit, error) {
 func (c *Cliente) CrearCommit(repo int64, n NuevoCommit) (Commit, error) {
 	var cm Commit
 	return cm, c.do("POST", fmt.Sprintf("/repos/%d/commits", repo), n, &cm)
+}
+
+// ---------------------------------------------------------------- Ramas y fusión
+
+type Rama struct {
+	Nombre       string  `json:"nombre"`
+	UltimoCommit *Commit `json:"ultimo_commit"`
+}
+
+func (c *Cliente) Ramas(repo int64) ([]Rama, error) {
+	var rs []Rama
+	return rs, c.do("GET", fmt.Sprintf("/repos/%d/branches", repo), nil, &rs)
+}
+
+func (c *Cliente) CrearRama(repo int64, nombre, desde string) error {
+	return c.do("POST", fmt.Sprintf("/repos/%d/branches", repo), map[string]string{"nombre": nombre, "desde": desde}, nil)
+}
+
+type Conflicto struct {
+	Tabla string   `json:"tabla"`
+	Desde []string `json:"desde"`
+	Hacia []string `json:"hacia"`
+}
+
+type ResultadoMerge struct {
+	Tipo        string      `json:"tipo"`
+	Nuevos      []Commit    `json:"nuevos"`
+	Otros       []Commit    `json:"otros"`
+	Conflictos  []Conflicto `json:"conflictos"`
+	Renumeradas []struct {
+		Antes   string `json:"antes"`
+		Despues string `json:"despues"`
+	} `json:"renumeradas"`
+	Aplicado bool    `json:"aplicado"`
+	Head     *string `json:"head"`
+}
+
+func (c *Cliente) Fusionar(repo int64, desde, hacia string, simular, forzar bool) (ResultadoMerge, error) {
+	var r ResultadoMerge
+	return r, c.do("POST", fmt.Sprintf("/repos/%d/fusionar", repo),
+		map[string]any{"desde": desde, "hacia": hacia, "simular": simular, "forzar": forzar}, &r)
+}
+
+// EstadoEntorno: lo que el servidor sabe de un entorno (nil si nunca reportó).
+type EstadoEntorno struct {
+	Nombre             string `json:"nombre"`
+	RequiereAprobacion bool   `json:"requiere_aprobacion"`
+}
+
+func (c *Cliente) Entorno(repo int64, nombre string) (*EstadoEntorno, error) {
+	var e EstadoEntorno
+	err := c.do("GET", fmt.Sprintf("/repos/%d/entornos/%s", repo, url.PathEscape(nombre)), nil, &e)
+	var re *Error
+	if errors.As(err, &re) && re.Status == http.StatusNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
 }

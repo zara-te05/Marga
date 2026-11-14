@@ -119,6 +119,9 @@ const (
 	Pendiente  Situacion = "pendiente"
 	Modificada Situacion = "modificada" // el archivo cambió después de aplicarse
 	Huerfana   Situacion = "huerfana"   // aplicada en la BD pero sin archivo local
+	// Renumerada: el mismo SQL ya está aplicado con otro número (pasa al fusionar
+	// ramas: la migración cambia de versión). No se vuelve a ejecutar.
+	Renumerada Situacion = "renumerada"
 )
 
 type Fila struct {
@@ -133,41 +136,125 @@ type Fila struct {
 func (f Fila) ID() string { return f.Version + "_" + f.Nombre }
 
 // Comparar cruza los archivos locales con lo aplicado en la BD.
+// La identidad de una migración es su SQL (checksum), no su número: al fusionar
+// ramas una migración ya aplicada puede cambiar de número.
 func Comparar(locales []proyecto.Migracion, aplicadas []Aplicada) []Fila {
 	porVersion := map[string]*Aplicada{}
+	porChecksum := map[string]*Aplicada{}
 	ultima := 0
 	for i := range aplicadas {
-		porVersion[aplicadas[i].Version] = &aplicadas[i]
-		if n := num(aplicadas[i].Version); n > ultima {
-			ultima = n
+		a := &aplicadas[i]
+		porVersion[a.Version] = a
+		if _, ya := porChecksum[a.Checksum]; !ya {
+			porChecksum[a.Checksum] = a
+		}
+		ultima = max(ultima, num(a.Version))
+	}
+	usadas := map[string]bool{} // versiones aplicadas ya emparejadas
+	filas := make([]Fila, len(locales))
+	listo := make([]bool, len(locales))
+	for i := range locales {
+		filas[i] = Fila{Version: locales[i].Version, Nombre: locales[i].Nombre, Local: &locales[i]}
+	}
+	// 1) mismo número y mismo SQL
+	for i, l := range locales {
+		if a, ok := porVersion[l.Version]; ok && a.Checksum == l.Checksum {
+			filas[i].Situacion, filas[i].Registro = Aplicada_, a
+			usadas[a.Version], listo[i] = true, true
 		}
 	}
-	var filas []Fila
-	vistas := map[string]bool{}
-	for i := range locales {
-		l := &locales[i]
-		f := Fila{Version: l.Version, Nombre: l.Nombre, Local: l}
-		if a, ok := porVersion[l.Version]; ok {
-			f.Registro = a
-			f.Situacion = Aplicada_
-			if a.Checksum != l.Checksum {
-				f.Situacion = Modificada
-			}
-			vistas[l.Version] = true
-		} else {
-			f.Situacion = Pendiente
-			f.FueraDeOrden = num(l.Version) < ultima
+	// 2) mismo SQL con otro número: renumerada
+	for i, l := range locales {
+		if listo[i] {
+			continue
 		}
-		filas = append(filas, f)
+		if a, ok := porChecksum[l.Checksum]; ok && !usadas[a.Version] {
+			filas[i].Situacion, filas[i].Registro = Renumerada, a
+			usadas[a.Version], listo[i] = true, true
+		}
+	}
+	// 3) mismo número con otro SQL (y ese SQL no está en otra parte): el archivo se editó
+	for i, l := range locales {
+		if listo[i] {
+			continue
+		}
+		if a, ok := porVersion[l.Version]; ok && !usadas[a.Version] {
+			filas[i].Situacion, filas[i].Registro = Modificada, a
+			usadas[a.Version], listo[i] = true, true
+		}
+	}
+	// 4) el resto está pendiente
+	for i, l := range locales {
+		if !listo[i] {
+			filas[i].Situacion = Pendiente
+			filas[i].FueraDeOrden = num(l.Version) < ultima
+		}
 	}
 	for i := range aplicadas {
-		if !vistas[aplicadas[i].Version] {
-			a := &aplicadas[i]
+		if a := &aplicadas[i]; !usadas[a.Version] {
 			filas = append(filas, Fila{Version: a.Version, Nombre: a.Nombre, Situacion: Huerfana, Registro: a})
 		}
 	}
 	sort.SliceStable(filas, func(i, j int) bool { return num(filas[i].Version) < num(filas[j].Version) })
 	return filas
+}
+
+// Renumerar actualiza marga_history cuando migraciones ya aplicadas cambiaron de número.
+// Se hace en dos pasos (a un nombre temporal y luego al definitivo) para que
+// intercambios como 0011↔0012 no choquen con la llave primaria.
+func (m *Migrador) Renumerar(ctx context.Context, filas []Fila) error {
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var ren []Fila
+	for _, f := range filas {
+		if f.Situacion == Renumerada {
+			ren = append(ren, f)
+		}
+	}
+	for _, f := range ren {
+		if _, err := tx.ExecContext(ctx, `UPDATE marga_history SET version = $1 WHERE version = $2`,
+			"tmp_"+f.Registro.Version, f.Registro.Version); err != nil {
+			return err
+		}
+	}
+	for _, f := range ren {
+		if _, err := tx.ExecContext(ctx, `UPDATE marga_history SET version = $1, nombre = $2 WHERE version = $3`,
+			f.Version, f.Nombre, "tmp_"+f.Registro.Version); err != nil {
+			return fmt.Errorf("renumerar %s: %w", f.ID(), err)
+		}
+	}
+	return tx.Commit()
+}
+
+// Registrar anota una migración como aplicada SIN ejecutarla (la usa `marga commit`,
+// porque los cambios ya están hechos en la base) y actualiza la línea base.
+func (m *Migrador) Registrar(ctx context.Context, mig proyecto.Migracion, autor string) (*introspeccion.Esquema, error) {
+	conn, err := m.bloquear(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer liberar(conn)
+	if err := asegurarTablas(ctx, conn); err != nil {
+		return nil, err
+	}
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO marga_history (version, nombre, checksum, duracion_ms, aplicada_por) VALUES ($1, $2, $3, 0, $4)`,
+		mig.Version, mig.Nombre, mig.Checksum, autor); err != nil {
+		return nil, err
+	}
+	snap, err := guardarLineaBase(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return snap, tx.Commit()
 }
 
 // ---------------------------------------------------------------- Aplicar / revertir

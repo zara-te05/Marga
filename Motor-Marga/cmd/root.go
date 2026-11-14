@@ -15,7 +15,7 @@ var RootCmd = &cobra.Command{
 Flujo típico:
   marga init                    crea el proyecto en esta carpeta
   marga env add dev "postgres://usuario:clave@localhost:5432/bd?sslmode=disable"
-  marga new crear tabla clientes
+  marga new crear tabla clientes  (o haz cambios en tu base y: marga commit <descripción>)
   marga status                  qué está aplicado y qué falta
   marga up                      aplica lo pendiente
   marga down                    revierte la última
@@ -30,11 +30,11 @@ func init() {
 		&cobra.Group{ID: "servidor", Title: "Servidor:"},
 		&cobra.Group{ID: "consola", Title: "Consola:"},
 	)
-	for _, c := range []*cobra.Command{initCmd, envCmd, newCmd, statusCmd, upCmd, downCmd, driftCmd, esquemaCmd, detectarCmd} {
+	for _, c := range []*cobra.Command{initCmd, envCmd, newCmd, commitCmd, statusCmd, upCmd, downCmd, revisarCmd, driftCmd, esquemaCmd, detectarCmd} {
 		c.GroupID = "migraciones"
 		RootCmd.AddCommand(c)
 	}
-	for _, c := range []*cobra.Command{loginCmd, logoutCmd, whoamiCmd, linkCmd, pushCmd, pullCmd, logCmd} {
+	for _, c := range []*cobra.Command{loginCmd, logoutCmd, whoamiCmd, linkCmd, pushCmd, pullCmd, logCmd, branchCmd, checkoutCmd, mergeCmd} {
 		c.GroupID = "servidor"
 		RootCmd.AddCommand(c)
 	}

@@ -335,15 +335,27 @@ func (p *Proyecto) EscribirMigracion(version, nombre, up, down string) (string, 
 
 // RenombrarVersion cambia el número de una migración (sus dos archivos).
 func (p *Proyecto) RenombrarVersion(m Migracion, nueva string) error {
+	return p.Renombrar(m, nueva, m.Nombre)
+}
+
+// Renombrar cambia versión y nombre de una migración: sus archivos y sus snapshots.
+func (p *Proyecto) Renombrar(m Migracion, version, nombre string) error {
+	nuevoID := version + "_" + nombre
 	base := filepath.Join(p.DirMigraciones(), m.ID())
-	dest := filepath.Join(p.DirMigraciones(), nueva+"_"+m.Nombre)
+	dest := filepath.Join(p.DirMigraciones(), nuevoID)
 	for _, ext := range []string{".up.sql", ".down.sql"} {
 		if _, err := os.Stat(base + ext); err != nil {
 			continue
 		}
+		if _, err := os.Stat(dest + ext); err == nil {
+			return fmt.Errorf("ya existe %s%s", dest, ext)
+		}
 		if err := os.Rename(base+ext, dest+ext); err != nil {
 			return err
 		}
+	}
+	for _, env := range p.EntornosConSnapshots() {
+		_ = os.Rename(p.rutaSnapshot(env, m.ID()), p.rutaSnapshot(env, nuevoID))
 	}
 	return nil
 }
