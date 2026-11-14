@@ -67,6 +67,10 @@ Es tu diagrama traducido a PostgreSQL, con estos ajustes:
 | `repositorio.slug`, `motor`, `entorno` (nuevos) | los usa el front (tarjetas, filtros) y la CLI |
 | `CHECK` en `rol`, `permiso`, `visibilidad`, `motor`, `entorno` | valores válidos garantizados por la BD |
 
+**Tablas agregadas después del diagrama:** `token_api` (tokens personales de la CLI),
+`entorno_bd` (cada base reportada por la CLI: esquema real en JSON y drift) y
+`migracion_aplicada` (qué migraciones tiene cada entorno, enlazadas a su commit por hash o por checksum del SQL).
+
 **Permisos por repositorio:** propietario o admin global → `admin`; colaborador → su `permiso`
 (`lectura` / `escritura` / `admin`); repo `publico` → `lectura`; resto → no lo ve (404).
 
@@ -99,6 +103,10 @@ Las peticiones que modifican datos deben enviar `Content-Type: application/json`
 | GET | `/api/repos/{id}/diff?from=main&to=feature/x` | lectura | ramas o hashes; se cachea en `cache_diff` |
 | GET | `/api/repos/{id}/buscar?q=wallets` | lectura | texto completo o prefijo de hash |
 | GET | `/api/repos/{id}/esquema?ref=main` | lectura | tablas y DDL en una rama o commit |
+| GET | `/api/repos/{id}/entornos?rama=main` | lectura | entornos reportados: aplicadas, pendientes, drift |
+| GET | `/api/repos/{id}/entornos/{nombre}` | lectura | detalle: lista de aplicadas y pendientes, esquema real |
+| PUT | `/api/repos/{id}/entornos/{nombre}` | escritura | lo usa la CLI para reportar el estado de un entorno |
+| DELETE | `/api/repos/{id}/entornos/{nombre}` | admin | olvida un entorno |
 | GET | `/api/repos/{id}/auditoria` | admin | |
 
 ### Conectar la CLI (Marga Moon)

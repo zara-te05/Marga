@@ -73,6 +73,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/repos/{id}/esquema", s.repo("lectura", s.esquema))
 	mux.HandleFunc("GET /api/repos/{id}/auditoria", s.repo("admin", s.auditoria))
 
+	// --- Entornos (estado real que reporta la CLI)
+	mux.HandleFunc("GET /api/repos/{id}/entornos", s.repo("lectura", s.listarEntornos))
+	mux.HandleFunc("GET /api/repos/{id}/entornos/{nombre}", s.repo("lectura", s.obtenerEntorno))
+	mux.HandleFunc("PUT /api/repos/{id}/entornos/{nombre}", s.repo("escritura", s.reportarEntorno))
+	mux.HandleFunc("DELETE /api/repos/{id}/entornos/{nombre}", s.repo("admin", s.eliminarEntorno))
+
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "ruta de API no encontrada")
 	})

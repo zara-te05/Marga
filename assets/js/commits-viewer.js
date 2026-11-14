@@ -11,6 +11,7 @@ let selectedCommit = null;      // commit completo (modo en vivo)
 let liveRepoId = null;
 let liveBranch = 'main';
 let searchTimer = null;
+let entornosRepo = [];          // entornos que reportó la CLI
 
 const isLiveCommits = () => window.MargaAPI && MargaAPI.online && MargaAPI.me && liveRepoId;
 
@@ -42,6 +43,7 @@ async function initLiveCommits() {
   const btnRevert = document.getElementById('btn-revert');
   if (btnRevert && repo.permiso === 'lectura') btnRevert.classList.add('hidden');
 
+  try { entornosRepo = await MargaAPI.get(`/repos/${repo.id}/entornos`); } catch (_) { entornosRepo = []; }
   const branches = await MargaAPI.get(`/repos/${repo.id}/branches`);
   const urlBranch = new URLSearchParams(location.search).get('branch');
   liveBranch = branches.some(b => b.nombre === urlBranch) ? urlBranch : (branches[0]?.nombre || 'main');
@@ -137,6 +139,9 @@ function renderTimeline(commits, head) {
             <span class="flex items-center gap-1" title="${e(new Date(c.fecha).toLocaleString('es-MX'))}"><span class="material-symbols-outlined text-[13px]">schedule</span>${e(MargaAPI.timeAgo(c.fecha))}</span>
           </div>
           ${tablas ? `<div class="flex flex-wrap items-center gap-1.5 mt-2">${tablas}</div>` : ''}
+          ${(c.entornos || []).length ? `<div class="flex flex-wrap items-center gap-1.5 mt-2">${c.entornos.map(n =>
+            `<span class="px-2 py-0.5 rounded text-[10px] font-mono border border-neutral-600 text-neutral-200 flex items-center gap-1" title="Aplicada en ${e(n)}">
+               <span class="material-symbols-outlined text-[12px]">check</span>${e(n)}</span>`).join('')}</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -256,6 +261,14 @@ async function selectCommitItem(hash, filename, author, time, duration) {
     const meta = document.getElementById('inspector-meta');
     if (meta) meta.innerHTML = `Commit <code class="font-mono text-brand-cyan font-bold">${e(c.hash_corto)}</code> · ${e(c.autor || '—')} · ${e(new Date(c.fecha).toLocaleString('es-MX'))}` +
       (c.padre_hash ? ` · padre <code class="font-mono text-neutral-300">${e(c.padre_hash.slice(0, 7))}</code>` : ' · commit raíz');
+    const enEl = document.getElementById('inspector-entornos');
+    if (enEl) {
+      const aplicada = c.entornos || [];
+      const falta = entornosRepo.map(x => x.nombre).filter(n => !aplicada.includes(n));
+      enEl.innerHTML = !entornosRepo.length ? 'Ningún entorno ha reportado su estado todavía.'
+        : (aplicada.length ? `Aplicada en <span class="text-neutral-200">${aplicada.map(e).join(', ')}</span>` : 'No aplicada en ningún entorno')
+          + (falta.length ? ` · pendiente en <span class="text-neutral-200">${falta.map(e).join(', ')}</span>` : '');
+    }
     setText('sql-up', c.sql_up);
     setText('down-sql', c.reversible ? c.sql_down : '-- Este commit no tiene script de reversión.');
     setText('down-detalle', c.reversible ? 'revert disponible' : 'no reversible');

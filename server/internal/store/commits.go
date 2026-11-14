@@ -77,6 +77,7 @@ type Commit struct {
 	SQLDown        string     `json:"sql_down,omitempty"`
 	Reversible     bool       `json:"reversible"`
 	Tablas         []string   `json:"tablas"`
+	Entornos       []string   `json:"entornos"` // entornos donde está aplicado
 	Snapshots      []Snapshot `json:"snapshots,omitempty"`
 }
 
@@ -113,7 +114,8 @@ func (s *Store) ListarCommits(ctx context.Context, repoID int64, ref string, lim
 		       c.hash_id, c.mensaje, c.fecha, c.autor_id, u.nombre, b.nombre,
 		       c.padre_hash, c.padre_merge_hash, (c.sql_down <> '') AS reversible,
 		       coalesce((SELECT array_to_string(array_agg(s.tabla ORDER BY s.tabla), ',')
-		                 FROM snapshot_esquema s WHERE s.commit_hash_id = c.hash_id), '')
+		                 FROM snapshot_esquema s WHERE s.commit_hash_id = c.hash_id), ''),
+		       `+selEntornosDeCommit+`
 		FROM hist
 		JOIN commit c       ON c.hash_id = hist.hash_id
 		LEFT JOIN usuario u ON u.usuario_id = c.autor_id
@@ -126,13 +128,14 @@ func (s *Store) ListarCommits(ctx context.Context, repoID int64, ref string, lim
 	defer rows.Close()
 	for rows.Next() {
 		var c Commit
-		var tablas string
+		var tablas, entornos string
 		if err := rows.Scan(&c.Numero, &h.Total, &c.Hash, &c.Mensaje, &c.Fecha, &c.AutorID, &c.Autor,
-			&c.Branch, &c.PadreHash, &c.PadreMergeHash, &c.Reversible, &tablas); err != nil {
+			&c.Branch, &c.PadreHash, &c.PadreMergeHash, &c.Reversible, &tablas, &entornos); err != nil {
 			return h, err
 		}
 		c.HashCorto = corto(c.Hash)
 		c.Tablas = splitNoVacio(tablas)
+		c.Entornos = splitNoVacio(entornos)
 		h.Commits = append(h.Commits, c)
 	}
 	return h, rows.Err()
@@ -152,17 +155,19 @@ func (s *Store) ObtenerCommit(ctx context.Context, repoID int64, ref string) (Co
 		return Commit{}, err
 	}
 	var c Commit
+	var entornos string
 	err = s.DB.QueryRowContext(ctx, `
 		SELECT c.hash_id, c.mensaje, c.fecha, c.autor_id, u.nombre, b.nombre,
-		       c.padre_hash, c.padre_merge_hash, c.sql_up, c.sql_down
+		       c.padre_hash, c.padre_merge_hash, c.sql_up, c.sql_down, `+selEntornosDeCommit+`
 		FROM commit c
 		LEFT JOIN usuario u ON u.usuario_id = c.autor_id
 		LEFT JOIN branch b  ON b.branch_id = c.branch_id
 		WHERE c.hash_id = $1`, hash).Scan(&c.Hash, &c.Mensaje, &c.Fecha, &c.AutorID, &c.Autor, &c.Branch,
-		&c.PadreHash, &c.PadreMergeHash, &c.SQLUp, &c.SQLDown)
+		&c.PadreHash, &c.PadreMergeHash, &c.SQLUp, &c.SQLDown, &entornos)
 	if err != nil {
 		return c, err
 	}
+	c.Entornos = splitNoVacio(entornos)
 	c.HashCorto = corto(c.Hash)
 	c.Reversible = c.SQLDown != ""
 	rows, err := s.DB.QueryContext(ctx,
@@ -282,6 +287,15 @@ func (s *Store) CrearCommit(ctx context.Context, u Usuario, repoID int64, n Nuev
 			`UPDATE branch SET ultimo_commit_hash=$1 WHERE branch_id=$2`, hash, branchID); err != nil {
 			return err
 		}
+		// Si algún entorno ya había reportado esta migración aplicada (se aplicó antes
+		// de hacer push), se enlaza ahora con el commit por el checksum de su SQL.
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE migracion_aplicada m SET commit_hash = $1
+			FROM entorno_bd e
+			WHERE e.entorno_bd_id = m.entorno_bd_id AND e.repositorio_id = $2
+			  AND m.commit_hash IS NULL AND m.checksum = $3::text`, hash, repoID, checksumDe(n.SQLUp)); err != nil {
+			return err
+		}
 		return Auditar(ctx, tx, u.ID, &repoID, "commit.crear", map[string]any{
 			"hash": hash, "branch": n.Branch, "mensaje": n.Mensaje, "tablas": len(n.Snapshots)})
 	})
@@ -378,4 +392,15 @@ func ParseLimite(s string, def, max int) int {
 		return max
 	}
 	return n
+}
+
+const selEntornosDeCommit = `coalesce((SELECT array_to_string(array_agg(e.nombre ORDER BY e.compartido DESC, e.nombre), ',')
+		        FROM migracion_aplicada m JOIN entorno_bd e ON e.entorno_bd_id = m.entorno_bd_id
+		        WHERE m.commit_hash = c.hash_id), '')`
+
+// checksumDe replica proyecto.Checksum de la CLI (sha256 del SQL normalizado).
+func checksumDe(sqlText string) string {
+	sqlText = strings.TrimRight(strings.ReplaceAll(sqlText, "\r\n", "\n"), " \t\n") + "\n"
+	sum := sha256.Sum256([]byte(sqlText))
+	return hex.EncodeToString(sum[:])
 }

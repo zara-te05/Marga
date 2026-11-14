@@ -23,20 +23,17 @@
   }
 
   const q = repoId ? `?repo=${repoId}` : '';
-  const esquemaPage = (motor) => motor === 'mongodb' ? 'visualizador-nosql.html' : 'visualizador-sql.html';
   const tabs = [
     { id: 'resumen', label: 'Resumen', icon: 'space_dashboard', href: 'code.html' + q },
     { id: 'commits', label: 'Commits', icon: 'commit', href: 'commits.html' + q },
-    { id: 'esquema', label: 'Esquema', icon: 'account_tree', href: (page === 'esquema' ? location.pathname.split('/').pop() : 'visualizador-sql.html') + q },
+    { id: 'entornos', label: 'Entornos', icon: 'dns', href: 'entornos.html' + q },
+    { id: 'esquema', label: 'Esquema', icon: 'account_tree', href: 'esquema.html' + q },
     { id: 'ajustes', label: 'Ajustes', icon: 'settings', href: `proyectos.html?editar=${repoId}` }
   ];
 
   const sep = '<span class="text-neutral-700 select-none">/</span>';
   const brand = `
-    <a href="proyectos.html" class="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity">
-      <img src="../assets/icons/marga-logo.svg" alt="" class="h-7 w-7">
-      <span class="text-[15px] font-semibold text-white tracking-tight">Marga</span>
-    </a>`;
+    <a href="proyectos.html" class="shrink-0 text-[17px] font-semibold text-white tracking-tight hover:opacity-80 transition-opacity">Marga</a>`;
 
   const crumbs = scope === 'project'
     ? `${sep}
@@ -87,7 +84,7 @@
     navigationRoutes.push({ name: 'Todos los proyectos', desc: 'Lista de proyectos del espacio de trabajo', path: 'proyectos.html', icon: 'folder' });
     navigationRoutes.push({ name: 'Cuenta y tokens', desc: 'Tus datos y tokens de acceso para la CLI', path: 'cuenta.html', icon: 'key' });
     if (scope === 'project') {
-      tabs.slice(0, 3).forEach(t => navigationRoutes.push({ name: t.label, desc: 'Proyecto actual', path: t.href, icon: t.icon }));
+      tabs.slice(0, 4).forEach(t => navigationRoutes.push({ name: t.label, desc: 'Proyecto actual', path: t.href, icon: t.icon }));
     }
   }
 
@@ -106,10 +103,8 @@
       document.getElementById('project-name').textContent = repo.nombre;
       const env = document.getElementById('project-env');
       env.textContent = repo.entorno;
-      const tabEsq = header.querySelector('[data-tab="esquema"]');
-      if (tabEsq && page !== 'esquema') tabEsq.href = esquemaPage(repo.motor) + q;
       if (repo.permiso !== 'admin') header.querySelector('[data-tab="ajustes"]')?.remove();
-      const label = { resumen: 'Resumen', commits: 'Commits', esquema: 'Esquema' }[page] || '';
+      const label = { resumen: 'Resumen', commits: 'Commits', entornos: 'Entornos', esquema: 'Esquema' }[page] || '';
       document.title = `${label ? label + ' · ' : ''}${repo.nombre} — Marga`;
       document.dispatchEvent(new CustomEvent('marga:repo', { detail: repo }));
 
@@ -134,7 +129,7 @@
       const repos = await loadRepos();
       menu.innerHTML = `<div class="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-neutral-500">Cambiar de proyecto</div>` +
         repos.map(r => {
-          const target = page === 'esquema' ? esquemaPage(r.motor) : location.pathname.split('/').pop();
+          const target = location.pathname.split('/').pop();
           return `<a href="${target}?repo=${r.id}" class="flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm hover:bg-marga-card ${r.id === repoId ? 'text-white' : 'text-neutral-300'}">
             <span class="truncate">${e(r.nombre)}</span>
             ${r.id === repoId ? '<span class="material-symbols-outlined text-[16px]">check</span>' : `<span class="text-[10px] font-mono text-neutral-500">${e(r.entorno)}</span>`}

@@ -22,10 +22,12 @@
     repo = ev.detail;
     try {
       pintarProyecto();
-      const [branches, personas] = await Promise.all([
+      const [branches, personas, entornos] = await Promise.all([
         API.get(`/repos/${repo.id}/branches`),
-        API.get(`/repos/${repo.id}/colaboradores`)
+        API.get(`/repos/${repo.id}/colaboradores`),
+        API.get(`/repos/${repo.id}/entornos`).catch(() => [])
       ]);
+      pintarEntornos(entornos);
       pintarRamas(branches);
       pintarPersonas(personas);
       const pedida = new URLSearchParams(location.search).get('branch');
@@ -124,6 +126,22 @@
     if (!actual) return;
     navigator.clipboard.writeText(actual.ddl).then(() => showToast('DDL copiado', 'success'));
   });
+
+  function pintarEntornos(lista) {
+    $('r-entornos-link').href = `entornos.html?repo=${repo.id}`;
+    if (!lista.length) {
+      $('r-entornos').innerHTML = '<li class="px-4 py-2.5 text-xs text-neutral-500">Ninguno ha reportado aún. Ejecuta <span class="font-mono text-neutral-300">marga status</span>.</li>';
+      return;
+    }
+    $('r-entornos').innerHTML = lista.map(x => {
+      const estado = x.drift.length ? `${x.drift.length} fuera de Marga`
+        : x.pendientes ? `${x.pendientes} pendiente${x.pendientes === 1 ? '' : 's'}` : 'al día';
+      return `<li><a href="entornos.html?repo=${repo.id}&entorno=${encodeURIComponent(x.nombre)}" class="flex items-center justify-between gap-3 px-4 py-2 hover:bg-marga-card transition-colors">
+        <span class="font-mono text-[13px] text-neutral-200 truncate">${e(x.nombre)}</span>
+        <span class="text-xs shrink-0 ${estado === 'al día' ? 'text-neutral-500' : 'text-white'}">${e(estado)}</span>
+      </a></li>`;
+    }).join('');
+  }
 
   function pintarRamas(branches) {
     $('r-ramas-count').textContent = branches.length;

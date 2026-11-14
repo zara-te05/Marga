@@ -17,8 +17,8 @@ Marga Sun/
 │   ├── proyectos.html           # Dashboard de proyectos, clusters y métricas
 │   ├── code.html                # Resumen del proyecto: tablas, DDL, ramas y personas
 │   ├── commits.html             # Historial de commits DDL, AST diffs y reversión
-│   ├── visualizador-sql.html    # Schema Graph interactivo ERD para PostgreSQL
-│   └── visualizador-nosql.html  # Schema Graph interactivo para MongoDB/NoSQL
+│   ├── entornos.html            # Qué tiene aplicado cada base (dev, staging, prod) y su drift
+│   └── esquema.html             # Diagrama ER real, leído de la base de un entorno
 ├── assets/                      # Recursos compartidos y lógica modular
 │   ├── css/
 │   │   └── marga-shared.css     # Estilos compartidos, scrollbars finos, canvas grid y glows
@@ -29,10 +29,8 @@ Marga Sun/
 │   │   ├── marga-layout.js      # Cabecera: fuera de un proyecto / dentro de un proyecto
 │   │   ├── resumen.js           # Lógica de la página Resumen
 │   │   ├── commits-viewer.js    # Selección de commits, visualizador diff y dry-runs
-│   │   ├── visualizador-sql.js  # Motor canvas ERD (zoom, pan, centrado e inspector)
-│   │   └── visualizador-nosql.js# Motor canvas NoSQL (zoom, colecciones, minimapa y BSON)
-│   └── icons/
-│       └── marga-logo.svg       # Logo vectorial SVG oficial de Marga
+│   │   ├── entornos.js          # Lógica de la página Entornos
+│   │   └── esquema.js           # Diagrama ER: distribución, líneas de FK, zoom e inspector
 └── _archive_legacy/             # Copia de seguridad de los archivos sueltos originales
 ```
 

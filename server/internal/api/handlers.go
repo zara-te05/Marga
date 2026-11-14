@@ -431,3 +431,44 @@ func (s *Server) revocarToken(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
+
+// ---------------------------------------------------------------- Entornos
+
+func (s *Server) listarEntornos(w http.ResponseWriter, r *http.Request) {
+	es, err := s.store.ListarEntornos(r.Context(), repoID(r), r.URL.Query().Get("rama"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, es)
+}
+
+func (s *Server) obtenerEntorno(w http.ResponseWriter, r *http.Request) {
+	e, err := s.store.ObtenerEntorno(r.Context(), repoID(r), r.PathValue("nombre"), r.URL.Query().Get("rama"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, e)
+}
+
+func (s *Server) reportarEntorno(w http.ResponseWriter, r *http.Request) {
+	var rep store.ReporteEntorno
+	if !decode(w, r, &rep) {
+		return
+	}
+	e, err := s.store.ReportarEntorno(r.Context(), usuario(r), repoID(r), r.PathValue("nombre"), rep)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, e)
+}
+
+func (s *Server) eliminarEntorno(w http.ResponseWriter, r *http.Request) {
+	if err := s.store.EliminarEntorno(r.Context(), usuario(r), repoID(r), r.PathValue("nombre")); err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}

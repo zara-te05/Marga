@@ -114,8 +114,7 @@ const navigationRoutes = [
   { name: 'Dashboard de Proyectos', desc: 'Resumen de clusters, réplicas y estado de drift', path: 'proyectos.html', icon: 'dataset' },
   { name: 'Código & Esquemas DDL', desc: 'Explorador de archivos, tablas y DDL versionado', path: 'code.html', icon: 'code' },
   { name: 'Commits & Migraciones', desc: 'Historial de migraciones, hashes, AST diff y reversiones', path: 'commits.html', icon: 'conversion_path' },
-  { name: 'Schema Graph (PostgreSQL ERD)', desc: 'Visualizador relacional interactivo de tablas y FKs', path: 'visualizador-sql.html', icon: 'account_tree' },
-  { name: 'Schema Graph (MongoDB / NoSQL)', desc: 'Visualizador de colecciones, esquemas BSON y embebidos', path: 'visualizador-nosql.html', icon: 'schema' }
+  { name: 'Cuenta y tokens', desc: 'Tus datos y tokens de acceso para la CLI', path: 'cuenta.html', icon: 'key' }
 ];
 
 function setupCommandPalette() {
