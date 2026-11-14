@@ -123,11 +123,11 @@
             <h2 class="text-sm font-medium text-white">Conectar desde la CLI</h2>
           </div>
           <div class="p-4 text-xs text-neutral-400 flex flex-col gap-2">
-            <p>Para enviar migraciones a este proyecto usa su identificador:</p>
-            <div class="flex items-center justify-between rounded-md bg-marga-bg border border-marga-border px-3 py-2 font-mono">
-              <span class="text-neutral-500">repo</span><span id="r-cli-id" class="text-white">—</span>
-            </div>
-            <code id="r-cli-endpoint" class="block rounded-md bg-marga-bg border border-marga-border px-3 py-2 font-mono text-neutral-300 break-all"></code>
+            <p>Desde la carpeta de tu proyecto:</p>
+            <pre id="r-cli" class="rounded-md bg-marga-bg border border-marga-border px-3 py-2.5 font-mono text-[11px] leading-relaxed text-neutral-200 whitespace-pre overflow-x-auto"></pre>
+            <button type="button" id="r-cli-copiar" class="self-start flex items-center gap-1 text-neutral-400 hover:text-white transition-colors">
+              <span class="material-symbols-outlined text-[15px]">content_copy</span>Copiar comandos
+            </button>
           </div>
         </section>
       </aside>

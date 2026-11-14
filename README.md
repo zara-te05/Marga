@@ -13,6 +13,7 @@ Marga Sun/
 ├── README.md                    # Documentación del proyecto
 ├── pages/                       # Vistas completas e integradas
 │   ├── login.html               # Inicio de sesión / registro
+│   ├── cuenta.html              # Tu cuenta y tokens de acceso para la CLI
 │   ├── proyectos.html           # Dashboard de proyectos, clusters y métricas
 │   ├── code.html                # Resumen del proyecto: tablas, DDL, ramas y personas
 │   ├── commits.html             # Historial de commits DDL, AST diffs y reversión

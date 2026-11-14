@@ -36,6 +36,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/auth/logout", s.logout)
 	mux.HandleFunc("GET /api/auth/me", s.auth(s.me))
 
+	// --- Tokens de acceso personales (CLI / CI)
+	mux.HandleFunc("GET /api/tokens", s.auth(s.listarTokens))
+	mux.HandleFunc("POST /api/tokens", s.auth(s.crearToken))
+	mux.HandleFunc("DELETE /api/tokens/{id}", s.auth(s.revocarToken)) // {id} o "actual"
+
 	// --- Equipos
 	mux.HandleFunc("GET /api/equipos", s.listarEquipos) // público: lo usa el registro
 	mux.HandleFunc("POST /api/equipos", s.auth(s.crearEquipo))
@@ -169,10 +174,16 @@ func (s *Server) auth(h http.HandlerFunc) http.HandlerFunc {
 			writeError(w, http.StatusUnauthorized, "inicia sesión para continuar")
 			return
 		}
-		u, err := s.store.UsuarioDeSesion(r.Context(), hashToken(tok))
+		var u store.Usuario
+		var err error
+		if strings.HasPrefix(tok, store.PrefijoToken) { // token personal de la CLI
+			u, err = s.store.UsuarioDeToken(r.Context(), hashToken(tok))
+		} else {
+			u, err = s.store.UsuarioDeSesion(r.Context(), hashToken(tok))
+		}
 		if err != nil {
 			if errors.Is(err, store.ErrNoEncontrado) {
-				writeError(w, http.StatusUnauthorized, "sesión expirada o inválida")
+				writeError(w, http.StatusUnauthorized, "sesión expirada o token inválido")
 				return
 			}
 			s.fail(w, err)

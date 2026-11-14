@@ -50,7 +50,9 @@
          <div id="project-menu" class="hidden absolute left-0 top-9 z-[70] w-72 rounded-lg bg-marga-surface border border-marga-border shadow-2xl p-1"></div>
        </div>
        <span id="project-env" class="hidden sm:inline px-2 py-0.5 rounded border border-marga-border text-[10px] font-mono text-neutral-400"></span>`
-    : `${sep}<span class="text-sm font-medium text-white">Proyectos</span>`;
+    : page === 'cuenta'
+      ? `${sep}<span class="text-sm font-medium text-white">Cuenta</span>`
+      : `${sep}<span class="text-sm font-medium text-white">Proyectos</span>`;
 
   const nav = scope === 'project' ? `
     <nav class="h-10 px-5 lg:px-8 flex items-end gap-1 text-[13px] border-b border-marga-border overflow-x-auto">
@@ -83,6 +85,7 @@
   if (typeof navigationRoutes !== 'undefined') {
     navigationRoutes.length = 0;
     navigationRoutes.push({ name: 'Todos los proyectos', desc: 'Lista de proyectos del espacio de trabajo', path: 'proyectos.html', icon: 'folder' });
+    navigationRoutes.push({ name: 'Cuenta y tokens', desc: 'Tus datos y tokens de acceso para la CLI', path: 'cuenta.html', icon: 'key' });
     if (scope === 'project') {
       tabs.slice(0, 3).forEach(t => navigationRoutes.push({ name: t.label, desc: 'Proyecto actual', path: t.href, icon: t.icon }));
     }

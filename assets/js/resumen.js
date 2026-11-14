@@ -51,8 +51,15 @@
       badge(repo.visibilidad === 'publico' ? 'public' : 'lock', repo.visibilidad === 'publico' ? 'Público' : 'Privado'),
       badge('badge', 'Tu acceso: ' + repo.permiso)
     ].join('');
-    $('r-cli-id').textContent = repo.id;
-    $('r-cli-endpoint').textContent = `POST ${location.origin}/api/repos/${repo.id}/commits`;
+    $('r-cli').textContent = [
+      `marga login --servidor ${location.origin}`,
+      `marga init --repo ${repo.id} --servidor ${location.origin}`,
+      'marga pull',
+      'marga env add dev "postgres://usuario:clave@localhost:5432/bd?sslmode=disable"',
+      'marga up'
+    ].join('\n');
+    $('r-cli-copiar').onclick = () =>
+      navigator.clipboard.writeText($('r-cli').textContent).then(() => showToast('Comandos copiados', 'success'));
   }
 
   async function cargarRama(rama, branches) {

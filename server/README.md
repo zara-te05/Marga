@@ -82,6 +82,8 @@ Las peticiones que modifican datos deben enviar `Content-Type: application/json`
 | POST | `/api/auth/login` | — | `{email, password}` → cookie + `token` |
 | POST | `/api/auth/logout` | sesión | |
 | GET | `/api/auth/me` | sesión | usuario actual |
+| GET / POST | `/api/tokens` | sesión | tokens de acceso personales; `POST {nombre}` devuelve el token **una sola vez** |
+| DELETE | `/api/tokens/{id}` | sesión | revoca un token (`/api/tokens/actual` revoca el que hace la petición) |
 | GET / POST | `/api/equipos` | — / admin | |
 | GET / POST | `/api/repos` | sesión | listar / crear `{nombre, slug?, descripcion, visibilidad, motor, entorno}` |
 | GET / PATCH / DELETE | `/api/repos/{id}` | lectura / admin / admin | |
@@ -96,30 +98,21 @@ Las peticiones que modifican datos deben enviar `Content-Type: application/json`
 | POST | `/api/repos/{id}/commits/{hash}/revert` | escritura | crea un commit inverso `{branch}` |
 | GET | `/api/repos/{id}/diff?from=main&to=feature/x` | lectura | ramas o hashes; se cachea en `cache_diff` |
 | GET | `/api/repos/{id}/buscar?q=wallets` | lectura | texto completo o prefijo de hash |
+| GET | `/api/repos/{id}/esquema?ref=main` | lectura | tablas y DDL en una rama o commit |
 | GET | `/api/repos/{id}/auditoria` | admin | |
 
 ### Conectar la CLI (Marga Moon)
 
-```bash
-# 1. login → guarda el token
-curl -s -X POST localhost:8080/api/auth/login -H "Content-Type: application/json" \
-     -d '{"email":"demo@marga.dev","password":"marga1234"}'
+La CLI de Marga Moon ya usa esta API (ver su README):
 
-# 2. "push" de una migración
-curl -s -X POST localhost:8080/api/repos/1/commits \
-     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{
-  "branch": "main",
-  "mensaje": "0007_add_phone_to_users",
-  "sql_up":   "ALTER TABLE users ADD COLUMN phone VARCHAR(20);",
-  "sql_down": "ALTER TABLE users DROP COLUMN phone;",
-  "padre_esperado": "<hash del head que tenía la CLI>",
-  "snapshots": [ { "tabla": "users", "ddl": "CREATE TABLE users ( ... )" } ]
-}'
+```bash
+marga login --servidor http://localhost:8080   # crea un token personal "CLI · <equipo>"
+marga init --repo 1
+marga push / pull / log
 ```
 
-- `padre_esperado` (opcional) evita pisar trabajo ajeno: si la rama avanzó, responde **409** (como un `push` rechazado).
-- `snapshots` (opcional) es el DDL completo de cada tabla tocada; con ellos el diff es por tabla.
-  Para una tabla eliminada envía `{"tabla": "x", "eliminada": true}`. Sin snapshots, el diff compara el SQL acumulado.
+Para CI crea un token en **Cuenta → Tokens de acceso** y úsalo como `Authorization: Bearer marga_pat_…`.
+Los tokens se guardan como SHA-256 en `token_api`; el token en claro solo se muestra al crearlo.
 
 ## Probado
 

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="web_dashboard" name="shell-type">
+  <title>Cuenta — Marga</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "marga-bg": "#0A0A0A",
+            "marga-surface": "#111111",
+            "marga-card": "#171717",
+            "marga-card-hover": "#1F1F1F",
+            "marga-border": "#262626",
+            "marga-border-subtle": "#1C1C1C",
+            "marga-border-active": "#737373",
+            "brand-purple": "#A3A3A3",
+            "brand-violet": "#FAFAFA",
+            "brand-indigo": "#737373",
+            "brand-cyan": "#F5F5F5",
+            "brand-blue": "#737373",
+            "brand-sky": "#A3A3A3",
+            "diff-add": "#737373",
+            "diff-add-bg": "rgba(255, 255, 255, 0.05)",
+            "diff-del": "#A3A3A3",
+            "diff-del-bg": "rgba(255, 255, 255, 0.02)"
+          },
+          fontFamily: {
+            sans: ["Geist", "Inter", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="../assets/css/marga-shared.css">
+</head>
+<body data-scope="workspace" data-page="cuenta" class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex flex-col">
+
+  <header id="marga-header" class="sticky top-0 z-50 shrink-0 h-16"></header>
+
+  <main class="flex-1 w-full max-w-[900px] mx-auto px-5 lg:px-8 py-8 flex flex-col gap-8">
+
+    <section>
+      <h1 class="text-2xl font-semibold text-white tracking-tight">Tu cuenta</h1>
+      <div id="c-usuario" class="mt-4 rounded-lg border border-marga-border bg-marga-surface px-5 py-4 text-sm text-neutral-400">Cargando…</div>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-white">Tokens de acceso</h2>
+        <p class="text-sm text-neutral-400 mt-1">La CLI (<span class="font-mono text-neutral-200">marga login</span>) crea uno por máquina. También puedes crear uno para CI y revocar los que ya no uses.</p>
+      </div>
+
+      <form id="c-form" class="flex flex-col sm:flex-row gap-2">
+        <input id="c-nombre" maxlength="120" required placeholder="Nombre del token, ej. GitHub Actions"
+          class="flex-1 h-9 px-3 rounded-md bg-marga-surface border border-marga-border text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500">
+        <button type="submit" class="h-9 px-4 rounded-md bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-sm font-medium transition-colors">Crear token</button>
+      </form>
+
+      <div id="c-nuevo" class="hidden rounded-lg border border-neutral-500 bg-marga-surface p-4 flex flex-col gap-2">
+        <p class="text-sm text-white font-medium">Copia tu token ahora: no se volverá a mostrar.</p>
+        <div class="flex items-center gap-2">
+          <code id="c-nuevo-token" class="flex-1 block rounded-md bg-marga-bg border border-marga-border px-3 py-2 font-mono text-xs text-neutral-100 break-all"></code>
+          <button type="button" id="c-copiar" class="h-8 px-3 rounded-md border border-marga-border text-xs text-neutral-300 hover:text-white hover:border-neutral-500">Copiar</button>
+        </div>
+        <p class="text-xs text-neutral-500">Úsalo en CI con la cabecera <span class="font-mono">Authorization: Bearer &lt;token&gt;</span>.</p>
+      </div>
+
+      <div class="rounded-lg border border-marga-border bg-marga-surface overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-neutral-500 border-b border-marga-border">
+              <th class="px-4 py-2.5 font-medium">Nombre</th>
+              <th class="px-4 py-2.5 font-medium">Token</th>
+              <th class="px-4 py-2.5 font-medium">Creado</th>
+              <th class="px-4 py-2.5 font-medium">Último uso</th>
+              <th class="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody id="c-tokens"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="../assets/js/marga-common.js"></script>
+  <script src="../assets/js/marga-api.js"></script>
+  <script src="../assets/js/marga-layout.js"></script>
+  <script>
+    (function () {
+      const API = MargaAPI, e = API.escapeHTML, $ = (id) => document.getElementById(id);
+      if (!API.online) { $('c-usuario').textContent = 'Abre Marga desde el servidor para ver tu cuenta.'; return; }
+
+      async function cargarTokens() {
+        const ts = await API.get('/tokens');
+        $('c-tokens').innerHTML = ts.length ? ts.map(t => `
+          <tr class="border-b border-marga-border last:border-0">
+            <td class="px-4 py-3 text-neutral-100">${e(t.nombre)}</td>
+            <td class="px-4 py-3 font-mono text-xs text-neutral-400">${e(t.prefijo)}…</td>
+            <td class="px-4 py-3 text-neutral-400">${e(API.timeAgo(t.creado_en))}</td>
+            <td class="px-4 py-3 text-neutral-400">${t.ultimo_uso ? e(API.timeAgo(t.ultimo_uso)) : 'nunca'}</td>
+            <td class="px-4 py-3 text-right"><button type="button" data-id="${t.id}" class="c-revocar text-xs text-neutral-400 hover:text-white underline-offset-2 hover:underline">Revocar</button></td>
+          </tr>`).join('')
+          : '<tr><td colspan="5" class="px-4 py-6 text-center text-neutral-500">No tienes tokens. Se crea uno al hacer <span class="font-mono">marga login</span>.</td></tr>';
+        document.querySelectorAll('.c-revocar').forEach(b => b.addEventListener('click', async () => {
+          if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = '¿Seguro?'; return; }
+          try { await API.del('/tokens/' + b.dataset.id); showToast('Token revocado', 'success'); cargarTokens(); }
+          catch (err) { showToast(err.message, 'error'); }
+        }));
+      }
+
+      API.ready.then(u => {
+        if (!u) return;
+        $('c-usuario').innerHTML = `
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-marga-card border border-marga-border flex items-center justify-center text-sm font-semibold text-neutral-200">${e(API.initials(u.nombre))}</div>
+            <div>
+              <div class="text-white font-medium">${e(u.nombre)}</div>
+              <div class="text-neutral-400">${e(u.email)} · ${e(u.rol)}${u.equipo ? ' · ' + e(u.equipo) : ''}</div>
+            </div>
+          </div>`;
+        cargarTokens().catch(err => showToast(err.message, 'error'));
+      });
+
+      $('c-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        try {
+          const r = await API.post('/tokens', { nombre: $('c-nombre').value.trim() });
+          $('c-nombre').value = '';
+          $('c-nuevo-token').textContent = r.token;
+          $('c-nuevo').classList.remove('hidden');
+          cargarTokens();
+        } catch (err) { showToast(err.message, 'error'); }
+      });
+      $('c-copiar').addEventListener('click', () =>
+        navigator.clipboard.writeText($('c-nuevo-token').textContent).then(() => showToast('Token copiado', 'success')));
+    })();
+  </script>
+</body>
+</html>

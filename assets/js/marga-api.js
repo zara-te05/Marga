@@ -100,10 +100,14 @@
           <div class="text-[11px] font-mono text-neutral-400 truncate">${escapeHTML(u.email)}</div>
           <div class="text-[10px] font-mono text-brand-cyan mt-1">${escapeHTML(u.rol)}${u.equipo ? ' · ' + escapeHTML(u.equipo) : ''}</div>
         </div>
+        <a href="cuenta.html" class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-xs text-neutral-200 hover:bg-marga-card transition-colors">
+          <span class="material-symbols-outlined text-[15px]">key</span><span>Cuenta y tokens</span>
+        </a>
         <button type="button" id="logout-btn" class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-xs text-neutral-400 hover:bg-neutral-500/20 transition-colors">
           <span class="material-symbols-outlined text-[15px]">logout</span><span>Cerrar sesión</span>
         </button>`;
       chip.appendChild(menu);
+      menu.addEventListener('click', (ev) => ev.stopPropagation());
       menu.querySelector('#logout-btn').addEventListener('click', async (ev) => {
         ev.stopPropagation();
         try { await request('POST', '/auth/logout', {}); } catch (_) { }

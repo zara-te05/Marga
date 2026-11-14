@@ -374,3 +374,60 @@ func (s *Server) esquema(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, e)
 }
+
+// ---------------------------------------------------------------- Tokens de acceso
+
+func (s *Server) listarTokens(w http.ResponseWriter, r *http.Request) {
+	ts, err := s.store.ListarTokens(r.Context(), usuario(r))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, ts)
+}
+
+func (s *Server) crearToken(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Nombre string `json:"nombre"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	plano, err := security.NewToken()
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	plano = store.PrefijoToken + plano
+	t, err := s.store.CrearToken(r.Context(), usuario(r), body.Nombre, plano, security.HashToken(plano))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	// El token en claro solo se devuelve aquí, una única vez.
+	writeJSON(w, http.StatusCreated, map[string]any{"token": plano, "info": t})
+}
+
+func (s *Server) revocarToken(w http.ResponseWriter, r *http.Request) {
+	var id int64
+	var hash string
+	if r.PathValue("id") == "actual" {
+		tok := tokenDe(r)
+		if !strings.HasPrefix(tok, store.PrefijoToken) {
+			writeError(w, http.StatusBadRequest, "esta petición no usa un token de acceso")
+			return
+		}
+		hash = security.HashToken(tok)
+	} else {
+		var err error
+		if id, err = strconv.ParseInt(r.PathValue("id"), 10, 64); err != nil || id <= 0 {
+			writeError(w, http.StatusBadRequest, "id de token inválido")
+			return
+		}
+	}
+	if err := s.store.RevocarToken(r.Context(), usuario(r), id, hash); err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
