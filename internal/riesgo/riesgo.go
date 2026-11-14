@@ -1,8 +1,7 @@
 // Package riesgo revisa el SQL de una migración y avisa de lo que puede
 // perder datos, bloquear tablas o fallar en producción.
 //
-// La misma copia vive en Marga Sun (server/internal/riesgo): si cambias una regla,
-// cámbiala en los dos.
+// Lo usan la CLI (marga revisar, marga up) y el servidor (el riesgo de cada commit).
 package riesgo
 
 import (

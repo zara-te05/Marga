@@ -51,7 +51,7 @@ func (s *Server) iniciarSesion(w http.ResponseWriter, r *http.Request, u store.U
 		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: s.cfg.SecureCookie,
 		MaxAge: int(s.cfg.SessionTTL.Seconds()),
 	})
-	// El token también va en el cuerpo para clientes sin cookies (la CLI de Marga Moon).
+	// El token también va en el cuerpo para clientes sin cookies (la CLI).
 	writeJSON(w, status, map[string]any{"usuario": u, "token": tok, "expira_en": time.Now().Add(s.cfg.SessionTTL)})
 }
 

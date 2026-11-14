@@ -26,6 +26,8 @@ type Indice struct {
 	Nombre     string `json:"nombre"`
 	Unico      bool   `json:"unico"`
 	Definicion string `json:"definicion"`
+	// Restriccion: el índice pertenece a una restricción UNIQUE (no se borra con DROP INDEX).
+	Restriccion bool `json:"restriccion,omitempty"`
 }
 
 type LlaveForanea struct {
@@ -157,7 +159,8 @@ func Leer(ctx context.Context, q Querier) (Esquema, error) {
 
 	// 3) Índices (los de la llave primaria ya se ven en PK)
 	rows, err = q.QueryContext(ctx, `
-		SELECT n.nspname, t.relname, i.relname, ix.indisunique, pg_get_indexdef(ix.indexrelid)
+		SELECT n.nspname, t.relname, i.relname, ix.indisunique, pg_get_indexdef(ix.indexrelid),
+		       EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = ix.indexrelid AND c.conrelid = ix.indrelid AND c.contype = 'u')
 		FROM pg_index ix
 		JOIN pg_class i ON i.oid = ix.indexrelid
 		JOIN pg_class t ON t.oid = ix.indrelid
@@ -170,7 +173,7 @@ func Leer(ctx context.Context, q Querier) (Esquema, error) {
 	for rows.Next() {
 		var esq, tab string
 		var idx Indice
-		if err := rows.Scan(&esq, &tab, &idx.Nombre, &idx.Unico, &idx.Definicion); err != nil {
+		if err := rows.Scan(&esq, &tab, &idx.Nombre, &idx.Unico, &idx.Definicion, &idx.Restriccion); err != nil {
 			rows.Close()
 			return e, err
 		}

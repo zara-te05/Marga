@@ -114,7 +114,7 @@ func plural(n int, uno, varios string) string {
 	return fmt.Sprintf("%d %s", n, varios)
 }
 
-// ---------------------------------------------------------------- Reporte a Marga Sun
+// ---------------------------------------------------------------- Reporte al servidor
 
 // nombreReporte: los entornos personales se reportan como "dev@usuario" para que
 // la base local de cada quien no se mezcle con la de sus compañeros.
@@ -175,10 +175,10 @@ func reportar(c *cobra.Command, p *proyecto.Proyecto, nombre string, e proyecto.
 		Motor: e.Motor, Compartido: e.Compartido, Aplicadas: aplicadas, Esquema: real, Drift: drift,
 	})
 	if err != nil {
-		linea(c, "%s No se pudo enviar el estado a Marga Sun: %v", sAviso.Render("!"), err)
+		linea(c, "%s No se pudo enviar el estado al servidor: %v", sAviso.Render("!"), err)
 		return
 	}
-	linea(c, "%s", sTenue.Render("↗ estado de "+nombreRep+" enviado a Marga Sun"))
+	linea(c, "%s", sTenue.Render("↗ estado de "+nombreRep+" enviado al servidor"))
 }
 
 // mostrarDrift imprime los cambios hechos fuera de Marga (máximo `limite`; 0 = todos).

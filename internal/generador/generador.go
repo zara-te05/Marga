@@ -87,6 +87,22 @@ func nombresOrdenados(e introspeccion.Esquema) []string {
 
 // sentencias genera el SQL para pasar de `a` a `b`, en un orden que no rompe dependencias:
 // quitar FKs e índices → borrar tablas → crear tablas → columnas → PK → índices → FKs.
+// Un índice que respalda una restricción UNIQUE se borra quitando la restricción,
+// y se recrea como índice + restricción para que el esquema quede idéntico.
+func quitarIndice(tabla string, i introspeccion.Indice) string {
+	if i.Restriccion {
+		return fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s;", tabla, i.Nombre)
+	}
+	return fmt.Sprintf("DROP INDEX IF EXISTS %s;", i.Nombre)
+}
+
+func ponerIndice(tabla string, i introspeccion.Indice) string {
+	if i.Restriccion {
+		return fmt.Sprintf("%s;\nALTER TABLE %s ADD CONSTRAINT %s UNIQUE USING INDEX %s;", i.Definicion, tabla, i.Nombre, i.Nombre)
+	}
+	return i.Definicion + ";"
+}
+
 func sentencias(a, b introspeccion.Esquema) ([]string, []string) {
 	var (
 		quitarFK, quitarIdx, borrar, crear, columnas, pks, ponerIdx, ponerFK []string
@@ -119,7 +135,7 @@ func sentencias(a, b introspeccion.Esquema) ([]string, []string) {
 		}
 		for _, i := range ta.Indices {
 			if def, ok := idxB[i.Nombre]; !ok || def != i.Definicion {
-				quitarIdx = append(quitarIdx, fmt.Sprintf("DROP INDEX %s;", i.Nombre))
+				quitarIdx = append(quitarIdx, quitarIndice(n, i))
 			}
 		}
 	}
@@ -134,7 +150,7 @@ func sentencias(a, b introspeccion.Esquema) ([]string, []string) {
 		if ta == nil {
 			crear = append(crear, crearTabla(*tb))
 			for _, i := range tb.Indices {
-				ponerIdx = append(ponerIdx, i.Definicion+";")
+				ponerIdx = append(ponerIdx, ponerIndice(n, i))
 			}
 			for _, f := range tb.FKs {
 				ponerFK = append(ponerFK, agregarFK(n, f))
@@ -159,7 +175,7 @@ func sentencias(a, b introspeccion.Esquema) ([]string, []string) {
 		}
 		for _, i := range tb.Indices {
 			if def, ok := idxA[i.Nombre]; !ok || def != i.Definicion {
-				ponerIdx = append(ponerIdx, i.Definicion+";")
+				ponerIdx = append(ponerIdx, ponerIndice(n, i))
 			}
 		}
 		fkA := map[string]bool{}

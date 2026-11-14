@@ -1,4 +1,4 @@
-// Package remoto es el cliente de la API de Marga Sun y guarda las
+// Package remoto es el cliente de la API del servidor de Marga y guarda las
 // credenciales del usuario en ~/.marga/credenciales.json.
 package remoto
 
@@ -76,8 +76,14 @@ func Nuevo(base, token string) *Cliente {
 }
 
 // Conectado devuelve un cliente con las credenciales guardadas para ese servidor.
+//
+// En CI no hace falta `marga login`: basta con la variable MARGA_TOKEN (un token de
+// acceso personal creado en la web, en Cuenta → Tokens de acceso).
 func Conectado(servidor string) (*Cliente, Credencial, error) {
 	servidor = NormalizarServidor(servidor)
+	if tok := strings.TrimSpace(os.Getenv("MARGA_TOKEN")); tok != "" {
+		return Nuevo(servidor, tok), Credencial{Token: tok}, nil
+	}
 	m, err := LeerCredenciales()
 	if err != nil {
 		return nil, Credencial{}, err

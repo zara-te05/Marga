@@ -56,7 +56,7 @@ func (s *Store) Revisar(ctx context.Context, u Usuario, repoID int64, ref, estad
 		return err
 	}
 	if estado == "aprobado" && autor.Valid && autor.Int64 == u.ID {
-		return errf(ErrInvalido, "no puedes aprobar tu propia migración: pídele a otra persona que la revise")
+		return errf(ErrProhibido, "no puedes aprobar tu propia migración: pídele a otra persona que la revise")
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `

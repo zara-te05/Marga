@@ -24,6 +24,9 @@ func servidorPorDefecto(flag string) string {
 	if flag != "" {
 		return remoto.NormalizarServidor(flag)
 	}
+	if v := os.Getenv("MARGA_SERVIDOR"); v != "" {
+		return remoto.NormalizarServidor(v)
+	}
 	if p, err := proyectoActual(); err == nil && p.Config.Servidor != "" {
 		return p.Config.Servidor
 	}
