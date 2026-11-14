@@ -1,10 +1,14 @@
-# Marga Moon · CLI
+# `marga` · la CLI
 
 Control de versiones para bases de datos. Aplica, revierte y sincroniza migraciones
-de PostgreSQL, y las comparte con tu equipo a través del servidor **Marga Sun**.
+de PostgreSQL, y las comparte con tu equipo a través del servidor de Marga (`marga-server`).
+
+**Instalar**: descarga `marga_<versión>_<sistema>.zip` de la página de *Releases* del repositorio
+y pon `marga` (o `marga.exe`) en tu `PATH`. O compílala desde la raíz del repositorio:
 
 ```
-go build -o marga.exe .      # Windows  (en Linux/Mac: go build -o marga .)
+go build -o marga.exe ./cmd/marga      # Windows  (en Linux/Mac: go build -o marga ./cmd/marga)
+marga version
 ```
 
 - `marga <comando>` → CLI normal (sirve para scripts y CI).
@@ -90,7 +94,7 @@ una base, toma su estado actual como línea base.
 
 ## Entornos y la web
 
-Cada `status`, `up`, `down` y `drift` envía a Marga Sun el estado del entorno: qué tiene aplicado,
+Cada `status`, `up`, `down` y `drift` envía al servidor el estado del entorno: qué tiene aplicado,
 su esquema real y su drift. Con eso la web muestra la pestaña **Entornos** (aplicadas y pendientes
 por entorno), el **diagrama ER real** en Esquema y en qué entornos está cada commit.
 
@@ -138,13 +142,23 @@ En la web, un admin puede marcar un entorno (p. ej. `prod`) como **Requiere apro
 Entonces `marga up` en ese entorno solo aplica migraciones que están en el servidor y que
 **otra persona** aprobó en *Commits → Revisiones* (nadie puede aprobar las suyas).
 
-## Variables útiles (CI)
+## En CI (GitHub Actions, GitLab…)
+
+En CI no hace falta `marga login`: crea un token en la web (**Cuenta → Tokens de acceso**),
+guárdalo como secreto y pásalo en `MARGA_TOKEN`. La URL de la base también puede venir de una variable:
 
 ```bash
-MARGA_PASSWORD=...  marga login --email ci@empresa.com     # login sin teclado
-marga env add prod '$DATABASE_URL'                         # la URL se lee de la variable al ejecutar
+export MARGA_TOKEN=marga_pat_...                  # secreto del CI
+marga env add prod '$DATABASE_URL'                # se guarda el nombre; la URL se lee al ejecutar
 marga up --env prod --si
 ```
+
+| Variable | Para qué |
+|---|---|
+| `MARGA_TOKEN` | token de acceso personal; reemplaza a `marga login` |
+| `MARGA_SERVIDOR` | servidor por defecto cuando no hay proyecto (en lugar de `http://localhost:8080`) |
+| `MARGA_PASSWORD` | contraseña para `marga login` sin teclado |
+| `MARGA_DEBUG` | escribe `debug.log` al usar la consola interactiva |
 
 ## Limitaciones actuales
 

@@ -1,4 +1,6 @@
-# PostgreSQL para desarrollo:  docker compose up -d   (desde la carpeta server/)
+# PostgreSQL para desarrollo (no es para producción: para eso está deploy/).
+#   docker compose -f docker-compose.dev.yml up -d
+# Después: go run ./cmd/marga-server -seed   →   http://localhost:8080
 services:
   postgres:
     image: postgres:16

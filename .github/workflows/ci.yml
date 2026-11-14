@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    name: Pruebas (con PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MARGA_TEST_DB_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Formato (gofmt)
+        run: |
+          sin_formato=$(gofmt -l .)
+          if [ -n "$sin_formato" ]; then echo "Corre gofmt -w en:"; echo "$sin_formato"; exit 1; fi
+      - name: go vet
+        run: go vet ./...
+      - name: Pruebas
+        run: go test -race -count=1 ./...
+
+  compilar:
+    name: Compilar ${{ matrix.goos }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Compilar marga y marga-server
+        env:
+          GOOS: ${{ matrix.goos }}
+          CGO_ENABLED: "0"
+        run: mkdir -p /tmp/salida && go build -o /tmp/salida/ ./cmd/...
+
+  css:
+    name: CSS al día
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerar marga.css y comparar
+        working-directory: web
+        run: |
+          npm install --no-audit --no-fund
+          npm run css
+          git diff --exit-code -- assets/css/marga.css || (echo "marga.css no está al día: corre 'cd web && npm run css' y súbelo"; exit 1)

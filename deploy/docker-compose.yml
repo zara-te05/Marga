@@ -1,0 +1,84 @@
+# Marga en un servidor con HTTPS automático.
+#
+#   cd deploy
+#   cp .env.ejemplo .env      # y edítalo: dominio, contraseña de la BD, correo
+#   docker compose up -d
+#
+# Caddy obtiene y renueva el certificado de Let's Encrypt solo; el dominio debe
+# apuntar (registro A/AAAA) a esta máquina y los puertos 80 y 443 estar abiertos.
+name: marga
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: marga
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en deploy/.env}
+      POSTGRES_DB: marga
+    volumes:
+      - datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marga -d marga"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  marga:
+    # Imagen publicada por el workflow de release. Para compilarla aquí mismo
+    # cambia esta línea por:  build: ..
+    image: ghcr.io/zara-te05/marga-server:${MARGA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MARGA_DB_URL: postgres://marga:${POSTGRES_PASSWORD}@db:5432/marga?sslmode=disable
+      MARGA_ADDR: ":8080"
+      MARGA_URL_PUBLICA: https://${MARGA_DOMINIO:?define MARGA_DOMINIO en deploy/.env}
+      MARGA_SECURE_COOKIE: "true"
+      MARGA_CONFIAR_PROXY: "true"
+      MARGA_SMTP_HOST: ${MARGA_SMTP_HOST:-}
+      MARGA_SMTP_PUERTO: ${MARGA_SMTP_PUERTO:-587}
+      MARGA_SMTP_USUARIO: ${MARGA_SMTP_USUARIO:-}
+      MARGA_SMTP_PASSWORD: ${MARGA_SMTP_PASSWORD:-}
+      MARGA_SMTP_DE: ${MARGA_SMTP_DE:-}
+    # Sin "ports": solo Caddy le habla, por la red interna.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [marga]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      MARGA_DOMINIO: ${MARGA_DOMINIO}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+
+  # Respaldo diario con pg_dump. Guarda 14 días en deploy/respaldos/.
+  respaldo:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: marga
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: marga
+      RESPALDOS_DIAS: ${RESPALDOS_DIAS:-14}
+    volumes:
+      - ./respaldos:/respaldos
+      - ./respaldo.sh:/respaldo.sh:ro
+    entrypoint: ["/bin/sh", "/respaldo.sh"]
+
+volumes:
+  datos:
+  caddy_datos:
+  caddy_config:

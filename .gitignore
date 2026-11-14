@@ -13,3 +13,7 @@
 
 # Front: dependencias de Node (solo para regenerar el CSS)
 web/node_modules/
+
+# Despliegue: secretos y respaldos
+deploy/.env
+deploy/respaldos/

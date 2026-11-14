@@ -1,0 +1,5 @@
+# Caddy pone HTTPS (Let's Encrypt) y le pasa las peticiones a marga-server.
+{$MARGA_DOMINIO} {
+	encode zstd gzip
+	reverse_proxy marga:8080
+}
