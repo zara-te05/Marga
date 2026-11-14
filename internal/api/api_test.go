@@ -321,3 +321,74 @@ func TestFrontEmbebido(t *testing.T) {
 		}
 	}
 }
+
+func TestLimiteDeIntentosDeLogin(t *testing.T) {
+	srv, _ := servidor(t)
+	registrar(t, srv.URL, "Ana", "ana@ejemplo.com")
+	anon := &cliente{t: t, base: srv.URL}
+	for i := 0; i < 8; i++ {
+		anon.pedir("POST", "/api/auth/login", map[string]string{"email": "ana@ejemplo.com", "password": "mala"}, 401, nil)
+	}
+	// Ni con la contraseña correcta: la cuenta queda en pausa un rato.
+	anon.pedir("POST", "/api/auth/login", map[string]string{"email": "ANA@ejemplo.com", "password": "clave-segura-1"}, 429, nil)
+}
+
+func TestRestablecerYCambiarPassword(t *testing.T) {
+	srv, st := servidor(t)
+	ana := registrar(t, srv.URL, "Ana", "ana@ejemplo.com")
+	anon := &cliente{t: t, base: srv.URL}
+
+	// La respuesta no revela si la cuenta existe.
+	var r1, r2 map[string]any
+	anon.pedir("POST", "/api/auth/recuperar", map[string]string{"email": "ana@ejemplo.com"}, 200, &r1)
+	anon.pedir("POST", "/api/auth/recuperar", map[string]string{"email": "nadie@ejemplo.com"}, 200, &r2)
+	if r1["mensaje"] != r2["mensaje"] {
+		t.Fatal("recuperar debe responder igual exista o no el email")
+	}
+
+	u, err := st.UsuarioPorEmail(context.Background(), "ana@ejemplo.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	enlace, err := EnlaceRestablecer(context.Background(), st, "https://marga.ejemplo.com", u)
+	if err != nil || !strings.HasPrefix(enlace, "https://marga.ejemplo.com/pages/restablecer.html#token=") {
+		t.Fatalf("enlace = %q, %v", enlace, err)
+	}
+	tok := enlace[strings.Index(enlace, "token=")+6:]
+
+	anon.pedir("POST", "/api/auth/restablecer", map[string]string{"token": tok, "password": "corta"}, 400, nil)
+	anon.pedir("POST", "/api/auth/restablecer", map[string]string{"token": "inventado", "password": "nueva-clave-99"}, 400, nil)
+	var ses struct{ Token string }
+	anon.pedir("POST", "/api/auth/restablecer", map[string]string{"token": tok, "password": "nueva-clave-99"}, 200, &ses)
+	// Un solo uso.
+	anon.pedir("POST", "/api/auth/restablecer", map[string]string{"token": tok, "password": "otra-clave-99"}, 400, nil)
+	// La sesión que Ana tenía abierta se cerró; la contraseña vieja ya no sirve.
+	ana.pedir("GET", "/api/auth/me", nil, 401, nil)
+	anon.pedir("POST", "/api/auth/login", map[string]string{"email": "ana@ejemplo.com", "password": "clave-segura-1"}, 401, nil)
+
+	// Cambiar la contraseña desde la sesión nueva.
+	nueva := &cliente{t: t, base: srv.URL, token: ses.Token}
+	nueva.pedir("POST", "/api/auth/password", map[string]string{"actual": "mal", "nueva": "tercera-clave-1"}, 400, nil)
+	nueva.pedir("POST", "/api/auth/password", map[string]string{"actual": "nueva-clave-99", "nueva": "tercera-clave-1"}, 200, nil)
+	nueva.pedir("GET", "/api/auth/me", nil, 200, nil) // la sesión desde la que cambió sigue viva
+	anon.pedir("POST", "/api/auth/login", map[string]string{"email": "ana@ejemplo.com", "password": "tercera-clave-1"}, 200, nil)
+
+	// Un token de la CLI no puede cambiar la contraseña.
+	var pat struct{ Token string }
+	nueva.pedir("POST", "/api/tokens", map[string]string{"nombre": "CI"}, 201, &pat)
+	(&cliente{t: t, base: srv.URL, token: pat.Token}).pedir("POST", "/api/auth/password", map[string]string{"actual": "tercera-clave-1", "nueva": "cuarta-clave-1"}, 403, nil)
+}
+
+func TestCabecerasDeSeguridad(t *testing.T) {
+	srv, _ := servidor(t)
+	res, err := http.Get(srv.URL + "/pages/login.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	for _, h := range []string{"Content-Security-Policy", "X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy"} {
+		if res.Header.Get(h) == "" {
+			t.Errorf("falta la cabecera %s", h)
+		}
+	}
+}

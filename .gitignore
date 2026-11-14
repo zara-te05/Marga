@@ -10,3 +10,6 @@
 
 # Registros
 *.log
+
+# Front: dependencias de Node (solo para regenerar el CSS)
+web/node_modules/

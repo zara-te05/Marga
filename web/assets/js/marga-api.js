@@ -10,7 +10,8 @@
  */
 (function () {
   const online = location.protocol === 'http:' || location.protocol === 'https:';
-  const isLogin = /login\.html$/.test(location.pathname);
+  // Páginas públicas: no exigen sesión.
+  const isLogin = /(login|restablecer)\.html$/.test(location.pathname);
 
   class ApiError extends Error {
     constructor(status, message) { super(message); this.status = status; }

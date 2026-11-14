@@ -238,6 +238,9 @@ func (s *Store) Purgar(ctx context.Context) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	if _, err := s.DB.ExecContext(ctx, `DELETE FROM restablecimiento WHERE expira_en <= now() - interval '1 day'`); err != nil {
+		return 0, err
+	}
 	a, _ := r1.RowsAffected()
 	b, _ := r2.RowsAffected()
 	return a + b, nil

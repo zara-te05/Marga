@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/zara-te05/Marga/internal/correo"
 )
 
 type Config struct {
@@ -16,6 +18,9 @@ type Config struct {
 	SessionTTL   time.Duration // MARGA_SESSION_TTL (ej. 72h)
 	DiffTTL      time.Duration // MARGA_DIFF_TTL   (ej. 24h)
 	SecureCookie bool          // MARGA_SECURE_COOKIE=true detrás de HTTPS
+	URLPublica   string        // MARGA_URL_PUBLICA: https://marga.tu-dominio.com (enlaces de correo)
+	ConfiarProxy bool          // MARGA_CONFIAR_PROXY=true: leer la IP real de X-Forwarded-For
+	SMTP         correo.Config // MARGA_SMTP_*: para enviar enlaces de restablecimiento
 }
 
 func Load() Config {
@@ -28,6 +33,15 @@ func Load() Config {
 		SessionTTL:   duration("MARGA_SESSION_TTL", 72*time.Hour),
 		DiffTTL:      duration("MARGA_DIFF_TTL", 24*time.Hour),
 		SecureCookie: get("MARGA_SECURE_COOKIE", "false") == "true",
+		URLPublica:   strings.TrimRight(get("MARGA_URL_PUBLICA", ""), "/"),
+		ConfiarProxy: get("MARGA_CONFIAR_PROXY", "false") == "true",
+		SMTP: correo.Config{
+			Host:     get("MARGA_SMTP_HOST", ""),
+			Puerto:   get("MARGA_SMTP_PUERTO", "587"),
+			Usuario:  get("MARGA_SMTP_USUARIO", ""),
+			Password: get("MARGA_SMTP_PASSWORD", ""),
+			De:       get("MARGA_SMTP_DE", ""),
+		},
 	}
 	return cfg
 }

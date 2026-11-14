@@ -60,6 +60,11 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &c) {
 		return
 	}
+	ip := s.ipDe(r)
+	if demasiados(w, s.lim.registroIP, ip) {
+		return
+	}
+	s.lim.registroIP.Registrar(ip)
 	if err := security.ValidarPassword(c.Password); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -83,6 +88,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &c) {
 		return
 	}
+	ip, email := s.ipDe(r), strings.ToLower(strings.TrimSpace(c.Email))
+	if demasiados(w, s.lim.loginEmail, email, s.lim.loginIP, ip) {
+		return
+	}
 	u, err := s.store.UsuarioPorEmail(r.Context(), c.Email)
 	if err != nil && !errors.Is(err, store.ErrNoEncontrado) {
 		s.fail(w, err)
@@ -94,9 +103,12 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		security.CheckPassword("pbkdf2-sha256$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", c.Password)
 	}
 	if err != nil || !ok {
+		s.lim.loginEmail.Registrar(email)
+		s.lim.loginIP.Registrar(ip)
 		writeError(w, http.StatusUnauthorized, "email o contraseña incorrectos")
 		return
 	}
+	s.lim.loginEmail.Limpiar(email)
 	_ = store.Auditar(r.Context(), s.store.DB, u.ID, nil, "usuario.login", nil)
 	s.iniciarSesion(w, r, u, http.StatusOK)
 }

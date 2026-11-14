@@ -3,6 +3,7 @@
 //	go run ./cmd/marga-server            -> migra la BD y levanta el servidor en :8080
 //	go run ./cmd/marga-server -seed      -> además crea datos de demostración
 //	go run ./cmd/marga-server -migrate   -> solo aplica migraciones y termina
+//	marga-server -restablecer ana@x.com  -> enlace para que Ana cambie su contraseña
 package main
 
 import (
@@ -29,6 +30,7 @@ func main() {
 	seed := flag.Bool("seed", false, "crear datos de demostración")
 	soloMigrar := flag.Bool("migrate", false, "solo aplicar migraciones y salir")
 	verVersion := flag.Bool("version", false, "muestra la versión y termina")
+	restablecer := flag.String("restablecer", "", "imprime un enlace para que EMAIL cambie su contraseña y termina")
 	flag.Parse()
 	if *verVersion {
 		fmt.Println("marga-server", version.Texto())
@@ -54,6 +56,18 @@ func main() {
 	}
 
 	st := store.New(db, cfg.DiffTTL)
+	if *restablecer != "" {
+		u, err := st.UsuarioPorEmail(ctx, *restablecer)
+		if err != nil {
+			log.Fatalf("✗ %s: %v", *restablecer, err)
+		}
+		enlace, err := api.EnlaceRestablecer(ctx, st, api.New(cfg, st).URLPublica(), u)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Enlace para %s (vale 1 hora, un solo uso):\n  %s\n", u.Email, enlace)
+		return
+	}
 	if *seed {
 		h, err := security.HashPassword("marga1234")
 		if err != nil {

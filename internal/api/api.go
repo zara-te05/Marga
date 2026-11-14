@@ -23,9 +23,12 @@ import (
 type Server struct {
 	cfg   config.Config
 	store *store.Store
+	lim   *limites
 }
 
-func New(cfg config.Config, st *store.Store) *Server { return &Server{cfg: cfg, store: st} }
+func New(cfg config.Config, st *store.Store) *Server {
+	return &Server{cfg: cfg, store: st, lim: nuevosLimites()}
+}
 
 // Handler arma el router completo (Go 1.22+: patrones con método y {comodines}).
 func (s *Server) Handler() http.Handler {
@@ -37,6 +40,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/auth/login", s.login)
 	mux.HandleFunc("POST /api/auth/logout", s.logout)
 	mux.HandleFunc("GET /api/auth/me", s.auth(s.me))
+	mux.HandleFunc("POST /api/auth/recuperar", s.recuperar)
+	mux.HandleFunc("POST /api/auth/restablecer", s.restablecer)
+	mux.HandleFunc("POST /api/auth/password", s.auth(s.cambiarPassword))
 
 	// --- Tokens de acceso personales (CLI / CI)
 	mux.HandleFunc("GET /api/tokens", s.auth(s.listarTokens))
@@ -94,7 +100,7 @@ func (s *Server) Handler() http.Handler {
 	// --- Front estático (solo index.html, pages/ y assets/; nunca server/ ni .env)
 	s.static(mux)
 
-	return chain(mux, recoverer, logger, csrfGuard)
+	return chain(mux, recoverer, logger, s.cabeceras, csrfGuard)
 }
 
 // ---------------------------------------------------------------- Middleware
