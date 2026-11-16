@@ -23,8 +23,8 @@ historial de migraciones.
 4. Abre **http://localhost:8080** → entra con `demo@marga.dev` / `marga1234`
    (o crea tu cuenta; el **primer** usuario registrado es `admin`).
 
-Para editar el front sin recompilar: `MARGA_WEB_DIR=./web`. Si cambias clases de Tailwind,
-regenera el CSS con `cd web && npm install && npm run css` (el CSS compilado va en el repositorio,
+Para editar el front sin recompilar: `MARGA_WEB_DIR=./internal/vistas/web`. Si cambias clases de Tailwind,
+regenera el CSS con `cd internal/vistas/web && npm install && npm run css` (el CSS compilado va en el repositorio,
 así que para compilar Go no hace falta Node).
 
 Para producción ver [despliegue.md](despliegue.md).
@@ -59,7 +59,7 @@ enlace para que esa persona cambie su contraseña), `-version`.
 
 ## Modelo de datos
 
-Es el diagrama ER original traducido a PostgreSQL (`internal/database/migrations/`), con estos ajustes:
+Es el diagrama ER original traducido a PostgreSQL (`internal/datos/database/migrations/`), con estos ajustes:
 
 | Cambio | Por qué |
 |---|---|
@@ -71,7 +71,8 @@ Es el diagrama ER original traducido a PostgreSQL (`internal/database/migrations
 | `cache_diff`: PK `(commit_origen, commit_destino)` y `ttl` → `expira_en` | evita la clave concatenada `claveOrigen_Ddestino_id` |
 | `sesion.sesion_id` = SHA-256 del token | si alguien lee la tabla no puede robar sesiones |
 | `indice_busqueda_commit.documento` (tsvector + GIN) y trigger | búsqueda de texto completo en español |
-| `snapshot_esquema.ddl` (nuevo) | DDL completo de la tabla en ese commit |
+| `snapshot_esquema.ddl` (nuevo) | DDL completo del objeto en ese commit |
+| `snapshot_esquema.tipo` (nuevo, 0007) | `tabla`, `funcion`, `procedimiento`, `vista`, `vista_materializada`, `trigger` o `tipo`. La columna `tabla` es el nombre del objeto: la firma de una función (`f(integer)`) o `trigger ON tabla`. Los nombres no chocan entre tipos, así que la llave única no cambió |
 | `repositorio.slug`, `motor`, `entorno` (nuevos) | los usan el front y la CLI |
 | `CHECK` en `rol`, `permiso`, `visibilidad`, `motor`, `entorno` | valores válidos garantizados por la BD |
 
@@ -80,7 +81,7 @@ Es el diagrama ER original traducido a PostgreSQL (`internal/database/migrations
 `migracion_aplicada` (qué migraciones tiene cada entorno, enlazadas a su commit por hash o checksum),
 `aprobacion` (revisiones de cada commit), `restablecimiento` (enlaces para cambiar la contraseña)
 y `commit.checksum` (sha256 del SQL: la identidad de una migración entre ramas, el mismo cálculo
-que hace la CLI en `internal/checksum`).
+que hace la CLI en `internal/modelos/checksum`).
 
 **Permisos por repositorio:** propietario o admin global → `admin`; colaborador → su `permiso`
 (`lectura` / `escritura` / `admin`); repo `publico` → `lectura`; resto → no lo ve (404).
@@ -111,7 +112,7 @@ Donde la API recibe un commit (`{ref}`) acepta hash, prefijo de hash o nombre de
 | GET / POST | `/api/repos/{id}/branches` | lectura / escritura | `{nombre, desde}` (`desde` = rama o hash) |
 | DELETE | `/api/repos/{id}/branches/{nombre}` | escritura | no permite borrar `main` |
 | GET | `/api/repos/{id}/commits?branch=main&limit=50&offset=0` | lectura | `git log` de la rama |
-| POST | `/api/repos/{id}/commits` | escritura | `{branch, mensaje, sql_up, sql_down, padre_esperado?, snapshots?}` |
+| POST | `/api/repos/{id}/commits` | escritura | `{branch, mensaje, sql_up, sql_down, padre_esperado?, snapshots?}`. Cada snapshot: `{tabla, tipo?, ddl, eliminada?}` (sin `tipo` = tabla) |
 | GET | `/api/repos/{id}/commits/{ref}` | lectura | incluye riesgo, revisiones y entornos donde está aplicado |
 | GET | `/api/repos/{id}/commits/{ref}/diff` | lectura | cambios contra su padre |
 | POST | `/api/repos/{id}/commits/{ref}/revert` | escritura | crea un commit inverso `{branch}` |
@@ -124,7 +125,7 @@ Donde la API recibe un commit (`{ref}`) acepta hash, prefijo de hash o nombre de
 | PUT | `/api/repos/{id}/entornos/{nombre}` | escritura | lo usa la CLI para reportar un entorno (`rama`: rama de git de una base personal) |
 | DELETE | `/api/repos/{id}/entornos/{nombre}` | admin | olvida un entorno |
 | PATCH | `/api/repos/{id}/entornos/{nombre}` | admin | `{requiere_aprobacion}`: protege el entorno |
-| POST | `/api/repos/{id}/fusionar` | escritura | `{desde, hacia, simular, forzar}` → al_dia / fast_forward / copia / conflicto |
+| POST | `/api/repos/{id}/fusionar` | escritura | `{desde, hacia, simular, forzar}` → al_dia / fast_forward / copia / conflicto (cada conflicto trae `tabla` = nombre del objeto y `tipo`) |
 | GET | `/api/repos/{id}/auditoria` | admin | |
 
 Para CI crea un token en **Cuenta → Tokens de acceso**: la CLI lo lee de `MARGA_TOKEN`; para

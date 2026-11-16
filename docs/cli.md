@@ -11,8 +11,75 @@ go build -o marga.exe ./cmd/marga      # Windows  (en Linux/Mac: go build -o mar
 marga version
 ```
 
-- `marga <comando>` → CLI normal (sirve para scripts y CI).
-- `marga` sin argumentos → consola interactiva (TUI). Ahí escribes los mismos comandos sin el `marga`.
+- `marga <comando>` → la CLI, en tu terminal (PowerShell, bash…), en scripts y en CI. `marga` sin
+  argumentos muestra la ayuda. Para autocompletar comandos: `marga completion powershell` (o bash, zsh, fish).
+- `marga ui` → panel interactivo: entornos, migraciones, SQL, riesgo y drift (ver abajo).
+- `marga sql` → consola de SQL en tu base, con historial y autocompletado.
+
+## `marga ui`: el panel
+
+```
+╭─ Entornos ──────────────────────────╮╭─ 0005_agregar_rfc ─────────────────────────────╮
+│ › dev       personal    1 pend.     ││  1 UP   2 DOWN   3 Riesgo   4 Drift             │
+│   staging   compartido  ✓ al día    ││                                                 │
+│   prod      producción  drift       ││ ALTER TABLE clientes ADD COLUMN rfc text;       │
+╰─────────────────────────────────────╯│                                                 │
+╭─ Migraciones en dev ────────────────╮│                                                 │
+│ ✓ 0004_crear_pedidos     hace 2d    ││                                                 │
+│ · 0005_agregar_rfc     ● pendiente  ││                                                 │
+╰─────────────────────────────────────╯╰─────────────────────────────────────────────────╯
+/ buscar  u up  d down  s sql  e editar  c commit  n new  a drift  t tema  q salir
+```
+
+Con `/` buscas migraciones: la lista se filtra mientras escribes, por versión, nombre o cualquier
+texto del SQL (UP o DOWN), y lo que coincide queda subrayado. Enter deja el filtro puesto y Esc lo quita.
+
+Muestra cada entorno con su estado (pendientes, drift, sin conexión), sus migraciones (✓ aplicada,
+· pendiente, ! cambió tras aplicarse; el punto rojo o amarillo es su riesgo) y, de la elegida, el UP,
+el DOWN, el análisis de riesgo o el drift del entorno.
+
+Las acciones no se reimplementan en el panel: se suspende, corre el comando real (`marga up --env …`,
+`marga down`, `marga sql`, `marga commit …`, `marga new …`, `marga drift --aceptar`) en la terminal, con su
+salida y sus confirmaciones, y al pulsar Enter vuelves al panel ya recargado. `u`, `d` y `a` preguntan
+antes; en producción esa respuesta cuenta como `--si`. `e` abre la migración (o su DOWN, en la pestaña 2)
+en tu editor.
+
+El panel solo mira: si la base de tu rama de git todavía no existe, lo dice y la crea `u` (como `marga up`).
+
+**Temas.** El panel, la consola de `marga sql` y el DDL que imprime `marga esquema` usan el mismo tema
+de colores. Hay seis: `marga` (el de siempre), `noche`, `bosque`, `atardecer`, `papel` (para terminales con
+fondo claro) y `mono` (sin colores). En el panel, `t` pasa al siguiente y lo guarda; `?` muestra la ayuda
+con una muestra de cada uno. También: `marga ui --tema noche`, `marga sql --tema noche` o
+`$env:MARGA_TEMA = "noche"`.
+
+Cada color se puede cambiar en `~/.marga/tema.json` (en Windows, `C:\Users\<tú>\.marga\tema.json`):
+
+```json
+{
+  "tema": "noche",
+  "colores": {
+    "clave": "#FF79C6",
+    "cadena": "#F1FA8C",
+    "parentesis": "#FFB86C #8BE9FD #BD93F9"
+  }
+}
+```
+
+| Color | Qué pinta |
+|---|---|
+| `acento`, `sobre_acento` | títulos, foco, la marca y las pestañas (y el texto encima de ellas) |
+| `texto`, `tenue`, `borde`, `seleccion` | texto normal, secundario, bordes y fondo de la fila elegida |
+| `ok`, `aviso`, `error` | al día / pendiente o drift / sin conexión y riesgo alto |
+| `clave` | palabras reservadas: `SELECT`, `CREATE`, `WHERE`… |
+| `tipo` | tipos: `integer`, `text`, `numeric`… |
+| `cadena`, `numero`, `comentario` | `'texto'` y cuerpos `$$…$$`, `42`, `-- notas` |
+| `funcion`, `operador`, `puntuacion` | `coalesce(`, `= <> :: \|\|`, `, ; .` |
+| `comillas`, `parametro` | `"Identificador"`, `$1` |
+| `parentesis` | `( [ {`: un color por nivel de anidación, separados por espacios |
+
+**Tu editor.** `e` (y `\e` en `marga sql`) usan `$VISUAL` o `$EDITOR`, como git. Si no hay, el Bloc de
+notas en Windows. En PowerShell: `$env:EDITOR = "code --wait"` (o `"nvim"`); para dejarlo fijo,
+agrégalo a tu perfil (`notepad $PROFILE`).
 
 ## Flujo de trabajo
 
@@ -99,9 +166,21 @@ Después de cada `up`/`down`, Marga guarda el esquema resultante en `marga_esque
     + índice idx_pedidos_total en pedidos
 ```
 
+El drift cubre tablas, columnas, llaves, índices y CHECK; y, en el esquema `public`, funciones y
+procedimientos (identificados por su firma: `calcular_total(integer)` y `calcular_total(integer, date)`
+son dos), vistas y vistas materializadas, triggers y tipos ENUM. Lo que pertenece a una extensión
+(pgcrypto, postgis…) no cuenta.
+
 Mientras haya drift, `up` y `down` no hacen nada (para no construir sobre algo desconocido).
 Si los cambios son correctos: `marga drift --aceptar --env staging`. La primera vez que Marga ve
 una base, toma su estado actual como línea base.
+
+**Al actualizar desde una versión que solo seguía tablas:** la línea base guardada no tiene funciones,
+vistas, triggers, ENUM ni CHECK (es `version: 1`). La primera vez que la nueva versión la lee, toma los
+que ya hay en la base como punto de partida, sin reportarlos como drift, y lista cuáles incorporó.
+Conviene correr `marga status` o `marga drift` en cada base **antes** de hacer cambios nuevos a mano:
+si haces el cambio primero y después `marga commit`, ese objeto se incorpora y no entra en la migración
+(Marga lo avisa).
 
 ## Entornos y la web
 
@@ -114,7 +193,8 @@ por entorno), el **diagrama ER real** en Esquema y en qué entornos está cada c
 - Si no hay sesión o el proyecto no está vinculado, simplemente no se reporta.
 
 `marga up` también guarda el esquema que dejó cada migración; `marga push` lo usa para enviar el
-DDL de las tablas que cambió. Por eso conviene aplicar (`up`) antes de hacer `push`.
+DDL de los objetos que cambió (tablas, funciones, vistas, triggers, tipos). Por eso conviene aplicar
+(`up`) antes de hacer `push`.
 
 ## `marga commit`: la migración se escribe sola
 
@@ -125,15 +205,41 @@ DDL de las tablas que cambió. Por eso conviene aplicar (`up`) antes de hacer `p
 3. Revisa los archivos (sobre todo los avisos) y súbelos con `marga push`.
 
 Genera tablas (incluidas `serial` e `IDENTITY`), columnas (tipo, NULL, DEFAULT), llave primaria,
-llaves foráneas e índices, en un orden que no rompe dependencias. Un renombre lo ve como
-borrar + crear: corrígelo a mano con `RENAME`. No genera CHECK, vistas, funciones ni ENUM.
+llaves foráneas, índices y CHECK; funciones y procedimientos, vistas y vistas materializadas (con sus
+índices), triggers y tipos ENUM. Un renombre lo ve como borrar + crear: corrígelo a mano con `RENAME`.
+
+**El orden.** PostgreSQL no deja cambiar el tipo de una columna que usa una vista, ni borrar una
+función que usa un trigger. Marga lee las dependencias (`pg_depend`) y escribe el SQL así:
+
+1. quita los triggers afectados;
+2. quita las vistas dependientes, las más externas primero;
+3. cambia tipos, funciones y tablas;
+4. vuelve a crear las vistas, las más internas primero;
+5. vuelve a crear los triggers.
+
+El DOWN hace exactamente lo inverso. Detalles:
+
+- **Funciones:** `CREATE OR REPLACE` si no cambian los argumentos ni el tipo de retorno; si cambian,
+  `DROP` + `CREATE` (y se recrean las vistas y triggers que la usan). El archivo empieza con
+  `SET LOCAL check_function_bodies = off` (como `pg_dump`): el cuerpo puede usar tablas creadas más abajo.
+- **Vistas:** una vista se quita y se vuelve a crear si cambia ella, o algo de lo que depende (una
+  columna que cambia de tipo o desaparece, una función que se recrea, otra vista). Pierde sus `GRANT`.
+- **ENUM:** agregar valores sí (`ADD VALUE … BEFORE …`, en su lugar). Quitar, renombrar o reordenar
+  valores no se puede de forma segura: Marga avisa y deja un comentario `-- marga: …` para hacerlo a
+  mano. Por eso el DOWN de una migración que agrega un valor no lo quita (`marga verificar` lo señala).
+- **Fuera de alcance por ahora:** secuencias sueltas, extensiones, permisos (`GRANT`) y esquemas
+  distintos de `public` (las tablas de otros esquemas sí se siguen, como antes).
 
 ## Análisis de riesgo
 
 `marga revisar`, `marga up` y la web avisan del SQL peligroso: `DROP TABLE`/`DROP COLUMN`,
 `NOT NULL` sin `DEFAULT` en tablas existentes, cambios de tipo, `SET NOT NULL`, índices sin
 `CONCURRENTLY`, llaves foráneas sin `NOT VALID`, renombres, `DELETE`/`UPDATE` sin `WHERE`,
-`CONCURRENTLY` sin `-- marga:sin-transaccion`, y migraciones sin `DOWN`.
+`CONCURRENTLY` sin `-- marga:sin-transaccion`, y migraciones sin `DOWN`. Y en funciones, vistas y tipos:
+`DROP FUNCTION` de una función que ejecuta un trigger (o con `CASCADE`), `DROP VIEW` (o solo un aviso
+bajo si la misma migración la vuelve a crear), quitar o renombrar un valor de un ENUM, y funciones
+`SECURITY DEFINER` sin `SET search_path` (un agujero de seguridad clásico). El SQL dentro del cuerpo
+de una función (`$$ … $$`, `$function$ … $function$`) no cuenta.
 
 ## Dónde se escribe el SQL
 
@@ -149,9 +255,10 @@ cada rama es una copia propia. Hay cuatro tipos de archivo:
 
 ### Objetos repetibles (`sql/`)
 
-`marga commit` no genera vistas, funciones, CHECK ni ENUM. Para las vistas y funciones, escribe
-el objeto **completo** en un archivo de `sql/` (`CREATE OR REPLACE VIEW …`) y edítalo ahí
-cada vez, en lugar de crear una migración por cada ajuste. `marga up` aplica primero las
+`marga commit` ya genera vistas y funciones, pero si prefieres, escribe el objeto **completo** en
+un archivo de `sql/` (`CREATE OR REPLACE VIEW …`) y edítalo ahí cada vez, en lugar de crear una
+migración por cada ajuste. Aplicar un repetible actualiza la línea base, así que no se cuela en el
+siguiente `marga commit`. `marga up` aplica primero las
 migraciones y después los repetibles nuevos o cambiados, cada uno en su transacción.
 
 - Se aplican en orden alfabético de ruta: si uno depende de otro, numéralos (`01_funciones/…`, `02_vistas/…`).
@@ -175,13 +282,29 @@ migraciones y después los repetibles nuevos o cambiados, cada uno en su transac
 marga sql -c "SELECT * FROM clientes LIMIT 5"
 marga sql -c "DELETE FROM clientes WHERE id = 3"     # ves qué pasa; al final se deshace
 marga sql prueba.sql                                  # un archivo, una o varias sentencias
-marga sql                                             # consola: SQL terminado en ; · \q para salir
+marga sql                                             # consola (abajo)
 marga sql -c "ALTER TABLE clientes ADD COLUMN rfc text" --guardar
 ```
 
 Todo corre en una transacción que se **deshace** al final, así que puedes probar un `ALTER` o un
 `DELETE` y ver el resultado sin cambiar nada. Con `--guardar` los cambios se quedan; si cambiaste
 tablas, conviértelos en migración con `marga commit`. En un entorno compartido, `--guardar` pide `--si`.
+
+**La consola** (`marga sql` sin `-c` ni archivo):
+
+| Tecla o comando | Qué hace |
+|---|---|
+| Enter | ejecuta si la sentencia termina en `;`; si no, agrega una línea |
+| ↑ ↓ | historial (se guarda entre sesiones en `~/.marga/historial_sql.jsonl`) |
+| Tab | completa tablas, columnas, vistas, funciones, tipos y palabras clave |
+| (al escribir) | el SQL se colorea mientras lo escribes, con el mismo tema que `marga ui` |
+| Ctrl+C | borra lo escrito; con la línea vacía, sale |
+| `\d` · `\d NOMBRE` | lista los objetos de la base · muestra el DDL de uno |
+| `\e` | abre la última sentencia en tu editor; al guardar vuelve a la consola para ejecutarla |
+| `\i ARCHIVO` | ejecuta un archivo `.sql` |
+| `\?` · `\q` | ayuda · salir |
+
+Con la entrada redirigida (`Get-Content x.sql | marga sql`) lee línea por línea, sin editor.
 
 ## Juntar ramas: un solo merge
 
@@ -194,7 +317,7 @@ El merge lo haces en git (o con el botón del PR). Marga se adapta:
 2. **El servidor.** En la rama principal, `marga push` nota que las migraciones nuevas ya existen en otra rama
    del servidor (es la que juntaste en git) y la **fusiona en el servidor** en vez de subirlas como commits
    nuevos. Si el servidor las renumera, renombra tus archivos para que coincidan. Si ambas ramas tocaron
-   las mismas tablas se detiene: revisa con `marga verificar` y repite con `marga push --forzar`.
+   los mismos objetos (la misma tabla, función, vista, trigger o tipo) se detiene: revisa con `marga verificar` y repite con `marga push --forzar`.
 3. Haz commit en git de los archivos que se hayan renombrado.
 
 `.marga/remoto/` guarda un archivo por migración (antes era un solo `remoto.json`), así dos ramas que
@@ -285,7 +408,8 @@ La historia de una base es lineal (las migraciones se aplican en orden), así qu
 
 - si el destino no avanzó → **fast-forward**;
 - si avanzó → **copia** las migraciones encima; si su número ya existe en el destino, las **renumera**;
-- si ambas ramas tocaron la misma tabla → **conflicto** (no fusiona salvo `--forzar`).
+- si ambas ramas tocaron el mismo objeto (tabla, función, vista, trigger o tipo) → **conflicto** (no fusiona
+  salvo `--forzar`). Las funciones se comparan por nombre: dos sobrecargas cuentan como el mismo objeto.
 
 La identidad de una migración es su **SQL** (checksum), no su número. Cuando una migración
 que ya aplicaste cambia de número al fusionar, `marga pull` renombra tu archivo y `marga up`
@@ -313,7 +437,7 @@ marga up --env prod --si
 | `MARGA_TOKEN` | token de acceso personal; reemplaza a `marga login` |
 | `MARGA_SERVIDOR` | servidor por defecto cuando no hay proyecto (en lugar de `http://localhost:8080`) |
 | `MARGA_PASSWORD` | contraseña para `marga login` sin teclado |
-| `MARGA_DEBUG` | escribe `debug.log` al usar la consola interactiva |
+| `EDITOR` / `VISUAL` | editor para `e` en `marga ui` y `\e` en `marga sql` (p. ej. `code --wait`, `nvim`) |
 
 ## Limitaciones actuales
 

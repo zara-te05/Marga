@@ -18,12 +18,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/zara-te05/Marga/internal/api"
-	"github.com/zara-te05/Marga/internal/config"
-	"github.com/zara-te05/Marga/internal/database"
-	"github.com/zara-te05/Marga/internal/security"
-	"github.com/zara-te05/Marga/internal/store"
-	"github.com/zara-te05/Marga/internal/version"
+	"github.com/zara-te05/Marga/internal/controladores/api"
+	"github.com/zara-te05/Marga/internal/datos/database"
+	"github.com/zara-te05/Marga/internal/datos/store"
+	"github.com/zara-te05/Marga/internal/modelos/version"
+	"github.com/zara-te05/Marga/internal/servicios/config"
+	"github.com/zara-te05/Marga/internal/servicios/security"
 )
 
 func main() {

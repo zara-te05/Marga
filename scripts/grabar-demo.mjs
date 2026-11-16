@@ -1,4 +1,4 @@
-// Regenera web/assets/js/demo-datos.js a partir de un marga-server con datos.
+// Regenera internal/vistas/web/assets/js/demo-datos.js a partir de un marga-server con datos.
 // Uso: node scripts/grabar-demo.mjs TOKEN   (token de /api/auth/login; ajusta REPOS abajo)
 // Graba respuestas reales del servidor para el modo demo del front.
 const BASE = 'http://127.0.0.1:8080/api';
@@ -51,5 +51,5 @@ for (const id of REPOS) {
 const txt = '// Datos del modo demo, grabados de un servidor real con datos de ejemplo.\n' +
   '// Se regeneran con: node scripts/grabar-demo.mjs TOKEN  (servidor en :8080)\n' +
   'window.MARGA_DEMO_DATOS = ' + JSON.stringify(datos) + ';\n';
-(await import('node:fs')).writeFileSync(process.argv[3] || new URL('../web/assets/js/demo-datos.js', import.meta.url), txt);
+(await import('node:fs')).writeFileSync(process.argv[3] || new URL('../internal/vistas/web/assets/js/demo-datos.js', import.meta.url), txt);
 console.log(Object.keys(datos).length, 'respuestas,', (txt.length / 1024).toFixed(0), 'KB');

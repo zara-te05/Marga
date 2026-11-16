@@ -14,8 +14,8 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X github.com/zara-te05/Marga/internal/version.Version={{ .Version }}
-      - -X github.com/zara-te05/Marga/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/zara-te05/Marga/internal/modelos/version.Version={{ .Version }}
+      - -X github.com/zara-te05/Marga/internal/modelos/version.Commit={{ .ShortCommit }}
 
   - id: marga-server
     main: ./cmd/marga-server
@@ -26,8 +26,8 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X github.com/zara-te05/Marga/internal/version.Version={{ .Version }}
-      - -X github.com/zara-te05/Marga/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/zara-te05/Marga/internal/modelos/version.Version={{ .Version }}
+      - -X github.com/zara-te05/Marga/internal/modelos/version.Commit={{ .ShortCommit }}
 
 archives:
   - id: marga

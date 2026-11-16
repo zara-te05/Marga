@@ -5,5 +5,5 @@ deploy
 docs
 bin
 dist
-web/node_modules
+internal/vistas/web/node_modules
 **/*.log
