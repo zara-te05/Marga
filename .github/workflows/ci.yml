@@ -37,8 +37,14 @@ jobs:
           if [ -n "$sin_formato" ]; then echo "Corre gofmt -w en:"; echo "$sin_formato"; exit 1; fi
       - name: go vet
         run: go vet ./...
-      - name: Pruebas
-        run: go test -race -count=1 ./...
+      - name: Compila todo (también lo que no tiene pruebas)
+        run: go build ./...
+      - name: Pruebas unitarias (tests/unit)
+        run: go test -race -count=1 ./tests/unit/...
+      - name: Pruebas de integración (tests/integracion)
+        run: go test -race -count=1 ./tests/integracion/...
+      - name: Pruebas de punta a punta (tests/e2e)
+        run: go test -race -count=1 ./tests/e2e/...
 
   compilar:
     name: Compilar ${{ matrix.goos }}
@@ -66,8 +72,8 @@ jobs:
         with:
           node-version: 22
       - name: Regenerar marga.css y comparar
-        working-directory: web
+        working-directory: internal/vistas/web
         run: |
           npm install --no-audit --no-fund
           npm run css
-          git diff --exit-code -- assets/css/marga.css || (echo "marga.css no está al día: corre 'cd web && npm run css' y súbelo"; exit 1)
+          git diff --exit-code -- assets/css/marga.css || (echo "marga.css no está al día: corre 'cd internal/vistas/web && npm run css' y súbelo"; exit 1)

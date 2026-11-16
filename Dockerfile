@@ -10,7 +10,7 @@ COPY . .
 ARG VERSION=dev
 ARG COMMIT=
 RUN CGO_ENABLED=0 go build -trimpath \
-      -ldflags "-s -w -X github.com/zara-te05/Marga/internal/version.Version=${VERSION} -X github.com/zara-te05/Marga/internal/version.Commit=${COMMIT}" \
+      -ldflags "-s -w -X github.com/zara-te05/Marga/internal/modelos/version.Version=${VERSION} -X github.com/zara-te05/Marga/internal/modelos/version.Commit=${COMMIT}" \
       -o /marga-server ./cmd/marga-server
 
 # Sin shell ni paquetes: solo el binario, corriendo como usuario sin privilegios.
