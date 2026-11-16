@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="web_dashboard" name="shell-type">
+  <title>Resumen — Marga</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/marga.css">
+  <link rel="stylesheet" href="../assets/css/marga-shared.css">
+</head>
+<body data-scope="project" data-page="resumen" class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex flex-col">
+
+  <header id="marga-header" class="sticky top-0 z-50 shrink-0 h-16"></header>
+
+  <main class="flex-1 w-full max-w-[1400px] mx-auto px-5 lg:px-8 py-8 flex flex-col gap-6">
+
+    <div id="offline-note" class="hidden rounded-lg border border-marga-border bg-marga-surface px-4 py-3 text-sm text-neutral-400">
+      Abre Marga desde el servidor (<span class="font-mono text-neutral-200">http://localhost:8080</span>) para ver los datos del proyecto.
+    </div>
+
+    <!-- Encabezado del proyecto -->
+    <section class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+      <div class="min-w-0">
+        <h1 id="r-nombre" class="text-2xl font-semibold text-white tracking-tight">&nbsp;</h1>
+        <p id="r-desc" class="text-sm text-neutral-400 mt-1 max-w-2xl"></p>
+        <div id="r-badges" class="flex flex-wrap gap-2 mt-3"></div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <label class="flex items-center gap-1 h-9 pl-3 rounded-md bg-marga-surface border border-marga-border">
+          <span class="material-symbols-outlined text-[17px] text-neutral-400">fork_right</span>
+          <select id="r-branch" class="bg-transparent border-0 py-0 pl-1 pr-8 text-sm text-white font-medium focus:outline-none focus:ring-0 cursor-pointer"></select>
+        </label>
+        <a id="r-ver-commits" href="commits.html" class="flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-sm font-medium transition-colors">
+          <span class="material-symbols-outlined text-[18px]">commit</span>Ver commits
+        </a>
+      </div>
+    </section>
+
+    <!-- Último commit -->
+    <a id="r-last" href="#" class="flex items-center gap-3 rounded-lg border border-marga-border bg-marga-surface px-4 py-3 text-sm hover:border-neutral-600 transition-colors min-w-0">
+      <span class="text-neutral-500">Cargando…</span>
+    </a>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- Tablas y DDL -->
+      <section class="lg:col-span-8 rounded-lg border border-marga-border bg-marga-surface overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-11 border-b border-marga-border">
+          <h2 class="text-sm font-medium text-white">Esquema</h2>
+          <span id="r-tablas-count" class="text-xs text-neutral-500"></span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[440px]">
+          <ul id="r-tablas" class="border-b md:border-b-0 md:border-r border-marga-border py-1 text-sm"></ul>
+          <div class="flex flex-col min-w-0">
+            <div class="flex items-center justify-between gap-3 px-4 h-11 border-b border-marga-border text-xs">
+              <span id="r-ddl-titulo" class="font-mono text-neutral-200 truncate"></span>
+              <button type="button" id="r-copiar" class="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors">
+                <span class="material-symbols-outlined text-[15px]">content_copy</span>Copiar
+              </button>
+            </div>
+            <pre id="r-ddl" class="flex-1 p-4 font-mono text-xs leading-relaxed text-neutral-200 whitespace-pre overflow-auto"></pre>
+            <div id="r-ddl-pie" class="px-4 py-2 border-t border-marga-border text-xs text-neutral-500 truncate"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Barra lateral -->
+      <aside class="lg:col-span-4 flex flex-col gap-6">
+        <section class="rounded-lg border border-marga-border bg-marga-surface">
+          <div class="flex items-center justify-between px-4 h-11 border-b border-marga-border">
+            <h2 class="text-sm font-medium text-white">Entornos</h2>
+            <a id="r-entornos-link" href="entornos.html" class="text-xs text-neutral-500 hover:text-white">Ver todos</a>
+          </div>
+          <ul id="r-entornos" class="py-1 text-sm"><li class="px-4 py-2 text-neutral-500">Cargando…</li></ul>
+        </section>
+
+        <section class="rounded-lg border border-marga-border bg-marga-surface">
+          <div class="flex items-center justify-between px-4 h-11 border-b border-marga-border">
+            <h2 class="text-sm font-medium text-white">Ramas</h2>
+            <span id="r-ramas-count" class="text-xs text-neutral-500"></span>
+          </div>
+          <ul id="r-ramas" class="py-1 text-sm"></ul>
+        </section>
+
+        <section class="rounded-lg border border-marga-border bg-marga-surface">
+          <div class="flex items-center justify-between px-4 h-11 border-b border-marga-border">
+            <h2 class="text-sm font-medium text-white">Personas</h2>
+            <span id="r-personas-count" class="text-xs text-neutral-500"></span>
+          </div>
+          <ul id="r-personas" class="py-1 text-sm"></ul>
+        </section>
+
+        <section class="rounded-lg border border-marga-border bg-marga-surface">
+          <div class="px-4 h-11 flex items-center border-b border-marga-border">
+            <h2 class="text-sm font-medium text-white">Conectar desde la CLI</h2>
+          </div>
+          <div class="p-4 text-xs text-neutral-400 flex flex-col gap-2">
+            <p>Desde la carpeta de tu proyecto:</p>
+            <pre id="r-cli" class="rounded-md bg-marga-bg border border-marga-border px-3 py-2.5 font-mono text-[11px] leading-relaxed text-neutral-200 whitespace-pre overflow-x-auto"></pre>
+            <button type="button" id="r-cli-copiar" class="self-start flex items-center gap-1 text-neutral-400 hover:text-white transition-colors">
+              <span class="material-symbols-outlined text-[15px]">content_copy</span>Copiar comandos
+            </button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script src="../assets/js/marga-common.js"></script>
+  <script src="../assets/js/marga-demo.js"></script>
+  <script src="../assets/js/marga-api.js"></script>
+  <script src="../assets/js/marga-layout.js"></script>
+  <script src="../assets/js/resumen.js"></script>
+</body>
+</html>

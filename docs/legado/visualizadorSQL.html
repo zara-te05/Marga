@@ -1,0 +1,667 @@
+<!DOCTYPE html><html class="dark" lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Marga — Schema Graph (ERD)</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "marga-bg": "#0a0e17",
+            "marga-surface": "#0f131c",
+            "marga-card": "#151a26",
+            "marga-card-hover": "#1c2233",
+            "marga-border": "#21283b",
+            "marga-border-subtle": "#161c2b",
+            "brand-purple": "#8b5cf6",
+            "brand-violet": "#7c3aed",
+            "brand-indigo": "#6366f1",
+            "brand-cyan": "#38bdf8",
+            "brand-sky": "#60a5fa",
+            "brand-blue": "#0284c7"
+          },
+          fontFamily: {
+            sans: ["Geist", "Inter", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #0a0e17;
+      color: #e2e8f0;
+      font-family: 'Geist', system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+    .canvas-grid {
+      background-size: 28px 28px;
+      background-image: 
+        radial-gradient(circle, rgba(124, 58, 237, 0.12) 1px, transparent 1px);
+    }
+    .bezier-glow {
+      filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.35));
+    }
+    /* Smooth custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0e17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e2638;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2e3b56;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-marga-bg text-slate-200 selection:bg-brand-violet selection:text-white">
+<!-- TOP HEADER / NAV BAR -->
+<header class="sticky top-0 z-50 bg-[#0a0e17]/95 backdrop-blur-xl border-b border-marga-border">
+<div class="h-14 w-full px-4 lg:px-6 flex items-center justify-between gap-4">
+<!-- Brand & Project Switcher -->
+<div class="flex items-center gap-3 shrink-0">
+<a class="flex items-center gap-2 group transition-opacity hover:opacity-90" href="#">
+<img alt="Marga Logo" class="h-7 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VcHsqZ4rNA9OI2q8v4hAppnd9-bkJ72NkBoBlq4VTbS3Z_TWAvxBjc3E_lDwn1gXZ_tGqACeNxdP4llQjfpJdWSmyjelGgLmcDV21FttGZY1ff38eqV7nHpOT3EqwvXZUNS9FhIE6m6DM31uyDHkpGg-ioZjs8ojvpMc3OT3xtPr_9bql6r2R6A-WvbaPWPNSjVZszuYdTS5Q3Eu0FcAbmAlS5bm6jfKuZIr-azCKutkw0_4mJaRmlQGKA">
+</a>
+<div class="h-4 w-px bg-marga-border"></div>
+<!-- Discreet Breadcrumb Navigation -->
+<nav class="flex items-center gap-1.5 text-xs font-mono">
+<span class="text-slate-400">zara-te05</span>
+<span class="text-slate-600">/</span>
+<span class="text-slate-200 font-medium">Motor-Marga</span>
+<span class="text-slate-600">›</span>
+<span class="text-brand-purple font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+            Schema Graph
+          </span>
+</nav>
+</div>
+<!-- Quick Canvas & Global Controls -->
+<div class="flex items-center gap-3">
+<!-- DB Engine Tag -->
+<div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-md bg-marga-surface border border-marga-border text-xs font-mono text-slate-300">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-cyan shadow-[0_0_8px_rgba(56,189,248,0.8)]"></span>
+<span class="">PostgreSQL 16.2</span>
+<span class="text-slate-500 font-normal">|</span>
+<span class="text-brand-cyan">public</span>
+</div>
+<!-- Quick Search Tablas/Columnas -->
+<div class="relative hidden sm:flex items-center">
+<span class="material-symbols-outlined absolute left-2.5 text-[15px] text-slate-400 pointer-events-none">search</span>
+<input class="bg-marga-surface border border-marga-border focus:border-brand-violet pl-8 pr-3 py-1 rounded-lg text-xs font-sans text-slate-200 placeholder:text-slate-500 w-52 focus:outline-none focus:ring-1 focus:ring-brand-violet transition-all" placeholder="Buscar tabla o columna... (⌘F)" type="text">
+</div>
+<!-- Toggle Panel Inspector Button -->
+
+</div>
+</div>
+<!-- Secondary Project Tabs Nav -->
+<div class="h-9 px-4 lg:px-6 border-t border-marga-border-subtle bg-marga-surface/60 flex items-center overflow-x-auto text-xs">
+<nav class="flex items-center gap-6 h-full font-medium">
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[14px]">code</span>
+<span class="">Código &amp; Esquemas</span>
+</a>
+<a class="h-full flex items-center px-1 text-brand-purple font-semibold border-b-2 border-brand-purple gap-1.5" href="#">
+<span class="material-symbols-outlined text-[14px] text-brand-purple">account_tree</span>
+<span class="">Schema Graph (ERD)</span>
+<span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-brand-violet/20 text-brand-cyan border border-brand-violet/30">4 Tablas</span>
+</a>
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[14px]">conversion_path</span>
+<span class="">Commits &amp; Migraciones</span>
+</a>
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[14px]">merge</span>
+<span class="">Pull Requests</span>
+</a>
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[14px]">settings</span>
+<span class="">Ajustes</span>
+</a>
+</nav>
+</div>
+</header>
+<!-- MAIN VIEWPORT CONTAINER -->
+<main class="flex-1 flex flex-col relative w-full h-[calc(100vh-5.75rem)] min-h-[750px] overflow-hidden">
+<!-- CANVAS TOOLBAR / CONTROLS STRIP -->
+<div class="h-11 px-4 lg:px-6 bg-marga-surface/85 backdrop-blur-md border-b border-marga-border flex items-center justify-between z-20 shrink-0">
+<!-- Left Filters & Schema Scope -->
+<div class="flex items-center gap-3">
+<!-- Schema Dropdown Pill -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-marga-card border border-marga-border text-xs font-mono text-slate-200">
+<span class="material-symbols-outlined text-[14px] text-brand-purple">database</span>
+<span class="">esquema: <strong class="text-white font-semibold">public</strong></span>
+<span class="material-symbols-outlined text-[14px] text-slate-400 ml-0.5">expand_more</span>
+</div>
+<div class="h-3.5 w-px bg-marga-border hidden sm:block"></div>
+<!-- Filter Tags -->
+<div class="hidden sm:flex items-center gap-1 text-[11px] font-mono">
+<button class="px-2 py-0.5 rounded bg-brand-violet/20 border border-brand-violet/40 text-brand-cyan font-medium">Todas (4)</button>
+<button class="px-2 py-0.5 rounded bg-marga-card/60 hover:bg-marga-card border border-marga-border text-slate-400 hover:text-slate-200 transition-colors">Relacionadas (3)</button>
+<button class="px-2 py-0.5 rounded bg-marga-card/60 hover:bg-marga-card border border-marga-border text-slate-400 hover:text-slate-200 transition-colors">Particionadas (1)</button>
+</div>
+</div>
+<!-- Right Canvas Viewport & Zoom Controls -->
+<div class="flex items-center gap-2">
+<!-- Zoom Controller -->
+<div class="flex items-center bg-marga-card border border-marga-border rounded-lg p-0.5 text-xs font-mono">
+<button class="p-1 rounded hover:bg-marga-surface text-slate-400 hover:text-slate-100 transition-colors" onclick="adjustZoom(-0.1)" title="Zoom Out">
+<span class="material-symbols-outlined text-[15px]">remove</span>
+</button>
+<span class="px-2 text-slate-300 select-none" id="zoom-badge">100%</span>
+<button class="p-1 rounded hover:bg-marga-surface text-slate-400 hover:text-slate-100 transition-colors" onclick="adjustZoom(0.1)" title="Zoom In">
+<span class="material-symbols-outlined text-[15px]">add</span>
+</button>
+</div>
+<!-- Auto Layout -->
+<button class="p-1.5 rounded-lg bg-marga-card hover:bg-marga-surface border border-marga-border text-slate-300 hover:text-white transition-colors" onclick="resetCanvasLayout()" title="Restablecer Posición y Auto-layout">
+<span class="material-symbols-outlined text-[16px]">account_tree</span>
+</button>
+<!-- Fit Screen -->
+<button class="p-1.5 rounded-lg bg-marga-card hover:bg-marga-surface border border-marga-border text-slate-300 hover:text-white transition-colors" onclick="fitScreen()" title="Ajustar a Pantalla">
+<span class="material-symbols-outlined text-[16px]">fit_screen</span>
+</button>
+<div class="h-3.5 w-px bg-marga-border hidden md:block"></div>
+<!-- Export Diagram -->
+<div class="flex items-center">
+<button class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-violet hover:bg-brand-purple text-white text-xs font-sans font-medium shadow-sm transition-all" onclick="exportDiagram('SVG')">
+<span class="material-symbols-outlined text-[15px]">file_download</span>
+<span class="">Exportar Esquema</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CANVAS & INSPECTOR WORKSPACE -->
+<div class="flex-1 flex relative overflow-hidden">
+<!-- ERD CANVAS (EXTENDED FULL VIEW) -->
+<div class="flex-1 relative overflow-auto bg-marga-bg canvas-grid cursor-grab active:cursor-grabbing select-none p-8" id="erd-canvas-area">
+<!-- Scalable Canvas Plane -->
+<div class="relative w-[1380px] h-[780px] mx-auto transition-transform duration-75 origin-top-left w-full" id="erd-plane">
+<!-- SVG CONNECTIONS LAYER (BEZIER RELATIONSHIP CURVES) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-10" id="relation-svg">
+<defs>
+<linearGradient id="relGradient1" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#38bdf8"></stop>
+<stop offset="100%" stop-color="#8b5cf6"></stop>
+</linearGradient>
+<linearGradient id="relGradient2" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#7c3aed"></stop>
+<stop offset="100%" stop-color="#38bdf8"></stop>
+</linearGradient>
+<linearGradient id="relGradient3" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#8b5cf6"></stop>
+<stop offset="100%" stop-color="#38bdf8"></stop>
+</linearGradient>
+<!-- Arrow & Glow Markers -->
+<filter height="140%" id="cyanGlow" width="140%" x="-20%" y="-20%">
+<feGaussianBlur result="blur" stdDeviation="3"></feGaussianBlur>
+<feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
+</filter>
+</defs>
+<!-- 1. RELATION: users.id (PK) -> wallets.user_id (FK 1:N) -->
+<!-- users: left 40px, top 40px, width 300px. users.id right anchor = (340, 134) -->
+<!-- wallets: left 480px, top 40px, width 300px. wallets.user_id left anchor = (480, 172) -->
+<path class="bezier-glow" d="M 340 134 C 410 134, 410 172, 480 172" fill="none" stroke="url(#relGradient1)" stroke-dasharray="4 2" stroke-width="2.2"></path>
+<circle cx="340" cy="134" fill="#38bdf8" filter="url(#cyanGlow)" r="4.5"></circle>
+<circle cx="480" cy="172" fill="#8b5cf6" filter="url(#cyanGlow)" r="4.5"></circle>
+<!-- Badge Cardinality 1 -->
+<rect fill="#151a26" height="15" rx="3" stroke="#21283b" width="22" x="352" y="122"></rect>
+<text fill="#38bdf8" font-family="JetBrains Mono" font-size="9" font-weight="600" text-anchor="middle" x="363" y="133">1</text>
+<!-- Badge Cardinality N -->
+<rect fill="#151a26" height="15" rx="3" stroke="#21283b" width="22" x="446" y="160"></rect>
+<text fill="#8b5cf6" font-family="JetBrains Mono" font-size="9" font-weight="600" text-anchor="middle" x="457" y="171">N</text>
+<!-- 2. RELATION: wallets.id (PK) -> transactions.wallet_id (FK 1:N) -->
+<!-- wallets: right anchor for wallets.id = (780, 134) -->
+<!-- transactions: left 920px, top 40px. transactions.wallet_id left anchor = (920, 172) -->
+<path class="bezier-glow" d="M 780 134 C 850 134, 850 172, 920 172" fill="none" stroke="url(#relGradient2)" stroke-width="2.2"></path>
+<circle cx="780" cy="134" fill="#7c3aed" filter="url(#cyanGlow)" r="4.5"></circle>
+<circle cx="920" cy="172" fill="#38bdf8" filter="url(#cyanGlow)" r="4.5"></circle>
+<!-- Badge Cardinality 1 -->
+<rect fill="#151a26" height="15" rx="3" stroke="#21283b" width="22" x="792" y="122"></rect>
+<text fill="#7c3aed" font-family="JetBrains Mono" font-size="9" font-weight="600" text-anchor="middle" x="803" y="133">1</text>
+<!-- Badge Cardinality N -->
+<rect fill="#151a26" height="15" rx="3" stroke="#21283b" width="22" x="886" y="160"></rect>
+<text fill="#38bdf8" font-family="JetBrains Mono" font-size="9" font-weight="600" text-anchor="middle" x="897" y="171">N</text>
+<!-- 3. RELATION: transactions.id (PK) -> ledger_entries.trx_id (FK 1:1) -->
+<!-- transactions: bottom or left exit from (920, 134) -->
+<!-- ledger_entries: left 480px, top 440px. ledger.trx_id right anchor = (780, 572) -->
+<!-- Let's connect transactions.id left anchor (920, 134) curving down to ledger_entries.trx_id right anchor (780, 572) -->
+<path class="bezier-glow" d="M 920 134 C 840 134, 860 572, 780 572" fill="none" stroke="url(#relGradient3)" stroke-dasharray="3 3" stroke-width="2"></path>
+<circle cx="920" cy="134" fill="#8b5cf6" filter="url(#cyanGlow)" r="4"></circle>
+<circle cx="780" cy="572" fill="#38bdf8" filter="url(#cyanGlow)" r="4"></circle>
+<!-- Badge Cardinality 1:1 -->
+<rect fill="#151a26" height="16" rx="3" stroke="#21283b" width="30" x="830" y="340"></rect>
+<text fill="#60a5fa" font-family="JetBrains Mono" font-size="9" font-weight="600" text-anchor="middle" x="845" y="352">1 : 1</text>
+</svg>
+<!-- ============================================== -->
+<!-- TABLE 1: 'users' -->
+<!-- ============================================== -->
+<article class="table-card absolute left-10 top-10 w-[300px] bg-marga-card rounded-xl border border-marga-border hover:border-brand-purple/50 shadow-xl transition-all duration-150 cursor-pointer group" id="card-users" onclick="selectErdEntity('users', 'public.users', 'Base Table', '1.8M', '82 MB', 'id', '0 FKs salientes, 1 entrante', ['idx_users_email (B-Tree, UNIQUE)', 'users_pkey (B-Tree, PK)'])">
+<!-- Header -->
+<div class="px-3.5 py-3 border-b border-marga-border/80 bg-marga-surface/90 rounded-t-xl flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-md bg-brand-purple/20 flex items-center justify-center text-brand-purple">
+<span class="material-symbols-outlined text-[15px]">table_chart</span>
+</span>
+<span class="font-mono text-sm font-semibold text-slate-100 group-hover:text-white">users</span>
+</div>
+<div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+<span class="px-1.5 py-0.5 rounded bg-marga-surface border border-marga-border/70">1.8M rows</span>
+</div>
+</div>
+<!-- Columns Container -->
+<div class="p-2 space-y-0.5 font-mono text-xs">
+<!-- PK: id -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-brand-cyan" title="Primary Key">key</span>
+<span class="text-slate-100 font-medium">id</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">uuid</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-cyan/20 text-brand-cyan">PK</span>
+</div>
+</div>
+<!-- UQ: email -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[13px] text-brand-purple" title="Unique Index">fingerprint</span>
+<span class="text-slate-200">email</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">varchar(255)</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-purple/20 text-brand-purple">UQ</span>
+</div>
+</div>
+<!-- tier_level -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">tier_level</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-slate-400 text-[11px]">varchar(32)</span>
+</div>
+</div>
+<!-- created_at -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">created_at</span>
+</div>
+<span class="text-slate-400 text-[11px]">timestamptz</span>
+</div>
+</div>
+<!-- Footer Badge -->
+<div class="px-3.5 py-2 border-t border-marga-border/70 bg-marga-surface/50 rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+<span class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-[13px] text-brand-cyan">storage</span>
+<span class="">Base Table</span>
+</span>
+<span class="text-brand-cyan/80">82 MB</span>
+</div>
+</article>
+<!-- ============================================== -->
+<!-- TABLE 2: 'wallets' -->
+<!-- ============================================== -->
+<article class="table-card absolute left-[480px] top-10 w-[300px] bg-marga-card rounded-xl border border-marga-border hover:border-brand-cyan/50 shadow-xl transition-all duration-150 cursor-pointer group" id="card-wallets" onclick="selectErdEntity('wallets', 'public.wallets', 'Hash Partitioned', '940K', '114 MB', 'id', '1 FK -&gt; users.id', ['wallets_pkey (B-Tree, PK)', 'idx_wallets_user (Hash, FK)'])">
+<!-- Header -->
+<div class="px-3.5 py-3 border-b border-marga-border/80 bg-marga-surface/90 rounded-t-xl flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-md bg-brand-cyan/20 flex items-center justify-center text-brand-cyan">
+<span class="material-symbols-outlined text-[15px]">account_balance_wallet</span>
+</span>
+<span class="font-mono text-sm font-semibold text-slate-100 group-hover:text-white">wallets</span>
+</div>
+<div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+<span class="px-1.5 py-0.5 rounded bg-marga-surface border border-marga-border/70">940K rows</span>
+</div>
+</div>
+<!-- Columns Container -->
+<div class="p-2 space-y-0.5 font-mono text-xs">
+<!-- PK: id -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-brand-cyan" title="Primary Key">key</span>
+<span class="text-slate-100 font-medium">id</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">uuid</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-cyan/20 text-brand-cyan">PK</span>
+</div>
+</div>
+<!-- FK: user_id -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded bg-brand-cyan/5 hover:bg-brand-cyan/10 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[13px] text-brand-cyan" title="Foreign Key to users.id">link</span>
+<span class="text-slate-100 font-medium">user_id</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">uuid</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-purple/25 text-brand-purple">FK 1:N</span>
+</div>
+</div>
+<!-- balance_cents -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">balance_cents</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-slate-400 text-[11px]">bigint</span>
+<span class="text-[9px] text-slate-500 font-bold">NN</span>
+</div>
+</div>
+<!-- currency -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">currency</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-slate-400 text-[11px]">char(3)</span>
+<span class="text-[10px] text-brand-cyan font-sans">'USD'</span>
+</div>
+</div>
+<!-- updated_at -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">updated_at</span>
+</div>
+<span class="text-slate-400 text-[11px]">timestamptz</span>
+</div>
+</div>
+<!-- Footer Badge -->
+<div class="px-3.5 py-2 border-t border-marga-border/70 bg-marga-surface/50 rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+<span class="flex items-center gap-1 text-brand-cyan">
+<span class="material-symbols-outlined text-[13px]">grid_goldenratio</span>
+<span class="">Hash [user_id]</span>
+</span>
+<span class="text-slate-300">114 MB</span>
+</div>
+</article>
+<!-- ============================================== -->
+<!-- TABLE 3: 'transactions' -->
+<!-- ============================================== -->
+<article class="table-card absolute left-[920px] top-10 w-[300px] bg-marga-card rounded-xl border-2 border-brand-violet/50 shadow-2xl shadow-brand-violet/10 transition-all duration-150 cursor-pointer group" id="card-transactions" onclick="selectErdEntity('transactions', 'public.transactions', 'Partitioned Table', '3.1M', '340 MB', 'id', '1 FK -&gt; wallets.id', ['transactions_pkey (B-Tree, PK)', 'idx_trx_wallet_status (B-Tree Composite)', 'idx_trx_created (BRIN)'])">
+<!-- Header -->
+<div class="px-3.5 py-3 border-b border-marga-border/80 bg-marga-surface/90 rounded-t-xl flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-md bg-brand-violet/30 flex items-center justify-center text-brand-purple">
+<span class="material-symbols-outlined text-[15px]">swap_horiz</span>
+</span>
+<span class="font-mono text-sm font-semibold text-slate-100 group-hover:text-white">transactions</span>
+</div>
+<div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+<span class="px-1.5 py-0.5 rounded bg-brand-violet/20 text-brand-cyan border border-brand-violet/30">3.1M rows</span>
+</div>
+</div>
+<!-- Columns Container -->
+<div class="p-2 space-y-0.5 font-mono text-xs">
+<!-- PK: id -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-brand-cyan" title="Primary Key">key</span>
+<span class="text-slate-100 font-medium">id</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">bigserial</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-cyan/20 text-brand-cyan">PK</span>
+</div>
+</div>
+<!-- FK: wallet_id -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded bg-brand-cyan/5 hover:bg-brand-cyan/10 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[13px] text-brand-cyan" title="Foreign Key to wallets.id">link</span>
+<span class="text-slate-100 font-medium">wallet_id</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">uuid</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-purple/25 text-brand-purple">FK N:1</span>
+</div>
+</div>
+<!-- amount -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">amount</span>
+</div>
+<span class="text-slate-400 text-[11px]">numeric(18,4)</span>
+</div>
+<!-- state -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">state</span>
+</div>
+<span class="text-brand-purple text-[10px] font-sans">trx_status_enum</span>
+</div>
+<!-- processed_at -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">processed_at</span>
+</div>
+<span class="text-slate-400 text-[11px]">timestamptz</span>
+</div>
+</div>
+<!-- Footer Badge -->
+<div class="px-3.5 py-2 border-t border-marga-border/70 bg-marga-surface/50 rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+<span class="flex items-center gap-1 text-slate-300">
+<span class="material-symbols-outlined text-[13px] text-brand-purple">dataset</span>
+<span class="">Range Part. [Year/Month]</span>
+</span>
+<span class="text-brand-cyan font-medium">340 MB</span>
+</div>
+</article>
+<!-- ============================================== -->
+<!-- TABLE 4: 'ledger_entries' -->
+<!-- ============================================== -->
+<article class="table-card absolute left-[480px] top-[440px] w-[300px] bg-marga-card rounded-xl border border-marga-border hover:border-brand-purple/50 shadow-xl transition-all duration-150 cursor-pointer group" id="card-ledger" onclick="selectErdEntity('ledger_entries', 'public.ledger_entries', 'Append-Only Ledger', '4.2M', '620 MB', 'entry_id', '1 FK -&gt; transactions.id', ['ledger_pkey (B-Tree, PK)', 'idx_ledger_proof (SHA256 UNIQUE)'])">
+<!-- Header -->
+<div class="px-3.5 py-3 border-b border-marga-border/80 bg-marga-surface/90 rounded-t-xl flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-md bg-brand-purple/20 flex items-center justify-center text-brand-purple">
+<span class="material-symbols-outlined text-[15px]">receipt_long</span>
+</span>
+<span class="font-mono text-sm font-semibold text-slate-100 group-hover:text-white">ledger_entries</span>
+</div>
+<div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+<span class="px-1.5 py-0.5 rounded bg-marga-surface border border-marga-border/70">4.2M rows</span>
+</div>
+</div>
+<!-- Columns Container -->
+<div class="p-2 space-y-0.5 font-mono text-xs">
+<!-- PK: entry_id -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-brand-cyan" title="Primary Key">key</span>
+<span class="text-slate-100 font-medium">entry_id</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">uuid</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-cyan/20 text-brand-cyan">PK</span>
+</div>
+</div>
+<!-- FK: trx_id -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded bg-brand-cyan/5 hover:bg-brand-cyan/10 transition-colors">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[13px] text-brand-cyan" title="Foreign Key to transactions.id">link</span>
+<span class="text-slate-100 font-medium">trx_id</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-slate-400 text-[11px]">bigint</span>
+<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-brand-cyan/20 text-brand-cyan">FK 1:1</span>
+</div>
+</div>
+<!-- entry_type -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">double_entry_type</span>
+</div>
+<span class="text-brand-cyan text-[10px]">'DEBIT' | 'CREDIT'</span>
+</div>
+<!-- hash_proof -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="material-symbols-outlined text-[12px] text-brand-purple">verified_user</span>
+<span class="text-slate-300">hash_proof</span>
+</div>
+<span class="text-slate-400 text-[11px]">bytea (SHA256)</span>
+</div>
+<!-- created_at -->
+<div class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-marga-surface/60 transition-colors">
+<div class="flex items-center gap-1.5 pl-5">
+<span class="text-slate-300">created_at</span>
+</div>
+<span class="text-slate-400 text-[11px]">timestamptz</span>
+</div>
+</div>
+<!-- Footer Badge -->
+<div class="px-3.5 py-2 border-t border-marga-border/70 bg-marga-surface/50 rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+<span class="flex items-center gap-1 text-brand-purple">
+<span class="material-symbols-outlined text-[13px]">lock</span>
+<span class="">Inmutable (Append-Only)</span>
+</span>
+<span class="text-slate-300">620 MB</span>
+</div>
+</article>
+</div>
+</div>
+<!-- RIGHT SIDEBAR: SCHEMA & TABLE DETAILS INSPECTOR -->
+<!-- (Focused strictly on table schema: no migration scripts, dry runs or commits) -->
+
+</div>
+</main>
+<!-- INTERACTION SCRIPTS -->
+<script>
+    let currentZoom = 1.0;
+    let selectedTableId = 'transactions';
+
+    function adjustZoom(delta) {
+      currentZoom = Math.min(Math.max(currentZoom + delta, 0.5), 1.8);
+      applyZoom();
+    }
+
+    function resetCanvasLayout() {
+      currentZoom = 1.0;
+      applyZoom();
+      
+      const users = document.getElementById('card-users');
+      const wallets = document.getElementById('card-wallets');
+      const trx = document.getElementById('card-transactions');
+      const ledger = document.getElementById('card-ledger');
+
+      if (users && wallets && trx && ledger) {
+        users.style.left = '40px';
+        users.style.top = '40px';
+        wallets.style.left = '480px';
+        wallets.style.top = '40px';
+        trx.style.left = '920px';
+        trx.style.top = '40px';
+        ledger.style.left = '480px';
+        ledger.style.top = '440px';
+      }
+    }
+
+    function fitScreen() {
+      currentZoom = 0.9;
+      applyZoom();
+      const canvasArea = document.getElementById('erd-canvas-area');
+      if (canvasArea) {
+        canvasArea.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function applyZoom() {
+      const plane = document.getElementById('erd-plane');
+      const badge = document.getElementById('zoom-badge');
+      if (plane) {
+        plane.style.transform = `scale(${currentZoom})`;
+      }
+      if (badge) {
+        badge.textContent = Math.round(currentZoom * 100) + '%';
+      }
+    }
+
+    function toggleInspector() {
+      const inspector = document.getElementById('schema-inspector');
+      if (inspector) {
+        inspector.classList.toggle('hidden');
+      }
+    }
+
+    function selectErdEntity(id, fullName, type, rows, size, pk, fk, indices) {
+      selectedTableId = id;
+      
+      // Highlight active card
+      document.querySelectorAll('.table-card').forEach(card => {
+        card.classList.remove('border-brand-violet', 'shadow-2xl', 'shadow-brand-violet/20');
+        card.classList.add('border-marga-border');
+      });
+      const activeCard = document.getElementById('card-' + id);
+      if (activeCard) {
+        activeCard.classList.remove('border-marga-border');
+        activeCard.classList.add('border-brand-violet', 'shadow-2xl', 'shadow-brand-violet/20');
+      }
+
+      // Update inspector DOM
+      const nameEl = document.getElementById('inspect-full-name');
+      const typeEl = document.getElementById('inspect-type');
+      const rowsEl = document.getElementById('inspect-rows');
+      const sizeEl = document.getElementById('inspect-size');
+      const pkEl = document.getElementById('inspect-pk');
+      const fkEl = document.getElementById('inspect-fk');
+      const idxCountEl = document.getElementById('inspect-idx-count');
+      const idxListEl = document.getElementById('inspect-indices');
+
+      if (nameEl) nameEl.textContent = fullName;
+      if (typeEl) typeEl.textContent = type;
+      if (rowsEl) rowsEl.textContent = rows;
+      if (sizeEl) sizeEl.textContent = size;
+      if (pkEl) pkEl.textContent = pk;
+      if (fkEl) fkEl.textContent = fk;
+
+      if (idxCountEl) idxCountEl.textContent = indices.length + ' Índices';
+      if (idxListEl) {
+        idxListEl.innerHTML = '';
+        indices.forEach(idx => {
+          const div = document.createElement('div');
+          div.className = 'p-2 rounded-lg bg-marga-card border border-marga-border flex items-center justify-between';
+          div.innerHTML = `
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[13px] text-brand-cyan">storage</span>
+              <span class="text-slate-200">${idx.split(' ')[0]}</span>
+            </div>
+            <span class="text-[10px] text-slate-400">${idx.replace(idx.split(' ')[0], '').trim()}</span>
+          `;
+          idxListEl.appendChild(div);
+        });
+      }
+
+      // Ensure inspector is visible
+      const inspector = document.getElementById('schema-inspector');
+      if (inspector && inspector.classList.contains('hidden')) {
+        inspector.classList.remove('hidden');
+      }
+    }
+
+    function focusSelectedTable() {
+      const activeCard = document.getElementById('card-' + selectedTableId);
+      if (activeCard) {
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      }
+    }
+
+    function exportDiagram(format) {
+      alert(`Exportando Schema Graph como ${format} vector de alta resolución.`);
+    }
+  </script>
+
+
+</body></html>

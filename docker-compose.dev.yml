@@ -1,0 +1,22 @@
+# PostgreSQL para desarrollo (no es para producción: para eso está deploy/).
+#   docker compose -f docker-compose.dev.yml up -d
+# Después: go run ./cmd/marga-server -seed   →   http://localhost:8080
+services:
+  postgres:
+    image: postgres:16
+    container_name: marga-postgres
+    environment:
+      POSTGRES_USER: marga
+      POSTGRES_PASSWORD: marga
+      POSTGRES_DB: marga
+    ports:
+      - "5432:5432"
+    volumes:
+      - marga-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marga -d marga"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  marga-pgdata:

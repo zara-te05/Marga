@@ -1,0 +1,62 @@
+# GoReleaser: compila marga (CLI) y marga-server para Windows, Linux y macOS.
+# Probar en local sin publicar:  goreleaser release --snapshot --clean
+version: 2
+
+project_name: marga
+
+builds:
+  - id: marga
+    main: ./cmd/marga
+    binary: marga
+    env: [CGO_ENABLED=0]
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/zara-te05/Marga/internal/version.Version={{ .Version }}
+      - -X github.com/zara-te05/Marga/internal/version.Commit={{ .ShortCommit }}
+
+  - id: marga-server
+    main: ./cmd/marga-server
+    binary: marga-server
+    env: [CGO_ENABLED=0]
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/zara-te05/Marga/internal/version.Version={{ .Version }}
+      - -X github.com/zara-te05/Marga/internal/version.Commit={{ .ShortCommit }}
+
+archives:
+  - id: marga
+    ids: [marga]
+    name_template: "marga_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [README.md, docs/cli.md]
+
+  - id: marga-server
+    ids: [marga-server]
+    name_template: "marga-server_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [README.md, .env.example, docs/servidor.md]
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^docs:", "^test:", "^ci:"]
+
+release:
+  github:
+    owner: zara-te05
+    name: Marga

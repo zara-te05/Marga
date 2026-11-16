@@ -1,0 +1,787 @@
+<!DOCTYPE html><html class="dark" lang="es" style=""><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Marga — NoSQL Schema Graph</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "marga-bg": "#090d16",
+            "marga-surface": "#0f131f",
+            "marga-card": "#131722",
+            "marga-card-hover": "#171c2b",
+            "marga-border": "#1e2436",
+            "marga-border-subtle": "#161b2a",
+            "brand-purple": "#8b5cf6",
+            "brand-violet": "#7c3aed",
+            "brand-indigo": "#6366f1",
+            "brand-cyan": "#38bdf8",
+            "brand-sky": "#60a5fa",
+            "brand-blue": "#0284c7"
+          },
+          fontFamily: {
+            sans: ["Geist", "Inter", "system-ui", "-apple-system", "sans-serif"],
+            mono: ["JetBrains Mono", "SF Mono", "Menlo", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #090d16;
+      color: #e2e8f0;
+      font-family: 'Geist', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+    .canvas-dots {
+      background-size: 24px 24px;
+      background-image: radial-gradient(circle, rgba(139, 92, 246, 0.12) 1px, transparent 1px);
+    }
+    .bezier-glow {
+      filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.45));
+    }
+    .bezier-glow-purple {
+      filter: drop-shadow(0 0 7px rgba(139, 92, 246, 0.45));
+    }
+    /* Sleek custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e2436;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2d3748;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col bg-marga-bg text-slate-200 selection:bg-brand-violet selection:text-white antialiased">
+<!-- TOP HEADER / NAV BAR -->
+<header class="shrink-0 z-50 bg-[#090d16]/95 backdrop-blur-xl border-b border-marga-border select-none">
+<div class="h-14 w-full px-5 flex items-center justify-between gap-4">
+<!-- Brand & Project Switcher -->
+<div class="flex items-center gap-3 shrink-0">
+<a class="flex items-center gap-2 group transition-opacity hover:opacity-90" href="#">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-violet to-brand-cyan flex items-center justify-center shadow-lg shadow-brand-violet/25">
+<span class="material-symbols-outlined text-white text-[19px]">account_tree</span>
+</div>
+<span class="font-bold text-base tracking-tight text-white flex items-center gap-0.5">
+            Marga<span class="text-brand-cyan text-xs font-mono font-medium ml-1 px-1.5 py-0.5 rounded bg-brand-cyan/10 border border-brand-cyan/20">NoSQL</span>
+</span>
+</a>
+<div class="h-4 w-px bg-marga-border mx-1"></div>
+<!-- Discreet Breadcrumb Navigation -->
+<nav class="flex items-center gap-1.5 text-xs font-mono">
+<span class="text-slate-400 hover:text-slate-300 cursor-pointer">zara-te05</span>
+<span class="text-slate-600">/</span>
+<span class="text-slate-200 font-medium">Motor-Marga</span>
+<span class="text-slate-600">›</span>
+<span class="text-brand-purple font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schema</span>
+            Schema Graph
+          </span>
+</nav>
+</div>
+<!-- Right Nav Status & Controls -->
+<div class="flex items-center gap-3">
+<!-- DB Engine & Cluster Status Tag -->
+<div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-marga-surface border border-marga-border text-xs font-mono">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-cyan opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-brand-cyan"></span>
+</span>
+<span class="text-slate-300 font-medium">MongoDB 7.0 / Atlas</span>
+<span class="text-slate-600">|</span>
+<span class="text-brand-cyan">cluster0.shard-main</span>
+</div>
+<!-- Quick Search -->
+<div class="relative hidden sm:flex items-center">
+<span class="material-symbols-outlined absolute left-2.5 text-[15px] text-slate-400 pointer-events-none">search</span>
+<input class="bg-marga-surface border border-marga-border focus:border-brand-violet pl-8 pr-9 py-1.5 rounded-lg text-xs font-sans text-slate-200 placeholder:text-slate-500 w-60 focus:outline-none focus:ring-1 focus:ring-brand-violet transition-all" placeholder="Buscar colección o campo... (⌘K)" type="text">
+<kbd class="absolute right-2 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-800/80 rounded border border-slate-700">⌘K</kbd>
+</div>
+<!-- User profile icon -->
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-purple/30 to-brand-cyan/20 border border-brand-purple/40 flex items-center justify-center text-xs font-mono font-medium text-brand-cyan shadow-inner">
+          ZT
+        </div>
+</div>
+</div>
+<!-- Secondary Project Tabs Nav -->
+<div class="h-10 px-5 border-t border-marga-border-subtle bg-marga-surface/70 flex items-center overflow-x-auto text-xs">
+<nav class="flex items-center gap-6 h-full font-medium">
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px]">code</span>
+<span class="">Código &amp; Esquemas</span>
+</a>
+<a class="h-full flex items-center px-1 text-brand-purple font-semibold border-b-2 border-brand-purple gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px] text-brand-purple">schema</span>
+<span class="">Schema Graph (NoSQL)</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-brand-violet/20 text-brand-cyan border border-brand-violet/30">4 Colecciones</span>
+</a>
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px]">conversion_path</span>
+<span class="">Commits &amp; Migraciones</span>
+</a>
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px]">merge</span>
+<span class="">Pull Requests</span>
+</a>
+<a class="h-full flex items-center px-1 text-slate-400 hover:text-slate-200 transition-colors gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px]">settings</span>
+<span class="">Ajustes</span>
+</a>
+</nav>
+</div>
+</header>
+<!-- SUB-BAR / CANVAS HUD TOOLBAR -->
+<section class="shrink-0 bg-[#0c101a] border-b border-marga-border px-5 py-2.5 flex flex-wrap items-center justify-between gap-4 z-40 select-none"><!-- Left: DB selector & filters -->
+<div class="flex items-center gap-3">
+  <!-- Database Namespace Switcher Dropdown -->
+  <button class="flex items-center gap-2 px-3 py-1.5 bg-marga-surface hover:bg-marga-card border border-marga-border rounded-lg text-xs font-mono text-slate-200 transition-all shadow-sm">
+    <span class="material-symbols-outlined text-[16px] text-brand-purple">database</span>
+    <span class="text-slate-400 text-[11px] uppercase tracking-wider font-semibold">DB:</span>
+    <span class="text-brand-cyan font-semibold">analytics_events</span>
+    <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-purple/20 text-brand-purple border border-brand-purple/30">5</span>
+    <span class="material-symbols-outlined text-[16px] text-slate-400 ml-0.5">arrow_drop_down</span>
+  </button>
+  <div class="h-4 w-px bg-marga-border"></div>
+  <!-- Quick Category Filter Pills -->
+  <div class="flex items-center gap-1 bg-marga-surface/90 p-1 rounded-lg border border-marga-border">
+    <button class="filter-pill px-3 py-1 rounded-md text-xs font-medium bg-brand-violet text-white shadow-sm transition-all" id="btn-all" onclick="filterCollections('all')">
+      Todas (4)
+    </button>
+    <button class="filter-pill px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-all" id="btn-subdocs" onclick="filterCollections('subdocs')">
+      Documentales (2)
+    </button>
+    <button class="filter-pill px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-all" id="btn-timeseries" onclick="filterCollections('timeseries')">
+      Time-Series (1)
+    </button>
+    <button class="filter-pill px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-all" id="btn-ttl" onclick="filterCollections('ttl')">
+      Key-Value (1)
+    </button>
+  </div>
+</div>
+<!-- Right: Cleanly spaced Stats, Zoom & Export Controls -->
+<div class="flex items-center gap-3">
+  <!-- Docs stats with generous spacing and clear values -->
+  <div class="flex items-center gap-3 text-xs font-mono text-slate-300 bg-marga-surface/80 px-3.5 py-1.5 rounded-lg border border-marga-border whitespace-nowrap shadow-sm">
+    <span class="flex items-center gap-1 text-slate-400">Docs: <strong class="text-white font-medium">46.5M</strong></span>
+    <span class="text-slate-600">•</span>
+    <span class="flex items-center gap-1 text-slate-400">Storage: <strong class="text-brand-cyan font-medium">10.05 GB</strong></span>
+    <span class="text-slate-600">•</span>
+    <span class="flex items-center gap-1.5 text-slate-300 font-medium">
+      <span class="w-2 h-2 rounded-full bg-brand-cyan"></span> WiredTiger Engine
+    </span>
+  </div>
+  <!-- Zoom Controls -->
+  <div class="flex items-center bg-marga-surface border border-marga-border rounded-lg p-0.5 shadow-sm">
+    <button class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-marga-card transition-colors" onclick="zoomOut()" title="Reducir zoom">
+      <span class="material-symbols-outlined text-[16px]">remove</span>
+    </button>
+    <span class="px-2 text-xs font-mono text-brand-cyan min-w-[48px] text-center font-medium" id="zoomLevelDisplay">100%</span>
+    <button class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-marga-card transition-colors" onclick="zoomIn()" title="Aumentar zoom">
+      <span class="material-symbols-outlined text-[16px]">add</span>
+    </button>
+    <div class="w-px h-3.5 bg-marga-border mx-1"></div>
+    <button class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-marga-card transition-colors" onclick="resetZoomCenter()" title="Ajustar a vista completa">
+      <span class="material-symbols-outlined text-[16px]">fit_screen</span>
+    </button>
+    <button class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-marga-card transition-colors" onclick="toggleMinimap()" title="Alternar Mini-mapa">
+      <span class="material-symbols-outlined text-[16px]">map</span>
+    </button>
+  </div>
+  <!-- Export CTA -->
+  <button class="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-brand-violet to-brand-indigo hover:from-purple-600 hover:to-indigo-500 text-white rounded-lg text-xs font-medium shadow-md shadow-brand-violet/25 hover:shadow-brand-violet/40 transition-all active:scale-95" onclick="exportSchemaModal()">
+    <span class="material-symbols-outlined text-[16px]">code_blocks</span>
+    <span class="">Exportar Esquema</span>
+  </button>
+</div></section>
+<!-- MAIN CANVAS VIEWPORT -->
+<main class="relative flex-1 w-full overflow-auto canvas-dots bg-[#090d16]" id="nosqlCanvasWrapper">
+<!-- SVG CONNECTORS OVERLAY (2200 x 1400 virtual area) -->
+<svg class="absolute inset-0 w-[2000px] h-[1300px] pointer-events-none z-10" id="connectionsSvg"><defs>
+  <!-- Marker Cyan (DBRef) -->
+  <marker id="marker-cyan" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="7" refY="3.5" viewBox="0 0 7 7">
+    <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#38bdf8"></path>
+  </marker>
+  <!-- Marker Purple (Array Ref) -->
+  <marker id="marker-purple" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="7" refY="3.5" viewBox="0 0 7 7">
+    <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#8b5cf6"></path>
+  </marker>
+  <!-- Gradient Curve -->
+  <linearGradient id="gradRef" x1="100%" x2="0%" y1="0%" y2="0%">
+    <stop offset="0%" stop-color="#38bdf8"></stop>
+    <stop offset="100%" stop-color="#8b5cf6"></stop>
+  </linearGradient>
+</defs>
+<!-- Curve 1: workspaces.owner_id (x: 680, y: 196) -> users_profiles._id (x: 540, y: 136) -->
+<path class="bezier-glow" d="M 680 196 C 600 196, 620 136, 540 136" fill="none" marker-end="url(#marker-cyan)" stroke="#38bdf8" stroke-dasharray="5 3" stroke-width="2"></path>
+<!-- Curve 2: workspaces.members.user_ref (x: 680, y: 275) -> users_profiles._id (x: 540, y: 136) -->
+<path class="bezier-glow-purple" d="M 680 275 C 590 275, 600 142, 540 136" fill="none" marker-end="url(#marker-purple)" stroke="url(#gradRef)" stroke-width="2"></path>
+<!-- Curve 3: telemetry_events.metadata.user_id (x: 680, y: 745) -> users_profiles._id (x: 540, y: 136) -->
+<path d="M 680 745 C 570 745, 590 220, 540 136" fill="none" marker-end="url(#marker-cyan)" opacity="0.45" stroke="#38bdf8" stroke-dasharray="4 3" stroke-width="1.5"></path></svg>
+<!-- Floating Connection Badges -->
+<div class="absolute left-[610px] top-[152px] z-20 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
+  <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#0e1322] border border-brand-cyan/40 rounded-full text-[10px] font-mono text-brand-cyan shadow-lg backdrop-blur-sm">
+    <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-pulse"></span>
+    <span class="">DBRef 1:N</span>
+  </div>
+</div>
+<div class="absolute left-[615px] top-[225px] z-20 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
+  <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#0e1322] border border-brand-purple/40 rounded-full text-[10px] font-mono text-brand-purple shadow-lg backdrop-blur-sm">
+    <span class="w-1.5 h-1.5 rounded-full bg-brand-purple animate-pulse"></span>
+    <span class="">Embed Ref</span>
+  </div>
+</div>
+<!-- TRANSFORMABLE CANVAS PLANE -->
+<div class="relative w-[1800px] h-[1200px] transition-transform duration-150 origin-top-left p-10" id="nosqlPlane"><!-- ========================================================== -->
+<!-- CARD 1: users_profiles (COL 1 - TOP)                       -->
+<!-- Left: 140px, Top: 60px, Width: 400px                       -->
+<!-- ========================================================== -->
+<div class="absolute left-[140px] top-[60px] w-[400px] bg-[#131722]/95 border border-brand-purple/25 rounded-xl shadow-2xl backdrop-blur-md transition-all hover:border-brand-purple/50 group" data-type="subdocs" id="card-users_profiles">
+  <!-- Card Header -->
+  <div class="p-3.5 bg-[#171c2b]/80 border-b border-marga-border rounded-t-xl flex items-center justify-between">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-8 h-8 rounded-lg bg-brand-purple/15 border border-brand-purple/30 flex items-center justify-center text-brand-purple shrink-0">
+        <span class="material-symbols-outlined text-[18px]">account_box</span>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h3 class="font-semibold text-sm text-white font-mono truncate">users_profiles</h3>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-purple/20 text-brand-purple border border-brand-purple/30 font-medium">Document</span>
+        </div>
+        <p class="text-[11px] font-mono text-slate-400 mt-0.5">3.4M docs • 1.2 GB • avg 360B</p>
+      </div>
+    </div>
+    <button class="text-slate-400 hover:text-slate-200 transition-colors p-1" title="Opciones">
+      <span class="material-symbols-outlined text-[16px]">more_vert</span>
+    </button>
+  </div>
+  <!-- Field Rows -->
+  <div class="p-3 flex flex-col gap-1.5 font-mono text-xs">
+    <!-- Row _id (PK) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70 hover:bg-[#0b0f19] border border-transparent hover:border-brand-cyan/20 transition-all">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-cyan">key</span>
+        <span class="text-white font-medium">_id</span>
+        <span class="px-1.5 py-0.2 text-[9px] font-bold rounded bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30">PK</span>
+      </div>
+      <span class="text-brand-cyan text-[11px] font-medium">ObjectId</span>
+    </div>
+    <!-- Row auth (Subdocument) -->
+    <div class="rounded-lg bg-[#0b0f19]/50 border border-slate-800/80 p-2.5 flex flex-col gap-1.5">
+      <div class="flex items-center justify-between text-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[14px] text-brand-purple">folder_open</span>
+          <span class="text-purple-300 font-medium">auth</span>
+          <span class="px-1.5 py-0.2 text-[9px] rounded bg-brand-purple/20 text-purple-300">subdoc</span>
+        </div>
+        <span class="text-[11px] text-slate-400">Object</span>
+      </div>
+      <!-- Tree items -->
+      <div class="pl-4 ml-1 border-l border-brand-purple/20 flex flex-col gap-1 text-[11px]">
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> email
+          </span>
+          <span class="text-slate-400">String</span>
+        </div>
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> provider
+          </span>
+          <span class="text-purple-300">'google' | 'github'</span>
+        </div>
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> mfa_enabled
+          </span>
+          <span class="text-brand-cyan">Boolean</span>
+        </div>
+      </div>
+    </div>
+    <!-- Row settings (Subdocument) -->
+    <div class="rounded-lg bg-[#0b0f19]/50 border border-slate-800/80 p-2.5 flex flex-col gap-1.5">
+      <div class="flex items-center justify-between text-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[14px] text-brand-purple">settings_suggest</span>
+          <span class="text-purple-300 font-medium">settings</span>
+        </div>
+        <span class="text-[11px] text-slate-400">Object</span>
+      </div>
+      <div class="pl-4 ml-1 border-l border-brand-purple/20 flex flex-col gap-1 text-[11px]">
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="">theme</span>
+          <span class="text-slate-400">String ('dark' | 'light')</span>
+        </div>
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="">notifications</span>
+          <span class="text-slate-400">Object</span>
+        </div>
+      </div>
+    </div>
+    <!-- Row roles (Array) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-cyan">data_array</span>
+        <span class="text-white">roles</span>
+      </div>
+      <span class="text-[11px] px-2 py-0.5 rounded bg-brand-cyan/15 text-brand-cyan border border-brand-cyan/30">Array&lt;String&gt;</span>
+    </div>
+    <!-- Row created_at (Date Index) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
+        <span class="text-white">created_at</span>
+        <span class="px-1.5 py-0.2 text-[9px] rounded bg-slate-800 text-slate-300">idx</span>
+      </div>
+      <span class="text-slate-400 text-[11px]">Date (ISODate)</span>
+    </div>
+  </div>
+  <!-- Card Footer -->
+  <div class="px-3.5 py-2.5 bg-[#171c2b]/80 border-t border-marga-border rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+    <div class="flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[14px] text-brand-purple">hub</span>
+      <span class="">Shard: <code class="text-brand-cyan">{ _id: "hashed" }</code></span>
+    </div>
+    <span class="px-2 py-0.5 rounded bg-slate-800/80 text-[10px] text-slate-300 border border-slate-700 font-medium">WiredTiger</span>
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- CARD 2: workspaces (COL 2 - TOP)                           -->
+<!-- Left: 680px, Top: 60px, Width: 400px                       -->
+<!-- ========================================================== -->
+<div class="absolute left-[680px] top-[60px] w-[400px] bg-[#131722]/95 border border-brand-cyan/25 rounded-xl shadow-2xl backdrop-blur-md transition-all hover:border-brand-cyan/50 group" data-type="subdocs" id="card-workspaces">
+  <!-- Card Header -->
+  <div class="p-3.5 bg-[#171c2b]/80 border-b border-marga-border rounded-t-xl flex items-center justify-between">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-8 h-8 rounded-lg bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center text-brand-cyan shrink-0">
+        <span class="material-symbols-outlined text-[18px]">corporate_fare</span>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h3 class="font-semibold text-sm text-white font-mono truncate">workspaces</h3>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30 font-medium">Document</span>
+        </div>
+        <p class="text-[11px] font-mono text-slate-400 mt-0.5">280K docs • 450 MB • Unsharded</p>
+      </div>
+    </div>
+    <button class="text-slate-400 hover:text-slate-200 transition-colors p-1" title="Opciones">
+      <span class="material-symbols-outlined text-[16px]">more_vert</span>
+    </button>
+  </div>
+  <!-- Field Rows -->
+  <div class="p-3 flex flex-col gap-1.5 font-mono text-xs">
+    <!-- Row _id (PK) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-cyan">key</span>
+        <span class="text-white font-medium">_id</span>
+        <span class="px-1.5 py-0.2 text-[9px] font-bold rounded bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30">PK</span>
+      </div>
+      <span class="text-brand-cyan text-[11px] font-medium">ObjectId</span>
+    </div>
+    <!-- Row name -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-slate-400">badge</span>
+        <span class="text-white">name</span>
+      </div>
+      <span class="text-slate-400 text-[11px]">String</span>
+    </div>
+    <!-- Row owner_id (Ref -> users_profiles._id) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-brand-cyan/10 border border-brand-cyan/30">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-cyan">link</span>
+        <span class="text-brand-cyan font-semibold">owner_id</span>
+        <span class="px-1.5 py-0.2 text-[9px] rounded bg-brand-cyan text-[#090d16] font-bold">DBRef</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[10px] text-slate-400">users._id</span>
+        <span class="text-brand-cyan text-[11px] font-medium">ObjectId</span>
+      </div>
+    </div>
+    <!-- Row members (Array of Objects) -->
+    <div class="rounded-lg bg-[#0b0f19]/50 border border-slate-800/80 p-2.5 flex flex-col gap-1.5">
+      <div class="flex items-center justify-between text-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[14px] text-brand-purple">group_work</span>
+          <span class="text-purple-300 font-medium">members</span>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-brand-purple/20 text-brand-purple border border-brand-purple/30">Array&lt;Object&gt;</span>
+      </div>
+      <!-- Sub items -->
+      <div class="pl-4 ml-1 border-l border-brand-purple/20 flex flex-col gap-1 text-[11px]">
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="flex items-center gap-1.5 text-brand-cyan font-medium">
+            <span class="material-symbols-outlined text-[12px]">subdirectory_arrow_right</span> user_ref
+          </span>
+          <span class="text-brand-cyan">ObjectId (Ref)</span>
+        </div>
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> role
+          </span>
+          <span class="text-purple-300">'admin' | 'member'</span>
+        </div>
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> joined_at
+          </span>
+          <span class="text-slate-400">Date</span>
+        </div>
+      </div>
+    </div>
+    <!-- Row tier -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-slate-400">workspace_premium</span>
+        <span class="text-white">tier</span>
+      </div>
+      <span class="text-purple-300 text-[11px]">'pro' | 'enterprise'</span>
+    </div>
+  </div>
+  <!-- Card Footer -->
+  <div class="px-3.5 py-2.5 bg-[#171c2b]/80 border-t border-marga-border rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+    <div class="flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[14px] text-brand-cyan">bolt</span>
+      <span class="">Index: <code class="text-brand-cyan">{ owner_id: 1 }</code></span>
+    </div>
+    <span class="px-2 py-0.5 rounded bg-slate-800/80 text-[10px] text-slate-300 border border-slate-700 font-medium">ReplSet: rs0</span>
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- CARD 3: session_cache (COL 1 - BOTTOM)                     -->
+<!-- Left: 140px, Top: 580px, Width: 400px                      -->
+<!-- ========================================================== -->
+<div class="absolute left-[140px] top-[580px] w-[400px] bg-[#131722]/95 border border-brand-purple/25 rounded-xl shadow-2xl backdrop-blur-md transition-all hover:border-brand-purple/50 group" data-type="ttl" id="card-session_cache">
+  <!-- Card Header -->
+  <div class="p-3.5 bg-[#171c2b]/80 border-b border-marga-border rounded-t-xl flex items-center justify-between">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-8 h-8 rounded-lg bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center text-brand-cyan shrink-0">
+        <span class="material-symbols-outlined text-[18px]">bolt</span>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h3 class="font-semibold text-sm text-white font-mono truncate">session_cache</h3>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30 font-medium">Key-Value</span>
+        </div>
+        <p class="text-[11px] font-mono text-slate-400 mt-0.5">120K docs • In-Memory Working Set</p>
+      </div>
+    </div>
+    <button class="text-slate-400 hover:text-slate-200 transition-colors p-1" title="Opciones">
+      <span class="material-symbols-outlined text-[16px]">more_vert</span>
+    </button>
+  </div>
+  <!-- Field Rows -->
+  <div class="p-3 flex flex-col gap-1.5 font-mono text-xs">
+    <!-- Row key (PK) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-cyan">key</span>
+        <span class="text-white font-medium">key</span>
+        <span class="px-1.5 py-0.2 text-[9px] font-bold rounded bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30">PK</span>
+      </div>
+      <span class="text-brand-cyan text-[11px] font-medium">String</span>
+    </div>
+    <!-- Row data -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-slate-400">lock</span>
+        <span class="text-white">data</span>
+      </div>
+      <span class="text-purple-300 text-[11px]">Binary / Encrypted</span>
+    </div>
+    <!-- Row expires_at (TTL) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-brand-violet/10 border border-brand-violet/30">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-purple">timer</span>
+        <span class="text-purple-300 font-semibold">expires_at</span>
+        <span class="px-1.5 py-0.2 text-[9px] rounded bg-brand-purple text-white font-bold">TTL</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[10px] text-brand-cyan">3600s Purge</span>
+        <span class="text-slate-400 text-[11px]">Date</span>
+      </div>
+    </div>
+  </div>
+  <!-- Card Footer -->
+  <div class="px-3.5 py-2.5 bg-[#171c2b]/80 border-t border-marga-border rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+    <div class="flex items-center gap-1.5">
+      <span class="w-2 h-2 rounded-full bg-brand-cyan"></span>
+      <span class="">TTL Index Activo</span>
+    </div>
+    <span class="px-2 py-0.5 rounded bg-slate-800/80 text-[10px] text-slate-300 border border-slate-700 font-medium">Auto-Expire</span>
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- CARD 4: telemetry_events (COL 2 - BOTTOM)                  -->
+<!-- Left: 680px, Top: 520px, Width: 400px                      -->
+<!-- ========================================================== -->
+<div class="absolute left-[680px] top-[520px] w-[400px] bg-[#131722]/95 border border-brand-purple/25 rounded-xl shadow-2xl backdrop-blur-md transition-all hover:border-brand-purple/50 group" data-type="timeseries" id="card-telemetry_events">
+  <!-- Card Header -->
+  <div class="p-3.5 bg-[#171c2b]/80 border-b border-marga-border rounded-t-xl flex items-center justify-between">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-8 h-8 rounded-lg bg-brand-purple/15 border border-brand-purple/30 flex items-center justify-center text-brand-purple shrink-0">
+        <span class="material-symbols-outlined text-[18px]">show_chart</span>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h3 class="font-semibold text-sm text-white font-mono truncate">telemetry_events</h3>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-purple/20 text-brand-purple border border-brand-purple/30 font-semibold">Time-Series</span>
+        </div>
+        <p class="text-[11px] font-mono text-slate-400 mt-0.5">42.8M docs • 8.4 GB • Ingest 2.4k/s</p>
+      </div>
+    </div>
+    <button class="text-slate-400 hover:text-slate-200 transition-colors p-1" title="Opciones">
+      <span class="material-symbols-outlined text-[16px]">more_vert</span>
+    </button>
+  </div>
+  <!-- Field Rows -->
+  <div class="p-3 flex flex-col gap-1.5 font-mono text-xs">
+    <!-- Row _id (PK) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-cyan">key</span>
+        <span class="text-white font-medium">_id</span>
+      </div>
+      <span class="text-brand-cyan text-[11px] font-medium">ObjectId</span>
+    </div>
+    <!-- Row timestamp (Time Field) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-brand-cyan/10 border border-brand-cyan/30">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-brand-cyan">schedule</span>
+        <span class="text-brand-cyan font-semibold">timestamp</span>
+        <span class="px-1.5 py-0.2 text-[9px] rounded bg-brand-cyan text-[#090d16] font-bold">TimeField</span>
+      </div>
+      <span class="text-brand-cyan text-[11px] font-medium">Date (ISODate)</span>
+    </div>
+    <!-- Row metadata (Meta Field) -->
+    <div class="rounded-lg bg-[#0b0f19]/50 border border-slate-800/80 p-2.5 flex flex-col gap-1.5">
+      <div class="flex items-center justify-between text-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[14px] text-brand-purple">data_object</span>
+          <span class="text-purple-300 font-medium">metadata</span>
+          <span class="px-1.5 py-0.2 text-[9px] rounded bg-brand-purple/20 text-purple-300">MetaField</span>
+        </div>
+        <span class="text-[11px] text-slate-400">Object</span>
+      </div>
+      <div class="pl-4 ml-1 border-l border-brand-purple/20 flex flex-col gap-1 text-[11px]">
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="">source</span>
+          <span class="text-slate-400">String</span>
+        </div>
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="">device</span>
+          <span class="text-slate-400">String</span>
+        </div>
+        <div class="flex items-center justify-between py-0.5 text-slate-300">
+          <span class="text-brand-cyan font-medium">user_id (Ref)</span>
+          <span class="text-brand-cyan">ObjectId</span>
+        </div>
+      </div>
+    </div>
+    <!-- Row payload (Mixed/Polymorphic) -->
+    <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#0b0f19]/70">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-purple-400">code</span>
+        <span class="text-white">payload</span>
+      </div>
+      <span class="text-[11px] text-purple-300">BSON / Mixed</span>
+    </div>
+  </div>
+  <!-- Card Footer -->
+  <div class="px-3.5 py-2.5 bg-[#171c2b]/80 border-t border-marga-border rounded-b-xl flex items-center justify-between text-[11px] font-mono text-slate-400">
+    <div class="flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[14px] text-brand-purple">timelapse</span>
+      <span class="">Granularity: <code class="text-white">Seconds</code></span>
+    </div>
+    <span class="px-2 py-0.5 rounded bg-brand-purple/20 text-brand-cyan text-[10px] border border-brand-purple/30 font-medium">ExpireAfter: 90d</span>
+  </div>
+</div></div>
+<!-- MINIMAP HUD (Floating lower right) -->
+
+</main>
+<!-- MODAL: Export JSON Schema & Validator ($jsonSchema) -->
+<div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-[#090d16]/80 backdrop-blur-sm p-4" id="exportModal">
+<div class="w-full max-w-2xl bg-[#131722] border border-brand-purple/30 rounded-xl shadow-2xl overflow-hidden">
+<div class="p-4 bg-[#171c2b] border-b border-marga-border flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-lg bg-brand-purple/20 flex items-center justify-center text-brand-purple">
+<span class="material-symbols-outlined text-[18px]">data_object</span>
+</div>
+<h4 class="text-sm font-semibold text-white font-mono">MongoDB JSON Schema Validator ($jsonSchema)</h4>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors" onclick="closeSchemaModal()">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="p-5 flex flex-col gap-4 font-mono">
+<p class="text-xs text-slate-400">
+          Validador formal exportado compatible con <code class="text-brand-cyan">db.createCollection(..., { validator: { ... } })</code> para aplicar rigidez de esquema en WiredTiger.
+        </p>
+<div class="bg-[#090d16] border border-slate-800 p-4 rounded-lg text-xs text-slate-200 overflow-x-auto max-h-72">
+<pre class="text-brand-cyan">{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["_id", "auth", "created_at"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "auth": {
+        "bsonType": "object",
+        "required": ["email", "provider"],
+        "properties": {
+          "email": { "bsonType": "string", "pattern": "^.+@.+$" },
+          "provider": { "enum": ["google", "github"] },
+          "mfa_enabled": { "bsonType": "bool" }
+        }
+      },
+      "roles": {
+        "bsonType": "array",
+        "items": { "bsonType": "string" }
+      },
+      "created_at": { "bsonType": "date" }
+    }
+  }
+}</pre>
+</div>
+<div class="flex items-center justify-between pt-2">
+<span class="text-xs text-slate-500 font-sans">analytics_events.users_profiles</span>
+<div class="flex items-center gap-2">
+<button class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" onclick="closeSchemaModal()">
+              Cerrar
+            </button>
+<button class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-brand-violet hover:bg-purple-600 text-white shadow-md shadow-brand-violet/30 transition-all flex items-center gap-1.5" onclick="copySchemaJson()">
+<span class="material-symbols-outlined text-[15px]">content_copy</span>
+<span class="">Copiar JSON Schema</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- INTERACTIVE CANVAS LOGIC -->
+<script>
+    let canvasZoom = 1.0;
+
+    function updateZoomTransform() {
+      const plane = document.getElementById('nosqlPlane');
+      const display = document.getElementById('zoomLevelDisplay');
+      if (plane) {
+        plane.style.transform = `scale(${canvasZoom})`;
+      }
+      if (display) {
+        display.textContent = `${Math.round(canvasZoom * 100)}%`;
+      }
+    }
+
+    function zoomIn() {
+      canvasZoom = Math.min(canvasZoom + 0.1, 1.5);
+      updateZoomTransform();
+    }
+
+    function zoomOut() {
+      canvasZoom = Math.max(canvasZoom - 0.1, 0.6);
+      updateZoomTransform();
+    }
+
+    function resetZoomCenter() {
+      canvasZoom = 1.0;
+      updateZoomTransform();
+      const wrapper = document.getElementById('nosqlCanvasWrapper');
+      if (wrapper) {
+        wrapper.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function toggleMinimap() {
+      const map = document.getElementById('canvasMinimap');
+      if (map) {
+        map.classList.toggle('hidden');
+      }
+    }
+
+    function filterCollections(type) {
+      // Update button states
+      const pills = document.querySelectorAll('.filter-pill');
+      pills.forEach(p => {
+        p.className = 'filter-pill px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-marga-card transition-all';
+      });
+
+      const activeBtn = document.getElementById('btn-' + type);
+      if (activeBtn) {
+        activeBtn.className = 'filter-pill px-3 py-1 rounded-md text-xs font-medium bg-brand-violet text-white shadow-sm transition-all';
+      }
+
+      // Toggle cards visibility
+      const cards = document.querySelectorAll('[id^="card-"]');
+      cards.forEach(card => {
+        if (type === 'all') {
+          card.style.opacity = '1';
+          card.style.filter = 'none';
+        } else {
+          const cardType = card.getAttribute('data-type');
+          if (cardType === type) {
+            card.style.opacity = '1';
+            card.style.filter = 'none';
+          } else {
+            card.style.opacity = '0.2';
+            card.style.filter = 'grayscale(80%)';
+          }
+        }
+      });
+
+      // Toggle SVG connections brightness
+      const svgLayer = document.getElementById('connectionsSvg');
+      if (svgLayer) {
+        if (type !== 'all' && type !== 'subdocs') {
+          svgLayer.style.opacity = '0.15';
+        } else {
+          svgLayer.style.opacity = '1';
+        }
+      }
+    }
+
+    function exportSchemaModal() {
+      const modal = document.getElementById('exportModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeSchemaModal() {
+      const modal = document.getElementById('exportModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function copySchemaJson() {
+      navigator.clipboard?.writeText(JSON.stringify({
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["_id", "auth", "created_at"]
+        }
+      }, null, 2));
+      closeSchemaModal();
+    }
+  </script>
+
+
+</body></html>

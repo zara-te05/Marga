@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="web_dashboard" name="shell-type">
+  <title>Marga — Iniciar sesión</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/marga.css">
+  <link rel="stylesheet" href="../assets/css/marga-shared.css">
+</head>
+<body class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex items-center justify-center p-4 canvas-grid">
+
+
+  <main class="relative w-full max-w-sm">
+    <div class="text-center mb-6">
+      <span class="text-3xl font-semibold text-white tracking-tight">Marga</span>
+    </div>
+
+    <section class="rounded-2xl bg-marga-surface border border-marga-border shadow-2xl overflow-hidden">
+      <div class="flex border-b border-marga-border text-xs" id="tabs">
+        <button type="button" id="tab-login" class="flex-1 py-3 font-semibold text-brand-purple bg-marga-card border-b-2 border-brand-violet" onclick="setMode('login')">Iniciar sesión</button>
+        <button type="button" id="tab-register" class="flex-1 py-3 font-medium text-neutral-400 hover:text-neutral-200" onclick="setMode('register')">Crear cuenta</button>
+      </div>
+
+      <form id="auth-form" class="p-6 flex flex-col gap-4" novalidate>
+        <p id="recuperar-ayuda" class="hidden text-xs text-neutral-400 leading-relaxed">Escribe el email de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.</p>
+        <div class="flex flex-col gap-1.5 hidden" id="field-nombre">
+          <label for="nombre" class="text-xs font-semibold text-neutral-300">Nombre de usuario</label>
+          <input id="nombre" autocomplete="username" class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet" placeholder="ej. zara-te05">
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="email" class="text-xs font-semibold text-neutral-300">Email</label>
+          <input id="email" type="email" autocomplete="email" required class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet" placeholder="tu@correo.com">
+        </div>
+        <div class="flex flex-col gap-1.5" id="field-password">
+          <div class="flex items-center justify-between">
+            <label for="password" class="text-xs font-semibold text-neutral-300">Contraseña</label>
+            <button type="button" id="link-olvide" class="text-[11px] text-neutral-500 hover:text-white" onclick="setMode('recuperar')">¿Olvidaste tu contraseña?</button>
+          </div>
+          <input id="password" type="password" autocomplete="current-password" required class="h-10 px-3.5 rounded-lg bg-marga-card border border-marga-border text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-violet" placeholder="••••••••">
+          <span class="text-[11px] text-neutral-500 hidden" id="pass-hint">Mínimo 8 caracteres.</span>
+        </div>
+        <div class="flex flex-col gap-1.5 hidden" id="field-equipo">
+          <label for="equipo" class="text-xs font-semibold text-neutral-300">Equipo <span class="text-neutral-500 font-normal">(opcional)</span></label>
+          <select id="equipo" class="h-10 px-3 rounded-lg bg-marga-card border border-marga-border text-xs text-white focus:outline-none cursor-pointer">
+            <option value="">Sin equipo</option>
+          </select>
+        </div>
+
+        <p id="form-ok" class="hidden text-xs text-neutral-200 bg-white/5 border border-marga-border rounded-lg px-3 py-2"></p>
+        <p id="form-error" class="hidden text-xs text-neutral-400 bg-neutral-500/10 border border-neutral-500/30 rounded-lg px-3 py-2"></p>
+
+        <button type="submit" id="submit-btn" class="h-10 rounded-lg bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+          <span class="material-symbols-outlined text-[18px]" id="submit-icon">login</span>
+          <span id="submit-text">Entrar</span>
+        </button>
+        <button type="button" id="link-volver" class="hidden text-[11px] text-neutral-500 hover:text-white" onclick="setMode('login')">Volver a iniciar sesión</button>
+      </form>
+    </section>
+
+    <p class="mt-4 text-center font-mono text-[11px] text-neutral-500" id="server-status">Comprobando servidor…</p>
+  </main>
+
+  <script src="../assets/js/marga-common.js"></script>
+  <script src="../assets/js/marga-demo.js"></script>
+  <script src="../assets/js/marga-api.js"></script>
+  <script>
+    let mode = 'login';
+
+    function setMode(m) {
+      mode = m;
+      const reg = m === 'register', rec = m === 'recuperar';
+      const ver = (id, v) => document.getElementById(id).classList.toggle('hidden', !v);
+      ver('field-nombre', reg);
+      ver('field-equipo', reg);
+      ver('pass-hint', reg);
+      ver('field-password', !rec);
+      ver('link-olvide', m === 'login');
+      ver('recuperar-ayuda', rec);
+      ver('link-volver', rec);
+      ver('tabs', !rec);
+      ver('form-ok', false);
+      document.getElementById('password').autocomplete = reg ? 'new-password' : 'current-password';
+      document.getElementById('submit-text').textContent = reg ? 'Crear cuenta' : rec ? 'Enviar enlace' : 'Entrar';
+      document.getElementById('submit-icon').textContent = rec ? 'mail' : 'login';
+      const on = 'flex-1 py-3 font-semibold text-brand-purple bg-marga-card border-b-2 border-brand-violet';
+      const off = 'flex-1 py-3 font-medium text-neutral-400 hover:text-neutral-200';
+      document.getElementById('tab-login').className = reg ? off : on;
+      document.getElementById('tab-register').className = reg ? on : off;
+      showError('');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('form-error');
+      el.textContent = msg;
+      el.classList.toggle('hidden', !msg);
+    }
+
+    function destino() {
+      const next = new URLSearchParams(location.search).get('next') || '';
+      // Solo rutas internas para evitar redirecciones abiertas.
+      return /^\/pages\/[\w.-]+\.html(\?[\w=&%.-]*)?$/.test(next) ? next : 'proyectos.html';
+    }
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showError('');
+      if (!MargaAPI.online) {
+        showError('Abre Marga desde el servidor (http://localhost:8080), no con doble clic.');
+        return;
+      }
+      const btn = document.getElementById('submit-btn');
+      if (mode === 'recuperar') {
+        const email = document.getElementById('email').value.trim();
+        if (!email) { showError('Escribe tu email.'); return; }
+        btn.disabled = true;
+        try {
+          const r = await MargaAPI.post('/auth/recuperar', { email });
+          const ok = document.getElementById('form-ok');
+          ok.textContent = r.mensaje + ' Revisa tu correo (y la carpeta de spam).';
+          ok.classList.remove('hidden');
+        } catch (err) {
+          showError(err.message);
+        } finally {
+          btn.disabled = false;
+        }
+        return;
+      }
+      const body = {
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value
+      };
+      if (mode === 'register') {
+        body.nombre = document.getElementById('nombre').value.trim();
+        const eq = document.getElementById('equipo').value;
+        if (eq) body.equipo_id = Number(eq);
+      }
+      btn.disabled = true;
+      try {
+        await MargaAPI.post(mode === 'register' ? '/auth/register' : '/auth/login', body);
+        location.replace(destino());
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    (async () => {
+      const status = document.getElementById('server-status');
+      if (!MargaAPI.online) { status.textContent = 'Modo sin servidor (file://)'; return; }
+      try {
+        const h = await MargaAPI.get('/health');
+        status.innerHTML = '<span class="text-brand-cyan">●</span> Servidor en línea · BD ' + MargaAPI.escapeHTML(h.bd) +
+          (h.version ? ' · ' + MargaAPI.escapeHTML(h.version) : '');
+        const equipos = await MargaAPI.get('/equipos');
+        const sel = document.getElementById('equipo');
+        equipos.forEach(eq => sel.insertAdjacentHTML('beforeend',
+          `<option value="${eq.id}">${MargaAPI.escapeHTML(eq.nombre)}</option>`));
+      } catch (err) {
+        status.innerHTML = '<span class="text-neutral-400">●</span> ' + MargaAPI.escapeHTML(err.message);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="web_dashboard" name="shell-type">
+  <title>Marga — Commits &amp; Migraciones DDL</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/marga.css">
+  <link rel="stylesheet" href="../assets/css/marga-shared.css">
+</head>
+<body data-scope="project" data-page="commits" class="bg-marga-bg text-neutral-200 antialiased selection:bg-brand-violet selection:text-neutral-950 min-h-screen flex flex-col">
+
+  <header id="marga-header" class="sticky top-0 z-50 shrink-0 h-16"></header>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flex-1 w-full max-w-[1400px] mx-auto px-5 lg:px-8 py-8 space-y-6">
+    <div class="flex flex-col w-full gap-6">
+
+      <!-- Barra de rama -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-1 h-9 pl-3 rounded-md bg-marga-surface border border-marga-border">
+            <span class="material-symbols-outlined text-[17px] text-neutral-400">fork_right</span>
+            <select id="branch-select" class="bg-transparent border-0 py-0 pl-1 pr-8 text-sm text-white font-medium focus:outline-none focus:ring-0 cursor-pointer">
+              <option value="main" class="bg-marga-card">main</option>
+            </select>
+          </label>
+          <span class="font-mono text-xs text-neutral-400" id="branch-estado"></span>
+          <span class="text-xs text-neutral-500" id="pill-total"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <p class="hidden md:block text-xs text-neutral-500">Las migraciones se suben con <span class="font-mono text-neutral-300">marga push</span>.</p>
+          <button type="button" id="btn-merge" class="hidden items-center gap-1.5 h-9 px-3 rounded-md border border-marga-border text-sm text-neutral-200 hover:border-neutral-500 transition-colors">
+            <span class="material-symbols-outlined text-[17px]">merge</span>Fusionar ramas
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 2: 2-COLUMN TIMELINE + DIFF WORKSPACE -->
+      <div class="flex flex-col lg:flex-row gap-6 items-start">
+        
+        <!-- LEFT COLUMN: COMMIT TIMELINE (42%) -->
+        <div class="w-full lg:w-[42%] flex flex-col gap-4">
+          
+          <!-- Search & Filters -->
+          <div class="bg-marga-surface p-3 rounded-xl border border-marga-border flex items-center justify-between gap-3 shadow-sm">
+            <div class="relative flex-1 flex items-center">
+              <span class="material-symbols-outlined absolute left-3 text-[16px] text-neutral-400">search</span>
+              <input class="w-full bg-marga-card border border-marga-border text-white placeholder:text-neutral-500 font-mono text-xs pl-9 pr-3 py-1.5 rounded-lg focus:outline-none focus:border-brand-violet transition-all" id="commit-search" data-live-search placeholder="Buscar por hash (8f3b91a), tag o tabla..." type="text">
+            </div>
+          </div>
+
+          <!-- Vertical Timeline Rail -->
+          <div class="relative flex flex-col gap-3" id="commits-timeline">
+            <div class="absolute left-[23px] top-6 bottom-6 w-0.5 bg-marga-border pointer-events-none"></div>
+
+            <!-- Commit Item 1: Active -->
+            <div class="commit-timeline-item relative group bg-marga-card border border-brand-violet p-4 rounded-xl transition-all shadow-md cursor-pointer" id="commit-item-8f3b91a" onclick="selectCommitItem('8f3b91a', '0018_add_wallets_ledger_partition.sql', 'zara-te05', 'hace 2h', '420ms')">
+              <div class="absolute left-[-2px] top-5 w-1.5 h-8 bg-brand-violet rounded-r"></div>
+              <div class="flex items-start gap-3">
+                <div class="w-7 h-7 rounded-full bg-white/10 border border-brand-violet text-brand-purple flex items-center justify-center font-mono text-xs font-bold z-10 shrink-0">
+                  18
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-mono text-xs text-white font-semibold truncate">0018_add_wallets_ledger_partition</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-brand-cyan font-semibold border border-white/10 shrink-0">Prod Sync</span>
+                  </div>
+                  <p class="text-xs text-neutral-400 mt-1">Particionado por rango en libro mayor contable y estado en transferencias.</p>
+                  
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 pt-2 font-mono text-[11px] text-neutral-400 border-t border-marga-border-subtle">
+                    <div class="flex items-center gap-1 text-white">
+                      <span class="material-symbols-outlined text-[13px] text-brand-purple">commit</span>
+                      <span class="text-brand-cyan font-bold">8f3b91a</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[13px]">person</span>
+                      <span>zara-te05</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[13px]">schedule</span>
+                      <span>hace 2h</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-brand-cyan">
+                      <span class="material-symbols-outlined text-[13px]">timer</span>
+                      <span>420ms</span>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-surface border border-marga-border text-neutral-300 flex items-center gap-1">
+                      <span class="w-1 h-1 rounded-full bg-brand-cyan"></span> transactions
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-surface border border-marga-border text-neutral-300 flex items-center gap-1">
+                      <span class="w-1 h-1 rounded-full bg-brand-purple"></span> ledger_entries
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-surface border border-marga-border text-neutral-400">
+                      SHA256: 3c9a..8b01
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Commit Item 2 -->
+            <div class="commit-timeline-item relative group bg-marga-surface hover:bg-marga-card border border-marga-border p-4 rounded-xl transition-all cursor-pointer" id="commit-item-7c21e04" onclick="selectCommitItem('7c21e04', '0017_create_crypto_wallets_table.sql', 'zara-te05', 'Ayer · 18:32', '189ms')">
+              <div class="flex items-start gap-3">
+                <div class="w-7 h-7 rounded-full bg-marga-card border border-marga-border text-neutral-400 flex items-center justify-center font-mono text-xs z-10 shrink-0">
+                  17
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-mono text-xs text-white font-medium truncate">0017_create_crypto_wallets_table</span>
+                    <span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-marga-card border border-marga-border text-brand-cyan">Aplicada</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 font-mono text-[11px] text-neutral-400">
+                    <span class="text-white">7c21e04</span>
+                    <span>zara-te05</span>
+                    <span>Ayer · 18:32</span>
+                    <span>189ms</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-card text-neutral-300 border border-marga-border">
+                      + tabla <span class="text-brand-cyan">wallets</span> (3 índices)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Commit Item 3 -->
+            <div class="commit-timeline-item relative group bg-marga-surface hover:bg-marga-card border border-marga-border p-4 rounded-xl transition-all cursor-pointer" id="commit-item-3a9f02c" onclick="selectCommitItem('3a9f02c', '0016_add_user_security_mfa_column.sql', 'diego-z', 'Hace 3 días', '45ms')">
+              <div class="flex items-start gap-3">
+                <div class="w-7 h-7 rounded-full bg-marga-card border border-marga-border text-neutral-400 flex items-center justify-center font-mono text-xs z-10 shrink-0">
+                  16
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-mono text-xs text-white font-medium truncate">0016_add_user_security_mfa_column</span>
+                    <span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-marga-card border border-marga-border text-brand-cyan">Aplicada</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 font-mono text-[11px] text-neutral-400">
+                    <span class="text-white">3a9f02c</span>
+                    <span>diego-z</span>
+                    <span>Hace 3 días</span>
+                    <span>45ms</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-card text-neutral-300 border border-marga-border">
+                      + col <span class="text-brand-purple">users.mfa_secret</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Commit Item 4: Baseline -->
+            <div class="commit-timeline-item relative group bg-marga-surface hover:bg-marga-card border border-marga-border p-4 rounded-xl transition-all cursor-pointer" id="commit-item-1b4ec5c" onclick="selectCommitItem('1b4ec5c', '0015_initial_auth_tables_schema.sql', 'zara-te05', 'Hace 1 sem', '890ms')">
+              <div class="flex items-start gap-3">
+                <div class="w-7 h-7 rounded-full bg-marga-card border border-marga-border text-neutral-400 flex items-center justify-center font-mono text-xs z-10 shrink-0">
+                  15
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-mono text-xs text-white font-medium truncate">0015_initial_auth_tables_schema</span>
+                    <span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-white/10 text-brand-purple border border-white/10">Baseline</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 font-mono text-[11px] text-neutral-400">
+                    <span class="text-white">1b4ec5c</span>
+                    <span>zara-te05</span>
+                    <span>Hace 1 sem</span>
+                    <span>890ms</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-marga-card text-neutral-300 border border-marga-border">
+                      4 tablas base estructuradas
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: SCHEMA DIFF & MIGRATION INSPECTOR (58%) -->
+        <div class="w-full lg:w-[58%] flex flex-col gap-4">
+          
+          <!-- Inspector Header Panel -->
+          <div class="bg-marga-surface p-4 rounded-xl border border-marga-border shadow-md flex flex-col gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[18px] text-brand-purple">description</span>
+                  <span class="text-sm font-bold text-white font-mono" id="inspector-filename">0018_add_wallets_ledger_partition.sql</span>
+                </div>
+                <p class="text-xs text-neutral-400 mt-1" id="inspector-meta">
+                  Commit <code class="font-mono text-brand-cyan font-bold">8f3b91a2</code> · Aplicado en PostgreSQL Cluster Atlas
+                </p>
+                <p class="text-xs text-neutral-500 mt-1" id="inspector-entornos"></p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button class="px-2.5 py-1.5 rounded-lg bg-marga-card border border-marga-border text-neutral-200 hover:text-white transition-colors text-xs font-mono flex items-center gap-1" onclick="copySelectedHash()">
+                  <span class="material-symbols-outlined text-[15px] text-brand-cyan">content_copy</span>
+                  <span>Copiar Hash</span>
+                </button>
+                <button class="px-2.5 py-1.5 rounded-lg bg-marga-card border border-marga-border text-neutral-200 hover:text-white transition-colors text-xs font-mono flex items-center gap-1" id="btn-revert" onclick="revertSelectedCommit()">
+                  <span class="material-symbols-outlined text-[15px] text-neutral-400">undo</span>
+                  <span>Revertir</span>
+                </button>
+                <button class="px-2.5 py-1.5 rounded-lg bg-marga-card border border-marga-border text-neutral-200 hover:text-white transition-colors text-xs font-mono flex items-center gap-1" onclick="downloadSelectedDDL()">
+                  <span class="material-symbols-outlined text-[15px] text-brand-purple">download</span>
+                  <span>Descargar SQL</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Diff Viewer Module -->
+          <div class="bg-marga-surface border border-marga-border rounded-xl overflow-hidden shadow-xl flex flex-col">
+            <!-- Diff Strip Header -->
+            <div class="flex items-center justify-between bg-marga-card px-4 py-2 border-b border-marga-border text-xs font-mono">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[15px] text-brand-cyan">difference</span>
+                <span class="font-semibold text-white">Cambios en el esquema</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-marga-surface border border-marga-border text-brand-purple text-[10px]" id="diff-hunk">@@ -42,7 +42,41 @@</span>
+            </div>
+
+            <!-- Code Diff Body -->
+            <div class="p-3 bg-marga-bg font-mono text-xs overflow-x-auto leading-relaxed select-text space-y-0.5" id="diff-body">
+              
+              <div class="flex items-center gap-3 px-2 py-0.5 text-neutral-500">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">42</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">42</span>
+                <span class="select-none">&nbsp;</span>
+                <span class="text-neutral-400">-- Ledger Partitioning Configuration Engine</span>
+              </div>
+
+              <!-- Removed Context line -->
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-neutral-500/10 text-neutral-400 rounded border border-neutral-500/20">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-50">43</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="select-none font-bold">-</span>
+                <span class="line-through opacity-80">-- Legacy unpartitioned ledger table schema deprecated</span>
+              </div>
+
+              <!-- Context Line -->
+              <div class="flex items-center gap-3 px-2 py-0.5 text-neutral-500">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">44</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">43</span>
+                <span class="select-none">&nbsp;</span>
+                <span class="text-neutral-300">CREATE TYPE trx_status_enum AS ENUM ('PENDING', 'SETTLED', 'CANCELLED');</span>
+              </div>
+
+              <!-- Added Lines (Marga Indigo / Cyan Accents) -->
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">44</span>
+                <span class="select-none font-bold">+</span>
+                <span><span class="text-brand-purple font-semibold">ALTER TABLE</span> transactions <span class="text-brand-purple font-semibold">ADD COLUMN IF NOT EXISTS</span> state trx_status_enum <span class="text-brand-sky">DEFAULT</span> 'PENDING';</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">45</span>
+                <span class="select-none font-bold">+</span>
+                <span><span class="text-brand-purple font-semibold">CREATE TABLE</span> ledger_entries (</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">46</span>
+                <span class="select-none font-bold">+</span>
+                <span class="pl-6">entry_id <span class="text-brand-sky">uuid</span> <span class="text-brand-purple font-semibold">DEFAULT</span> gen_random_uuid(),</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">47</span>
+                <span class="select-none font-bold">+</span>
+                <span class="pl-6">trx_id <span class="text-brand-sky">bigint</span> <span class="text-brand-purple font-semibold">REFERENCES</span> transactions(id) <span class="text-brand-purple font-semibold">ON DELETE CASCADE</span>,</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">48</span>
+                <span class="select-none font-bold">+</span>
+                <span class="pl-6">amount <span class="text-brand-sky">numeric(24, 8)</span> <span class="text-brand-purple font-semibold">NOT NULL</span>,</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">49</span>
+                <span class="select-none font-bold">+</span>
+                <span class="pl-6">created_at <span class="text-brand-sky">timestamptz</span> <span class="text-brand-purple font-semibold">NOT NULL DEFAULT</span> clock_timestamp(),</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">50</span>
+                <span class="select-none font-bold">+</span>
+                <span class="pl-6"><span class="text-brand-purple font-semibold">PRIMARY KEY</span> (entry_id, created_at)</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">51</span>
+                <span class="select-none font-bold">+</span>
+                <span>) <span class="text-brand-purple font-semibold">PARTITION BY RANGE</span> (created_at);</span>
+              </div>
+
+              <div class="flex items-center gap-3 px-2 py-0.5 bg-white/5 text-brand-cyan rounded border border-white/10">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-20">...</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] font-bold text-brand-cyan">52</span>
+                <span class="select-none font-bold">+</span>
+                <span><span class="text-brand-purple font-semibold">CREATE INDEX</span> idx_ledger_trx_id <span class="text-brand-purple font-semibold">ON</span> ledger_entries(trx_id);</span>
+              </div>
+
+              <!-- Trailing line -->
+              <div class="flex items-center gap-3 px-2 py-0.5 text-neutral-500">
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">45</span>
+                <span class="w-8 text-right shrink-0 select-none text-[10px] opacity-40">53</span>
+                <span class="select-none">&nbsp;</span>
+                <span class="text-neutral-400">-- Fin de definición de partición</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SQL de la migración -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-marga-surface rounded-xl border border-marga-border overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-2 bg-marga-card border-b border-marga-border text-xs font-mono text-white font-semibold">
+                <span class="material-symbols-outlined text-[15px]">arrow_upward</span>Migración (UP)
+              </div>
+              <pre id="sql-up" class="p-4 font-mono text-xs text-neutral-300 whitespace-pre overflow-x-auto max-h-72">—</pre>
+            </div>
+            <div class="bg-marga-surface rounded-xl border border-marga-border overflow-hidden">
+              <div class="flex items-center justify-between gap-2 px-4 py-2 bg-marga-card border-b border-marga-border text-xs font-mono">
+                <span class="flex items-center gap-2 text-white font-semibold"><span class="material-symbols-outlined text-[15px]">arrow_downward</span>Reversión (DOWN)</span>
+                <span id="down-detalle" class="text-neutral-500"></span>
+              </div>
+              <pre id="down-sql" class="p-4 font-mono text-xs text-neutral-300 whitespace-pre overflow-x-auto max-h-72">—</pre>
+            </div>
+          </div>
+
+          <!-- Riesgo y revisiones (los llena commits-viewer.js) -->
+          <div id="panel-revision" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+
+  <!-- Scripts -->
+  <!-- Modal: fusionar ramas -->
+  <div id="merge-modal" class="fixed inset-0 z-[80] hidden items-center justify-center p-4 bg-black/70">
+    <div class="w-full max-w-lg rounded-xl bg-marga-surface border border-marga-border shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between px-5 h-14 border-b border-marga-border shrink-0">
+        <h3 class="text-base font-semibold text-white">Fusionar ramas</h3>
+        <button type="button" id="merge-cerrar" class="text-neutral-400 hover:text-white"><span class="material-symbols-outlined text-[20px]">close</span></button>
+      </div>
+      <div class="p-5 flex flex-col gap-4 overflow-y-auto">
+        <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+          <label class="flex flex-col gap-1.5 text-xs text-neutral-400">Traer migraciones de
+            <select id="merge-desde" class="h-9 px-2 rounded-md bg-marga-card border border-marga-border text-sm font-mono text-white focus:outline-none"></select>
+          </label>
+          <span class="material-symbols-outlined text-[18px] text-neutral-500 pb-2">arrow_forward</span>
+          <label class="flex flex-col gap-1.5 text-xs text-neutral-400">hacia
+            <select id="merge-hacia" class="h-9 px-2 rounded-md bg-marga-card border border-marga-border text-sm font-mono text-white focus:outline-none"></select>
+          </label>
+        </div>
+        <p class="text-xs text-neutral-500 leading-relaxed">Las migraciones se aplican en orden, así que la historia queda lineal: si el destino también avanzó, las migraciones se copian encima y se renumeran si su versión ya existe. Si ambas ramas tocaron la misma tabla, Marga se detiene.</p>
+        <div id="merge-resultado" class="text-sm"></div>
+      </div>
+      <div class="flex items-center justify-between gap-3 px-5 py-4 border-t border-marga-border shrink-0">
+        <label class="hidden items-center gap-2 text-xs text-neutral-300" id="merge-forzar-wrap">
+          <input type="checkbox" id="merge-forzar" class="rounded bg-marga-card border-marga-border text-neutral-200 focus:ring-0"> Fusionar de todos modos
+        </label>
+        <div class="flex items-center gap-2 ml-auto">
+          <button type="button" id="merge-simular" class="h-9 px-4 rounded-md border border-marga-border text-sm text-neutral-200 hover:border-neutral-500">Revisar</button>
+          <button type="button" id="merge-aplicar" disabled class="h-9 px-4 rounded-md bg-brand-violet hover:bg-neutral-300 text-neutral-950 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Fusionar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/marga-common.js"></script>
+  <script src="../assets/js/marga-demo.js"></script>
+  <script src="../assets/js/marga-api.js"></script>
+  <script src="../assets/js/marga-layout.js"></script>
+  <script src="../assets/js/commits-viewer.js"></script>
+</body>
+</html>
