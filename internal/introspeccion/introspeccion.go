@@ -53,7 +53,7 @@ type Esquema struct {
 }
 
 // Tablas internas de Marga que no forman parte del esquema del usuario.
-var internas = map[string]bool{"marga_history": true, "marga_esquema": true}
+var internas = map[string]bool{"marga_history": true, "marga_esquema": true, "marga_scripts": true}
 
 type Querier interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)

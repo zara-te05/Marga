@@ -16,7 +16,9 @@
     repo = ev.detail;
     try {
       entornos = await API.get(`/repos/${repo.id}/entornos`);
-      $('e-rama').textContent = 'Comparado con la rama main';
+      $('e-rama').textContent = entornos.some(x => x.rama_git)
+        ? 'Cada entorno se compara con main; las bases de una rama, con su rama'
+        : 'Comparado con la rama main';
       if (!entornos.length) {
         $('e-vacio').classList.remove('hidden');
         $('e-contenido').classList.add('hidden');
@@ -30,6 +32,11 @@
     }
   });
 
+  // "dev@zara · feature/facturas": las bases personales dicen en qué rama de git están.
+  const ramaDe = (x) => x.rama_git
+    ? `<span class="text-neutral-500"> · </span><span class="text-neutral-300">${e(x.rama_git)}</span>` : '';
+  const comparada = (x) => x.rama_comparada || 'main';
+
   function estado(x) {
     if (x.drift.length) return { txt: `${x.drift.length} cambio${x.drift.length === 1 ? '' : 's'} fuera de Marga`, icon: 'warning', fuerte: true };
     if (x.pendientes) return { txt: `${x.pendientes} pendiente${x.pendientes === 1 ? '' : 's'}`, icon: 'schedule', fuerte: true };
@@ -42,7 +49,7 @@
       return `
       <button type="button" data-n="${e(x.nombre)}" class="e-item text-left rounded-lg border border-marga-border bg-marga-surface px-4 py-3 hover:border-neutral-600 transition-colors">
         <div class="flex items-center justify-between gap-2">
-          <span class="font-mono text-sm text-white truncate">${e(x.nombre)}</span>
+          <span class="font-mono text-sm text-white truncate" title="${e(x.nombre + (x.rama_git ? ' · ' + x.rama_git : ''))}">${e(x.nombre)}${ramaDe(x)}</span>
           <span class="text-[10px] uppercase tracking-wider text-neutral-500 shrink-0">${x.requiere_aprobacion ? 'protegido · ' : ''}${x.compartido ? 'compartido' : 'personal'}</span>
         </div>
         <div class="flex items-center gap-1.5 mt-2 text-xs ${st.fuerte ? 'text-white' : 'text-neutral-400'}">
@@ -89,8 +96,8 @@
     const cabecera = `
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div class="font-mono text-lg text-white">${e(d.nombre)}</div>
-          <div class="text-xs text-neutral-500 mt-1">${e(API.MOTORES[d.motor] || d.motor)} · ${d.compartido ? 'compartido por el equipo' : 'base personal'} · ${tablas} tablas · reportado ${e(new Date(d.reportado_en).toLocaleString('es-MX'))}${d.reportado_por ? ' por ' + e(d.reportado_por) : ''}</div>
+          <div class="font-mono text-lg text-white">${e(d.nombre)}${ramaDe(d)}</div>
+          <div class="text-xs text-neutral-500 mt-1">${e(API.MOTORES[d.motor] || d.motor)} · ${d.compartido ? 'compartido por el equipo' : (d.rama_git ? 'base personal de la rama ' + e(d.rama_git) : 'base personal')} · ${tablas} tablas · reportado ${e(new Date(d.reportado_en).toLocaleString('es-MX'))}${d.reportado_por ? ' por ' + e(d.reportado_por) : ''}</div>
         </div>
         <a href="esquema.html?repo=${repo.id}&entorno=${encodeURIComponent(d.nombre)}" class="flex items-center gap-1.5 h-9 px-3 rounded-md border border-marga-border text-sm text-neutral-200 hover:border-neutral-500 transition-colors shrink-0">
           <span class="material-symbols-outlined text-[17px]">account_tree</span>Ver esquema
@@ -101,7 +108,7 @@
       <ul class="px-4 py-3 font-mono text-xs text-neutral-200 flex flex-col gap-1.5">${d.drift.map(x => `<li>${e(x)}</li>`).join('')}</ul>
       <p class="px-4 pb-3 text-xs text-neutral-500">Alguien modificó esta base directamente. Si los cambios son correctos: <span class="font-mono text-neutral-300">marga drift --aceptar</span>. Mientras tanto, <span class="font-mono text-neutral-300">marga up</span> no aplicará nada.</p>`) : '';
 
-    const pendientes = tarjeta('Pendientes', d.lista_pendientes.length ? `${d.lista_pendientes.length} de main` : 'al día con main',
+    const pendientes = tarjeta('Pendientes', d.lista_pendientes.length ? `${d.lista_pendientes.length} de ${e(comparada(d))}` : `al día con ${e(comparada(d))}`,
       d.lista_pendientes.length ? `
         <ul class="divide-y divide-marga-border">${d.lista_pendientes.map(c => `
           <li><a href="commits.html?repo=${repo.id}" class="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-marga-card">
@@ -110,7 +117,7 @@
             <span class="ml-auto text-xs text-neutral-500 shrink-0">${e(c.autor || '—')}</span>
           </a></li>`).join('')}</ul>
         <div class="px-4 py-2.5 border-t border-marga-border text-xs text-neutral-500">Para aplicarlas: <span class="font-mono text-neutral-300">${e(comando)}</span></div>`
-        : '<div class="px-4 py-4 text-sm text-neutral-400">Este entorno tiene aplicadas todas las migraciones de main.</div>');
+        : `<div class="px-4 py-4 text-sm text-neutral-400">Este entorno tiene aplicadas todas las migraciones de ${e(comparada(d))}.</div>`);
 
     const aplicadas = tarjeta('Aplicadas', `${d.lista_aplicadas.length}`, d.lista_aplicadas.length ? `
       <div class="overflow-x-auto"><table class="w-full text-sm">

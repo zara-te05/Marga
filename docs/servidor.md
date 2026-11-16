@@ -76,7 +76,7 @@ Es el diagrama ER original traducido a PostgreSQL (`internal/database/migrations
 | `CHECK` en `rol`, `permiso`, `visibilidad`, `motor`, `entorno` | valores válidos garantizados por la BD |
 
 **Tablas agregadas después del diagrama:** `token_api` (tokens personales de la CLI),
-`entorno_bd` (cada base reportada por la CLI: esquema real en JSON y drift),
+`entorno_bd` (cada base reportada por la CLI: esquema real en JSON, drift y, en las bases personales, `rama_git`),
 `migracion_aplicada` (qué migraciones tiene cada entorno, enlazadas a su commit por hash o checksum),
 `aprobacion` (revisiones de cada commit), `restablecimiento` (enlaces para cambiar la contraseña)
 y `commit.checksum` (sha256 del SQL: la identidad de una migración entre ramas, el mismo cálculo
@@ -119,9 +119,9 @@ Donde la API recibe un commit (`{ref}`) acepta hash, prefijo de hash o nombre de
 | GET | `/api/repos/{id}/diff?from=main&to=feature/x` | lectura | ramas o hashes; se cachea en `cache_diff` |
 | GET | `/api/repos/{id}/buscar?q=wallets` | lectura | texto completo o prefijo de hash |
 | GET | `/api/repos/{id}/esquema?ref=main` | lectura | tablas y DDL en una rama o commit |
-| GET | `/api/repos/{id}/entornos?rama=main` | lectura | entornos reportados: aplicadas, pendientes, drift |
+| GET | `/api/repos/{id}/entornos?rama=main` | lectura | entornos reportados: aplicadas, pendientes, drift. Sin `rama`, cada base personal se compara con su `rama_git` (si existe en el servidor) y el resto con main |
 | GET | `/api/repos/{id}/entornos/{nombre}` | lectura | detalle y esquema real |
-| PUT | `/api/repos/{id}/entornos/{nombre}` | escritura | lo usa la CLI para reportar un entorno |
+| PUT | `/api/repos/{id}/entornos/{nombre}` | escritura | lo usa la CLI para reportar un entorno (`rama`: rama de git de una base personal) |
 | DELETE | `/api/repos/{id}/entornos/{nombre}` | admin | olvida un entorno |
 | PATCH | `/api/repos/{id}/entornos/{nombre}` | admin | `{requiere_aprobacion}`: protege el entorno |
 | POST | `/api/repos/{id}/fusionar` | escritura | `{desde, hacia, simular, forzar}` → al_dia / fast_forward / copia / conflicto |

@@ -26,6 +26,7 @@ type MigracionAplicada struct {
 type ReporteEntorno struct {
 	Motor      string              `json:"motor"`
 	Compartido bool                `json:"compartido"`
+	Rama       string              `json:"rama"` // rama de git de la base ("" si no sigue ramas)
 	Aplicadas  []MigracionAplicada `json:"aplicadas"`
 	Esquema    json.RawMessage     `json:"esquema"`
 	Drift      []string            `json:"drift"`
@@ -36,6 +37,8 @@ type EntornoResumen struct {
 	Nombre             string             `json:"nombre"`
 	Motor              string             `json:"motor"`
 	Compartido         bool               `json:"compartido"`
+	RamaGit            *string            `json:"rama_git"`       // rama de git de la base (entornos personales)
+	RamaComparada      string             `json:"rama_comparada"` // rama del servidor contra la que se cuentan las pendientes
 	ReportadoEn        time.Time          `json:"reportado_en"`
 	ReportadoPor       *string            `json:"reportado_por"`
 	RequiereAprobacion bool               `json:"requiere_aprobacion"`
@@ -67,6 +70,14 @@ func (s *Store) ReportarEntorno(ctx context.Context, u Usuario, repoID int64, no
 	if r.Motor == "" {
 		r.Motor = "postgresql"
 	}
+	r.Rama = strings.TrimSpace(r.Rama)
+	if len(r.Rama) > 255 || strings.ContainsAny(r.Rama, "\x00\n\r") {
+		return EntornoResumen{}, errf(ErrInvalido, "rama inválida")
+	}
+	var ramaGit any
+	if r.Rama != "" && !r.Compartido {
+		ramaGit = r.Rama
+	}
 	if len(r.Aplicadas) > 10000 || len(r.Drift) > 1000 {
 		return EntornoResumen{}, errf(ErrInvalido, "reporte demasiado grande")
 	}
@@ -93,13 +104,14 @@ func (s *Store) ReportarEntorno(ctx context.Context, u Usuario, repoID int64, no
 			return err
 		}
 		if err := tx.QueryRowContext(ctx, `
-			INSERT INTO entorno_bd (repositorio_id, nombre, motor, compartido, esquema, drift, reportado_por)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO entorno_bd (repositorio_id, nombre, motor, compartido, esquema, drift, reportado_por, rama_git)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (repositorio_id, nombre) DO UPDATE SET
 			    motor = EXCLUDED.motor, compartido = EXCLUDED.compartido, esquema = EXCLUDED.esquema,
-			    drift = EXCLUDED.drift, reportado_en = now(), reportado_por = EXCLUDED.reportado_por
+			    drift = EXCLUDED.drift, reportado_en = now(), reportado_por = EXCLUDED.reportado_por,
+			    rama_git = EXCLUDED.rama_git
 			RETURNING entorno_bd_id`,
-			repoID, nombre, r.Motor, r.Compartido, esquema, string(drift), u.ID).Scan(&id); err != nil {
+			repoID, nombre, r.Motor, r.Compartido, esquema, string(drift), u.ID, ramaGit).Scan(&id); err != nil {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM migracion_aplicada WHERE entorno_bd_id = $1`, id); err != nil {
@@ -125,7 +137,7 @@ func (s *Store) ReportarEntorno(ctx context.Context, u Usuario, repoID int64, no
 		// Solo se audita si cambió lo aplicado (un status repetido no llena la bitácora).
 		if strings.Join(ahora, ",") != antes.String {
 			return Auditar(ctx, tx, u.ID, &repoID, "entorno.reportar", map[string]any{
-				"entorno": nombre, "aplicadas": len(r.Aplicadas), "drift": len(r.Drift)})
+				"entorno": nombre, "rama": r.Rama, "aplicadas": len(r.Aplicadas), "drift": len(r.Drift)})
 		}
 		return nil
 	})
@@ -138,20 +150,26 @@ func (s *Store) ReportarEntorno(ctx context.Context, u Usuario, repoID int64, no
 
 // ---------------------------------------------------------------- Consultar
 
+// selEntorno cuenta las pendientes de cada entorno contra una rama del servidor:
+// $2 si se pidió explícitamente ($3 = true); si no, la rama de git de la base
+// (dev@zara en feature/facturas se compara con feature/facturas) o $2 (main).
 const selEntorno = `
-	WITH RECURSIVE hist AS (
-	    SELECT c.hash_id, c.padre_hash FROM commit c
-	    WHERE c.hash_id = (SELECT ultimo_commit_hash FROM branch WHERE repositorio_id = $1 AND nombre = $2)
-	    UNION ALL
-	    SELECT c.hash_id, c.padre_hash FROM commit c JOIN hist ON c.hash_id = hist.padre_hash
-	)
-	SELECT e.entorno_bd_id, e.nombre, e.motor, e.compartido, e.requiere_aprobacion, e.reportado_en, u.nombre, e.drift,
+	SELECT e.entorno_bd_id, e.nombre, e.motor, e.compartido, e.rama_git, rc.rama, e.requiere_aprobacion, e.reportado_en, u.nombre, e.drift,
 	       (SELECT count(*) FROM migracion_aplicada m WHERE m.entorno_bd_id = e.entorno_bd_id),
 	       (SELECT count(*) FROM migracion_aplicada m WHERE m.entorno_bd_id = e.entorno_bd_id AND m.commit_hash IS NULL),
-	       (SELECT count(*) FROM hist JOIN commit c ON c.hash_id = hist.hash_id
+	       (WITH RECURSIVE hist AS (
+	            SELECT c.hash_id, c.padre_hash FROM commit c
+	            WHERE c.hash_id = (SELECT b.ultimo_commit_hash FROM branch b WHERE b.repositorio_id = $1 AND b.nombre = rc.rama)
+	            UNION ALL
+	            SELECT c.hash_id, c.padre_hash FROM commit c JOIN hist ON c.hash_id = hist.padre_hash
+	        )
+	        SELECT count(*) FROM hist JOIN commit c ON c.hash_id = hist.hash_id
 	        WHERE c.checksum NOT IN (SELECT m.checksum FROM migracion_aplicada m WHERE m.entorno_bd_id = e.entorno_bd_id)),
 	       e.esquema
-	FROM entorno_bd e LEFT JOIN usuario u ON u.usuario_id = e.reportado_por
+	FROM entorno_bd e
+	LEFT JOIN usuario u ON u.usuario_id = e.reportado_por
+	CROSS JOIN LATERAL (SELECT CASE WHEN $3::boolean THEN $2::text ELSE coalesce(
+	    (SELECT b.nombre FROM branch b WHERE b.repositorio_id = $1 AND b.nombre = e.rama_git), $2::text) END AS rama) rc
 	WHERE e.repositorio_id = $1 `
 
 func (s *Store) scanEntornos(rows *sql.Rows) ([]EntornoDetalle, error) {
@@ -159,7 +177,7 @@ func (s *Store) scanEntornos(rows *sql.Rows) ([]EntornoDetalle, error) {
 	for rows.Next() {
 		var d EntornoDetalle
 		var drift, esquema []byte
-		if err := rows.Scan(&d.ID, &d.Nombre, &d.Motor, &d.Compartido, &d.RequiereAprobacion, &d.ReportadoEn, &d.ReportadoPor, &drift,
+		if err := rows.Scan(&d.ID, &d.Nombre, &d.Motor, &d.Compartido, &d.RamaGit, &d.RamaComparada, &d.RequiereAprobacion, &d.ReportadoEn, &d.ReportadoPor, &drift,
 			&d.Aplicadas, &d.SinEnviar, &d.Pendientes, &esquema); err != nil {
 			return nil, err
 		}
@@ -192,12 +210,14 @@ func (s *Store) aplicadasDe(ctx context.Context, entornoID int64) ([]MigracionAp
 	return out, rows.Err()
 }
 
-// ListarEntornos resume cada entorno respecto a una rama (por defecto main).
+// ListarEntornos resume cada entorno respecto a una rama. Sin rama, cada entorno
+// se compara con main, salvo las bases personales de una rama: con su rama.
 func (s *Store) ListarEntornos(ctx context.Context, repoID int64, rama string) ([]EntornoResumen, error) {
-	if rama == "" {
+	explicita := rama != ""
+	if !explicita {
 		rama = "main"
 	}
-	rows, err := s.DB.QueryContext(ctx, selEntorno+`ORDER BY e.compartido DESC, e.nombre`, repoID, rama)
+	rows, err := s.DB.QueryContext(ctx, selEntorno+`ORDER BY e.compartido DESC, e.nombre`, repoID, rama, explicita)
 	if err != nil {
 		return nil, err
 	}
@@ -218,10 +238,11 @@ func (s *Store) ListarEntornos(ctx context.Context, repoID int64, rama string) (
 
 // ObtenerEntorno devuelve el detalle: lo aplicado, lo pendiente y el esquema real.
 func (s *Store) ObtenerEntorno(ctx context.Context, repoID int64, nombre, rama string) (EntornoDetalle, error) {
-	if rama == "" {
+	explicita := rama != ""
+	if !explicita {
 		rama = "main"
 	}
-	rows, err := s.DB.QueryContext(ctx, selEntorno+`AND e.nombre = $3`, repoID, rama, nombre)
+	rows, err := s.DB.QueryContext(ctx, selEntorno+`AND e.nombre = $4`, repoID, rama, explicita, nombre)
 	if err != nil {
 		return EntornoDetalle{}, err
 	}
@@ -234,7 +255,8 @@ func (s *Store) ObtenerEntorno(ctx context.Context, repoID int64, nombre, rama s
 		return EntornoDetalle{}, errf(ErrNoEncontrado, "entorno no encontrado")
 	}
 	d := ds[0]
-	d.Rama = rama
+	d.Rama = d.RamaComparada
+	rama = d.RamaComparada
 	if d.ListaAplicadas, err = s.aplicadasDe(ctx, d.ID); err != nil {
 		return d, err
 	}

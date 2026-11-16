@@ -20,7 +20,9 @@ Flujo típico:
   marga status                  qué está aplicado y qué falta
   marga up                      aplica lo pendiente
   marga down                    revierte la última
-  marga login / push / pull / log   sincroniza con el servidor`,
+  marga login / push / pull / log   sincroniza con el servidor
+
+Con git, Marga sigue la rama actual: en dev cada rama tiene su propia base (marga ramas).`,
 	Version:       version.Texto(),
 	SilenceUsage:  true, // ante un error no repetir la ayuda completa
 	SilenceErrors: true, // los errores los imprime Execute (o la TUI)
@@ -32,7 +34,7 @@ func init() {
 		&cobra.Group{ID: "servidor", Title: "Servidor:"},
 		&cobra.Group{ID: "consola", Title: "Consola:"},
 	)
-	for _, c := range []*cobra.Command{initCmd, envCmd, newCmd, commitCmd, statusCmd, upCmd, downCmd, revisarCmd, driftCmd, esquemaCmd, detectarCmd} {
+	for _, c := range []*cobra.Command{initCmd, envCmd, newCmd, commitCmd, statusCmd, upCmd, downCmd, revisarCmd, driftCmd, esquemaCmd, ramasCmd, urlCmd, seedCmd, sqlCmd, renumerarCmd, verificarCmd, detectarCmd} {
 		c.GroupID = "migraciones"
 		RootCmd.AddCommand(c)
 	}

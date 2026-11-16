@@ -25,6 +25,10 @@ type Config struct {
 	Rama        string `json:"rama"`
 	Motor       string `json:"motor"`
 	Migraciones string `json:"migraciones"` // carpeta relativa a la raíz
+	// Repetibles: vistas, funciones… (un archivo por objeto, se reaplica al cambiar).
+	Repetibles string `json:"repetibles,omitempty"` // por defecto "sql"
+	// Seeds: datos de prueba para los entornos personales.
+	Seeds string `json:"seeds,omitempty"` // por defecto "seeds"
 }
 
 // Entorno se guarda en .marga/entornos.json, que NO se versiona (tiene contraseñas).
@@ -34,6 +38,28 @@ type Entorno struct {
 	// Compartido: la usa todo el equipo (staging, prod). Si es false es la base
 	// personal de quien ejecuta la CLI y se reporta como "dev@usuario".
 	Compartido bool `json:"compartido"`
+
+	// Solo en memoria (no se guardan). Los llena la CLI cuando un entorno personal
+	// sigue la rama de git: la URL apunta entonces a la base de esa rama.
+	RamaGit string `json:"-"` // rama de git de la base ("" si el entorno no sigue ramas)
+	Base    string `json:"-"` // base real que se usa (tienda__feature_facturas)
+	clave   string // carpeta de sus snapshots
+}
+
+// ConRama devuelve el entorno apuntando a la base de una rama. `clave` separa sus
+// snapshots de los de la base principal (cada base tiene su propia historia).
+func (e Entorno) ConRama(url, rama, base, clave string) Entorno {
+	e.URL, e.RamaGit, e.Base, e.clave = url, rama, base, clave
+	return e
+}
+
+// ClaveSnapshots es la carpeta de .marga/snapshots/ de esta base: el nombre del
+// entorno para la base principal, o "dev@tienda__feature_facturas" para una de rama.
+func (e Entorno) ClaveSnapshots(nombre string) string {
+	if e.clave != "" {
+		return e.clave
+	}
+	return nombre
 }
 
 var reEntornoPersonal = regexp.MustCompile(`(?i)^(dev|local|desarrollo|development)$`)
@@ -88,7 +114,7 @@ func Iniciar(raiz string, cfg Config) (*Proyecto, error) {
 	if err := os.MkdirAll(p.DirMigraciones(), 0o755); err != nil {
 		return nil, err
 	}
-	gi := "# Generado por Marga: las cadenas de conexión no se versionan\nentornos.json\nsnapshots/\n"
+	gi := "# Generado por Marga: las cadenas de conexión y el estado de esta máquina no se versionan\nentornos.json\nlocal.json\nsnapshots/\n"
 	if err := os.WriteFile(filepath.Join(raiz, Dir, ".gitignore"), []byte(gi), 0o644); err != nil {
 		return nil, err
 	}
@@ -185,14 +211,63 @@ func (e Entorno) URLOculta() string {
 // ---------------------------------------------------------------- Mapa con el servidor
 
 // Remoto relaciona cada migración local con su commit en el servidor.
-// Se guarda en .marga/remoto.json y se versiona (lo comparte el equipo).
+// Se versiona (lo comparte el equipo) como un archivo por migración en
+// .marga/remoto/<id> con el hash: así dos ramas que envían migraciones distintas
+// nunca chocan en git (un solo remoto.json chocaba en cada merge).
+// Los proyectos con el remoto.json de antes se pasan al formato nuevo al guardar.
 func (p *Proyecto) Remoto() (map[string]string, error) {
 	m := map[string]string{}
-	return m, p.leerJSON("remoto.json", &m)
+	if err := p.leerJSON("remoto.json", &m); err != nil {
+		return nil, err
+	}
+	ents, err := os.ReadDir(p.ruta("remoto"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	for _, e := range ents {
+		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(p.ruta("remoto"), e.Name()))
+		if err != nil {
+			return nil, err
+		}
+		if h := strings.TrimSpace(string(b)); h != "" {
+			m[e.Name()] = h
+		}
+	}
+	return m, nil
 }
 
+var reIDRemoto = regexp.MustCompile(`^[0-9]+_[a-z0-9_]+$`)
+
 func (p *Proyecto) GuardarRemoto(m map[string]string) error {
-	return p.escribirJSON("remoto.json", m, 0o644)
+	dir := p.ruta("remoto")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	for id, h := range m {
+		if !reIDRemoto.MatchString(id) {
+			continue
+		}
+		ruta := filepath.Join(dir, id)
+		if b, err := os.ReadFile(ruta); err == nil && strings.TrimSpace(string(b)) == h {
+			continue
+		}
+		if err := os.WriteFile(ruta, []byte(h+"\n"), 0o644); err != nil {
+			return err
+		}
+	}
+	ents, _ := os.ReadDir(dir)
+	for _, e := range ents {
+		if _, ok := m[e.Name()]; !ok && !e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
+			_ = os.Remove(filepath.Join(dir, e.Name()))
+		}
+	}
+	if err := os.Remove(p.ruta("remoto.json")); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------- Migraciones
@@ -226,8 +301,42 @@ func EsVacio(sql string) bool {
 	return true
 }
 
+// ErrVersionRepetida: dos migraciones distintas usan la misma versión. Pasa al
+// juntar en git dos ramas que crearon, cada una, su 0007.
+type ErrVersionRepetida struct {
+	Version string
+	Nombres []string
+}
+
+func (e *ErrVersionRepetida) Error() string {
+	return fmt.Sprintf("hay %d migraciones con la versión %s (%s). Pasa al juntar ramas que crearon la misma versión; arréglalo con: marga renumerar",
+		len(e.Nombres), e.Version, strings.Join(e.Nombres, ", "))
+}
+
 // Migraciones lee la carpeta de migraciones ordenada por versión.
+// Si dos migraciones comparten versión devuelve *ErrVersionRepetida.
 func (p *Proyecto) Migraciones() ([]Migracion, error) {
+	todas, err := p.TodasLasMigraciones()
+	if err != nil {
+		return nil, err
+	}
+	for i := 1; i < len(todas); i++ {
+		if versionNum(todas[i].Version) == versionNum(todas[i-1].Version) {
+			e := &ErrVersionRepetida{Version: todas[i].Version}
+			for _, m := range todas {
+				if versionNum(m.Version) == versionNum(e.Version) {
+					e.Nombres = append(e.Nombres, m.ID())
+				}
+			}
+			return nil, e
+		}
+	}
+	return todas, nil
+}
+
+// TodasLasMigraciones es como Migraciones pero acepta versiones repetidas
+// (la usa `marga renumerar` para arreglarlas). Ordena por versión y nombre.
+func (p *Proyecto) TodasLasMigraciones() ([]Migracion, error) {
 	entradas, err := os.ReadDir(p.DirMigraciones())
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -248,12 +357,11 @@ func (p *Proyecto) Migraciones() ([]Migracion, error) {
 		if err != nil {
 			return nil, err
 		}
-		mig, ok := por[m[1]]
+		clave := m[1] + "_" + m[2]
+		mig, ok := por[clave]
 		if !ok {
 			mig = &Migracion{Version: m[1], Nombre: m[2]}
-			por[m[1]] = mig
-		} else if mig.Nombre != m[2] {
-			return nil, fmt.Errorf("hay dos migraciones con la versión %s (%s y %s); renombra una", m[1], mig.Nombre, m[2])
+			por[clave] = mig
 		}
 		if m[3] == "up" {
 			mig.Up = Normalizar(string(b))
@@ -273,7 +381,12 @@ func (p *Proyecto) Migraciones() ([]Migracion, error) {
 		}
 		out = append(out, *m)
 	}
-	sort.Slice(out, func(i, j int) bool { return versionNum(out[i].Version) < versionNum(out[j].Version) })
+	sort.Slice(out, func(i, j int) bool {
+		if a, b := versionNum(out[i].Version), versionNum(out[j].Version); a != b {
+			return a < b
+		}
+		return out[i].Nombre < out[j].Nombre
+	})
 	return out, nil
 }
 

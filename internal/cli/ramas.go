@@ -44,22 +44,27 @@ var branchCmd = &cobra.Command{
 		if len(args) == 1 {
 			desde := ramaDesde
 			if desde == "" {
-				desde = p.Config.Rama
+				desde = ramaDeTrabajo(p)
 			}
 			if err := cli.CrearRama(p.Config.RepoID, args[0], desde); err != nil {
 				return err
 			}
-			linea(c, "%s Rama %s creada desde %s. Cámbiate a ella con: marga checkout %s", sAcento.Render("✓"), sNegri.Render(args[0]), desde, args[0])
+			if gitDe(p) != nil {
+				linea(c, "%s Rama %s creada en el servidor desde %s. Marga sigue a git: cámbiate con git checkout %s", sAcento.Render("✓"), sNegri.Render(args[0]), desde, args[0])
+			} else {
+				linea(c, "%s Rama %s creada desde %s. Cámbiate a ella con: marga checkout %s", sAcento.Render("✓"), sNegri.Render(args[0]), desde, args[0])
+			}
 			return nil
 		}
 		ramas, err := cli.Ramas(p.Config.RepoID)
 		if err != nil {
 			return err
 		}
+		actual := ramaDeTrabajo(p)
 		for _, r := range ramas {
 			marca := "  "
 			nombre := r.Nombre
-			if r.Nombre == p.Config.Rama {
+			if r.Nombre == actual {
 				marca, nombre = sAcento.Render("* "), sNegri.Render(r.Nombre)
 			}
 			detalle := sTenue.Render("vacía")
@@ -74,12 +79,17 @@ var branchCmd = &cobra.Command{
 
 var checkoutCmd = &cobra.Command{
 	Use:   "checkout RAMA",
-	Short: "Cambia la rama del servidor que usan push, pull y log",
-	Args:  cobra.ExactArgs(1),
+	Short: "Cambia la rama del servidor que usan push, pull y log (solo proyectos sin git)",
+	Long: `En un proyecto con git, Marga sigue la rama de git: base de datos, push, pull y log
+usan la rama actual. Cámbiate con git checkout. Este comando es para proyectos sin git.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(c *cobra.Command, args []string) error {
 		p, cli, err := vinculado()
 		if err != nil {
 			return err
+		}
+		if gitDe(p) != nil {
+			return fmt.Errorf("este proyecto usa git y Marga sigue su rama (ahora %s). Cámbiate con: git checkout %s", ramaDeTrabajo(p), args[0])
 		}
 		ramas, err := cli.Ramas(p.Config.RepoID)
 		if err != nil {
@@ -126,7 +136,7 @@ si chocan. Si ambas ramas tocaron la misma tabla, Marga se detiene (conflicto).`
 		}
 		hacia := mergeFlags.hacia
 		if hacia == "" {
-			hacia = p.Config.Rama
+			hacia = ramaDeTrabajo(p)
 		}
 		res, err := cli.Fusionar(p.Config.RepoID, args[0], hacia, mergeFlags.simular, mergeFlags.forzar)
 		if err != nil {
@@ -179,7 +189,7 @@ si chocan. Si ambas ramas tocaron la misma tabla, Marga se detiene (conflicto).`
 			linea(c, "%s", sTenue.Render("(simulación: no se cambió nada)"))
 			return nil
 		}
-		if hacia == p.Config.Rama {
+		if hacia == ramaDeTrabajo(p) {
 			linea(c, "Siguiente: marga pull  (y luego marga up en tus entornos)")
 		}
 		return nil

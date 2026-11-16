@@ -227,6 +227,7 @@ type MigracionAplicada struct {
 type ReporteEntorno struct {
 	Motor      string              `json:"motor"`
 	Compartido bool                `json:"compartido"`
+	Rama       string              `json:"rama,omitempty"` // rama de git de la base (entornos personales)
 	Aplicadas  []MigracionAplicada `json:"aplicadas"`
 	Esquema    any                 `json:"esquema"`
 	Drift      []string            `json:"drift"`

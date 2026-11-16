@@ -34,7 +34,7 @@ Genera: tablas, columnas (tipo, NULL, DEFAULT), llave primaria, llaves foráneas
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		p, locales, nombre, e, m, err := conectar(ctx)
+		p, locales, nombre, e, m, err := conectar(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -116,8 +116,8 @@ Genera: tablas, columnas (tipo, NULL, DEFAULT), llave primaria, llaves foráneas
 		// para que `push` sepa qué tablas cambió esta.
 		if n := len(locales); n > 0 {
 			var tmp introspeccion.Esquema
-			if ok, _ := p.LeerSnapshot(nombre, locales[n-1].ID(), &tmp); !ok {
-				_ = p.GuardarSnapshot(nombre, locales[n-1].ID(), base)
+			if ok, _ := p.LeerSnapshot(e.ClaveSnapshots(nombre), locales[n-1].ID(), &tmp); !ok {
+				_ = p.GuardarSnapshot(e.ClaveSnapshots(nombre), locales[n-1].ID(), base)
 			}
 		}
 		mig := proyecto.Migracion{Version: version, Nombre: nombreMig, Up: proyecto.Normalizar(up), Down: proyecto.Normalizar(down)}
@@ -133,7 +133,7 @@ Genera: tablas, columnas (tipo, NULL, DEFAULT), llave primaria, llaves foráneas
 			return fmt.Errorf("la migración quedó registrada en %s pero no se pudieron escribir los archivos: %w", nombre, err)
 		}
 		if snap != nil {
-			_ = p.GuardarSnapshot(nombre, id, snap)
+			_ = p.GuardarSnapshot(e.ClaveSnapshots(nombre), id, snap)
 		}
 		linea(c, "%s Migración %s creada y marcada como aplicada en %s (los cambios ya estaban ahí)", sAcento.Render("✓"), sNegri.Render(id), nombre)
 		linea(c, "  %s", relativo(p, fu))

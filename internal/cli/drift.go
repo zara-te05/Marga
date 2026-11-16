@@ -21,7 +21,7 @@ Cualquier diferencia (una columna agregada a mano, un índice borrado…) es "dr
 	Args: cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		p, _, nombre, e, m, err := conectar(ctx)
+		p, _, nombre, e, m, err := conectar(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ var esquemaCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		_, _, nombre, _, m, err := conectar(ctx)
+		_, _, nombre, _, m, err := conectar(ctx, c)
 		if err != nil {
 			return err
 		}

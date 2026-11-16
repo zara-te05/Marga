@@ -172,7 +172,7 @@ func reportar(c *cobra.Command, p *proyecto.Proyecto, nombre string, e proyecto.
 	}
 	nombreRep := nombreReporte(nombre, e, cred)
 	err = cli.ReportarEntorno(p.Config.RepoID, nombreRep, remoto.ReporteEntorno{
-		Motor: e.Motor, Compartido: e.Compartido, Aplicadas: aplicadas, Esquema: real, Drift: drift,
+		Motor: e.Motor, Compartido: e.Compartido, Rama: e.RamaGit, Aplicadas: aplicadas, Esquema: real, Drift: drift,
 	})
 	if err != nil {
 		linea(c, "%s No se pudo enviar el estado al servidor: %v", sAviso.Render("!"), err)

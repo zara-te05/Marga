@@ -25,7 +25,8 @@ var migFlags struct {
 }
 
 // conectar abre el proyecto, sus migraciones locales y el entorno elegido.
-func conectar(ctx context.Context) (*proyecto.Proyecto, []proyecto.Migracion, string, proyecto.Entorno, *migrador.Migrador, error) {
+// En un entorno personal (dev, local) la base es la de la rama de git actual.
+func conectar(ctx context.Context, c *cobra.Command) (*proyecto.Proyecto, []proyecto.Migracion, string, proyecto.Entorno, *migrador.Migrador, error) {
 	p, err := proyectoActual()
 	if err != nil {
 		return nil, nil, "", proyecto.Entorno{}, nil, err
@@ -37,6 +38,9 @@ func conectar(ctx context.Context) (*proyecto.Proyecto, []proyecto.Migracion, st
 	nombre, e, err := p.Entorno(migFlags.env)
 	if err != nil {
 		return p, locales, "", e, nil, err
+	}
+	if e, err = resolverRama(ctx, c, p, nombre, e, locales); err != nil {
+		return p, locales, nombre, e, nil, err
 	}
 	m, err := migrador.Abrir(ctx, e)
 	if err != nil {
@@ -53,7 +57,7 @@ var statusCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		p, locales, nombre, e, m, err := conectar(ctx)
+		p, locales, nombre, e, m, err := conectar(ctx, c)
 		if p != nil && m == nil && strings.Contains(fmt.Sprint(err), "no hay entornos") {
 			// Sin entornos: al menos listamos lo local.
 			linea(c, "%d migraciones locales (sin entorno configurado):", len(locales))
@@ -74,6 +78,9 @@ var statusCmd = &cobra.Command{
 		filas := migrador.Comparar(locales, aplicadas)
 
 		linea(c, "Entorno %s · %s · %s", sNegri.Render(nombre), e.Motor, sTenue.Render(e.URLOculta()))
+		if e.RamaGit != "" {
+			linea(c, "Rama %s · base %s", sNegri.Render(e.RamaGit), sNegri.Render(e.Base))
+		}
 		if len(filas) == 0 {
 			linea(c, "  No hay migraciones todavía. Crea una con marga new, o cambia la base y usa marga commit.")
 		}
@@ -105,6 +112,9 @@ var statusCmd = &cobra.Command{
 			resumen += sAviso.Render(fmt.Sprintf(" · %d con problemas", n))
 		}
 		linea(c, "%s", resumen)
+		if err := mostrarRepetibles(ctx, c, p, m); err != nil {
+			linea(c, "%s No se pudieron revisar los objetos repetibles: %v", sAviso.Render("!"), err)
+		}
 
 		cambios, real, nuevaBase, err := m.Drift(ctx)
 		switch {
@@ -157,7 +167,7 @@ var upCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		p, locales, nombre, e, m, err := conectar(ctx)
+		p, locales, nombre, e, m, err := conectar(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -208,8 +218,20 @@ var upCmd = &cobra.Command{
 				linea(c, "  %s %s ya estaba aplicada como %s_%s: historial actualizado", sAcento.Render("↻"), f.ID(), f.Registro.Version, f.Registro.Nombre)
 			}
 		}
-		if len(pendientes) == 0 {
-			if len(renumeradas) > 0 && !migFlags.dryRun {
+		// Objetos repetibles (sql/): se aplican después de las migraciones si cambiaron.
+		reps, borrados, err := repetiblesPendientes(ctx, p, m)
+		if err != nil {
+			return err
+		}
+		if migFlags.hasta != "" && len(reps) > 0 {
+			linea(c, "%s", sTenue.Render("Con --hasta no se aplican los objetos repetibles (sql/): se aplican con un marga up completo."))
+			reps = nil
+		}
+		if len(borrados) > 0 && !migFlags.dryRun {
+			olvidarRepetibles(ctx, c, m, borrados)
+		}
+		if len(pendientes) == 0 && len(reps) == 0 {
+			if (len(renumeradas) > 0 || len(borrados) > 0) && !migFlags.dryRun {
 				reportar(c, p, nombre, e, m, nil, nil)
 			}
 			linea(c, "%s La base %s ya está al día", sAcento.Render("✓"), sNegri.Render(nombre))
@@ -221,23 +243,49 @@ var upCmd = &cobra.Command{
 		for _, mig := range pendientes {
 			mostrarRiesgo(c, mig.ID(), riesgo.Analizar(mig.Up, mig.Down), false)
 		}
-		if err := verificarAprobaciones(c, p, nombre, e, pendientes); err != nil {
+		protegido, err := verificarAprobaciones(c, p, nombre, e, pendientes)
+		if err != nil {
 			return err
+		}
+		if protegido && len(reps) > 0 {
+			linea(c, "%s %s requiere aprobación y los objetos repetibles (sql/) todavía no se revisan en la web: no se aplican aquí.",
+				sAviso.Render("!"), nombre)
+			reps = nil
+			if len(pendientes) == 0 {
+				return nil
+			}
 		}
 
 		if migFlags.dryRun {
-			linea(c, "Se aplicaría(n) %s en %s (simulación, no se ejecuta nada):", plural(len(pendientes), "migración", "migraciones"), sNegri.Render(nombre))
+			if len(pendientes) > 0 {
+				linea(c, "Se aplicaría(n) %s en %s (simulación, no se ejecuta nada):", plural(len(pendientes), "migración", "migraciones"), sNegri.Render(nombre))
+			}
 			for _, mig := range pendientes {
 				linea(c, "\n%s", sAcento.Render("-- "+mig.ID()))
 				linea(c, "%s", strings.TrimRight(mig.Up, "\n"))
+			}
+			if len(reps) > 0 {
+				linea(c, "\nSe aplicaría(n) %s en %s:", plural(len(reps), "objeto repetible", "objetos repetibles"), sNegri.Render(nombre))
+			}
+			for _, f := range reps {
+				linea(c, "\n%s", sAcento.Render("-- "+relRepetible(p, f.Script.Archivo)+" ("+string(f.Estado)+")"))
+				linea(c, "%s", strings.TrimRight(f.Script.SQL, "\n"))
 			}
 			return nil
 		}
 		if esProduccion(nombre) && !migFlags.si {
 			return fmt.Errorf("%q parece producción: revisa con --dry-run y confirma con --si", nombre)
 		}
+		if len(pendientes) == 0 {
+			if err := aplicarRepetibles(ctx, c, p, m, nombre, reps); err != nil {
+				reportar(c, p, nombre, e, m, nil, nil)
+				return err
+			}
+			reportar(c, p, nombre, e, m, nil, nil)
+			return nil
+		}
 
-		guardarSnapshotPrevio(ctx, p, m, nombre, locales, pendientes[0])
+		guardarSnapshotPrevio(ctx, p, m, e.ClaveSnapshots(nombre), locales, pendientes[0])
 
 		linea(c, "Aplicando %s en %s…", plural(len(pendientes), "migración", "migraciones"), sNegri.Render(nombre))
 		hechas := 0
@@ -249,7 +297,7 @@ var upCmd = &cobra.Command{
 			hechas++
 			// El esquema que dejó esta migración: `marga push` lo envía al servidor.
 			if snap != nil {
-				if err := p.GuardarSnapshot(nombre, mig.ID(), snap); err != nil {
+				if err := p.GuardarSnapshot(e.ClaveSnapshots(nombre), mig.ID(), snap); err != nil {
 					linea(c, "  %s no se pudo guardar el snapshot de %s: %v", sAviso.Render("!"), mig.ID(), err)
 				}
 			}
@@ -259,14 +307,16 @@ var upCmd = &cobra.Command{
 			}
 			linea(c, "  %s %s %s", sAcento.Render("✓"), relleno(mig.ID(), 40), sTenue.Render(fmt.Sprintf("%dms%s", d.Milliseconds(), extra)))
 		})
-		if hechas > 0 {
-			reportar(c, p, nombre, e, m, nil, nil)
-		}
 		if err != nil {
+			if hechas > 0 {
+				reportar(c, p, nombre, e, m, nil, nil)
+			}
 			return fmt.Errorf("se aplicaron %d de %d; la que falló se deshizo por completo", hechas, len(pendientes))
 		}
 		linea(c, "%s %s", sAcento.Render("✓"), plural(hechas, "migración aplicada", "migraciones aplicadas"))
-		return nil
+		errRep := aplicarRepetibles(ctx, c, p, m, nombre, reps)
+		reportar(c, p, nombre, e, m, nil, nil)
+		return errRep
 	},
 }
 
@@ -281,7 +331,7 @@ var downCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
-		p, locales, nombre, e, m, err := conectar(ctx)
+		p, locales, nombre, e, m, err := conectar(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -362,6 +412,9 @@ func init() {
 		cm.Flags().BoolVar(&migFlags.si, "si", false, "confirma cambios en un entorno de producción")
 	}
 	upCmd.Flags().StringVar(&migFlags.hasta, "hasta", "", "aplica solo hasta esta versión (ej. 0005)")
+	for _, cm := range []*cobra.Command{statusCmd, upCmd} {
+		cm.Flags().BoolVar(&ramaBDFlags.vacia, "vacia", false, "si la rama aún no tiene base, créala vacía (en vez de copiar la de su rama de origen)")
+	}
 	downCmd.Flags().IntVar(&migFlags.pasos, "pasos", 1, "cuántas migraciones revertir")
 }
 
@@ -414,25 +467,29 @@ func mostrarRiesgo(c *cobra.Command, id string, hs []riesgo.Hallazgo, todos bool
 
 // verificarAprobaciones: si el entorno está protegido en la web, cada migración
 // pendiente debe estar en el servidor y aprobada por alguien distinto a su autor.
-func verificarAprobaciones(c *cobra.Command, p *proyecto.Proyecto, nombre string, e proyecto.Entorno, pendientes []proyecto.Migracion) error {
+// Devuelve protegido=true si el entorno requiere aprobación.
+func verificarAprobaciones(c *cobra.Command, p *proyecto.Proyecto, nombre string, e proyecto.Entorno, pendientes []proyecto.Migracion) (bool, error) {
 	if p.Config.Servidor == "" || p.Config.RepoID == 0 {
-		return nil
+		return false, nil
 	}
 	cli, cred, err := remoto.Conectado(p.Config.Servidor)
 	if err != nil {
-		return nil
+		return false, nil
 	}
 	est, err := cli.Entorno(p.Config.RepoID, nombreReporte(nombre, e, cred))
 	if err != nil {
 		linea(c, "%s No se pudo comprobar si %s requiere aprobación: %v", sAviso.Render("!"), nombre, err)
-		return nil
+		return false, nil
 	}
 	if est == nil || !est.RequiereAprobacion {
-		return nil
+		return false, nil
 	}
-	hist, err := cli.Historial(p.Config.RepoID, p.Config.Rama)
+	if len(pendientes) == 0 {
+		return true, nil
+	}
+	hist, err := cli.Historial(p.Config.RepoID, ramaDeTrabajo(p))
 	if err != nil {
-		return fmt.Errorf("%s requiere aprobación y no pude leer el historial del servidor: %w", nombre, err)
+		return true, fmt.Errorf("%s requiere aprobación y no pude leer el historial del servidor: %w", nombre, err)
 	}
 	porChecksum := map[string]remoto.Commit{}
 	for _, cm := range hist.Commits {
@@ -451,8 +508,8 @@ func verificarAprobaciones(c *cobra.Command, p *proyecto.Proyecto, nombre string
 		}
 	}
 	if len(faltan) > 0 {
-		return fmt.Errorf("%s requiere que otra persona apruebe cada migración antes de aplicarla:\n  - %s\nSe aprueban en la web: Commits → Revisiones", nombre, strings.Join(faltan, "\n  - "))
+		return true, fmt.Errorf("%s requiere que otra persona apruebe cada migración antes de aplicarla:\n  - %s\nSe aprueban en la web: Commits → Revisiones", nombre, strings.Join(faltan, "\n  - "))
 	}
 	linea(c, "%s Todas las migraciones pendientes están aprobadas (%s requiere aprobación)", sAcento.Render("✓"), nombre)
-	return nil
+	return true, nil
 }

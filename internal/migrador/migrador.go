@@ -377,6 +377,9 @@ func asegurarTablas(ctx context.Context, q execer) error {
 	if _, err := q.ExecContext(ctx, ddlEsquema); err != nil {
 		return fmt.Errorf("no se pudo crear marga_esquema: %w", err)
 	}
+	if _, err := q.ExecContext(ctx, ddlScripts); err != nil {
+		return fmt.Errorf("no se pudo crear marga_scripts: %w", err)
+	}
 	return nil
 }
 
