@@ -4,6 +4,7 @@ package proyecto
 
 import (
 	"github.com/zara-te05/Marga/internal/modelos/checksum"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 
 	"encoding/json"
 	"errors"
@@ -20,6 +21,8 @@ const Dir = ".marga"
 
 // Config se guarda en .marga/config.json y SÍ se versiona con el proyecto.
 type Config struct {
+	// Nombre del proyecto (lo pregunta marga init; en el servidor es el nombre del repo).
+	Nombre      string `json:"nombre,omitempty"`
 	Servidor    string `json:"servidor,omitempty"`
 	RepoID      int64  `json:"repo_id,omitempty"`
 	Rama        string `json:"rama"`
@@ -72,7 +75,14 @@ type Proyecto struct {
 	Config Config
 }
 
-var ErrSinProyecto = errors.New("no hay un proyecto de Marga aquí (ni en carpetas superiores). Usa `marga init`")
+var ErrSinProyecto = sugerencia.Nuevo("no hay un proyecto de Marga aquí (ni en carpetas superiores)",
+	"marga init (o cámbiate con cd a la carpeta del proyecto)")
+
+// EjemploURL es la cadena de conexión de ejemplo que se muestra en las sugerencias.
+const EjemploURL = `"postgres://usuario:clave@localhost:5432/mi_bd?sslmode=disable"`
+
+// ErrSinEntornos: el proyecto todavía no tiene ninguna base configurada.
+var ErrSinEntornos = sugerencia.Nuevo("este proyecto todavía no tiene entornos (bases de datos)", "marga env add dev "+EjemploURL)
 
 // Buscar sube desde `desde` hasta encontrar una carpeta .marga/.
 func Buscar(desde string) (*Proyecto, error) {
@@ -96,7 +106,8 @@ func Buscar(desde string) (*Proyecto, error) {
 // Iniciar crea .marga/ y la carpeta de migraciones en `raiz`.
 func Iniciar(raiz string, cfg Config) (*Proyecto, error) {
 	if _, err := os.Stat(filepath.Join(raiz, Dir)); err == nil {
-		return nil, fmt.Errorf("ya existe un proyecto de Marga en %s", raiz)
+		return nil, sugerencia.Nuevof("no hace falta volver a iniciarlo: sigue con marga status",
+			"ya existe un proyecto de Marga en %s", raiz)
 	}
 	if cfg.Rama == "" {
 		cfg.Rama = "main"
@@ -166,18 +177,23 @@ func (p *Proyecto) Entorno(nombre string) (string, Entorno, error) {
 	if nombre == "" {
 		switch len(m) {
 		case 0:
-			return "", Entorno{}, errors.New("no hay entornos. Agrega uno con `marga env add dev \"postgres://...\"`")
+			return "", Entorno{}, ErrSinEntornos
 		case 1:
 			for k, v := range m {
 				return k, v, nil
 			}
 		default:
-			return "", Entorno{}, fmt.Errorf("hay %d entornos; elige uno con --env (%s)", len(m), strings.Join(NombresEntornos(m), ", "))
+			nombres := NombresEntornos(m)
+			return "", Entorno{}, sugerencia.Nuevof("agrega --env "+nombres[0]+" (o el que quieras de: "+strings.Join(nombres, ", ")+")",
+				"hay %d entornos y no dijiste cuál usar", len(m))
 		}
 	}
 	e, ok := m[nombre]
 	if !ok {
-		return "", Entorno{}, fmt.Errorf("el entorno %q no existe (usa `marga env ls`)", nombre)
+		if len(m) == 0 {
+			return "", Entorno{}, sugerencia.Nuevof("marga env add "+nombre+" "+EjemploURL, "el entorno %q no existe: este proyecto todavía no tiene entornos", nombre)
+		}
+		return "", Entorno{}, sugerencia.Nuevof("marga env ls para ver los que hay ("+strings.Join(NombresEntornos(m), ", ")+")", "el entorno %q no existe", nombre)
 	}
 	return nombre, e, nil
 }
@@ -196,7 +212,8 @@ func (e Entorno) URLReal() (string, error) {
 	if strings.HasPrefix(e.URL, "$") {
 		v := os.Getenv(strings.TrimPrefix(e.URL, "$"))
 		if v == "" {
-			return "", fmt.Errorf("la variable de entorno %s está vacía", e.URL)
+			return "", sugerencia.Nuevof("define la variable antes de correr marga (en PowerShell: $env:"+strings.TrimPrefix(e.URL, "$")+" = \"postgres://...\")",
+				"la variable de entorno %s está vacía", e.URL)
 		}
 		return v, nil
 	}

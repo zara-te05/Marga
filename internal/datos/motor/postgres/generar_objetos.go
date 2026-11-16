@@ -1,4 +1,4 @@
-package generador
+package postgres
 
 // Funciones, vistas, triggers, ENUM y CHECK.
 //
@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
 )
 
 // plan agrupa las sentencias de los objetos que no son tablas.
@@ -35,13 +35,13 @@ type plan struct {
 
 // reemplazable: CREATE OR REPLACE solo sirve si no cambian los argumentos
 // (nombres y DEFAULT incluidos), el tipo de retorno ni el tipo de rutina.
-func reemplazable(a, b introspeccion.Funcion) bool {
+func reemplazable(a, b esquema.Funcion) bool {
 	return a.Argumentos == b.Argumentos && a.Retorno == b.Retorno && a.Procedimiento == b.Procedimiento
 }
 
 // columnasCambiadas: las columnas de `a` que desaparecen o cambian de tipo en `b`.
 // Las vistas que las leen hay que quitarlas antes y recrearlas después.
-func columnasCambiadas(a, b introspeccion.Tabla) []string {
+func columnasCambiadas(a, b esquema.Tabla) []string {
 	tipos := map[string]string{}
 	for _, c := range b.Columnas {
 		tipos[c.Nombre] = c.Tipo
@@ -55,7 +55,7 @@ func columnasCambiadas(a, b introspeccion.Tabla) []string {
 	return out
 }
 
-func dropFuncion(f introspeccion.Funcion) string {
+func dropFuncion(f esquema.Funcion) string {
 	tipo := "FUNCTION"
 	if f.Procedimiento {
 		tipo = "PROCEDURE"
@@ -63,7 +63,7 @@ func dropFuncion(f introspeccion.Funcion) string {
 	return fmt.Sprintf("DROP %s %s(%s);", tipo, f.Nombre, f.Identidad)
 }
 
-func dropVista(v introspeccion.Vista) string {
+func dropVista(v esquema.Vista) string {
 	if v.Materializada {
 		return "DROP MATERIALIZED VIEW " + v.Nombre + ";"
 	}
@@ -75,7 +75,7 @@ func sinSaltoFinal(s string) string { return strings.TrimRight(s, "\n") }
 // tocados calcula, en el esquema `a`, qué objetos se borran o se tienen que
 // quitar y volver a crear para llegar a `b`. Las claves son las de introspeccion
 // (tabla:x, vista:x, funcion:f(int), tipo:x).
-func tocados(a, b introspeccion.Esquema) (map[string]bool, map[string]bool) {
+func tocados(a, b esquema.Esquema) (map[string]bool, map[string]bool) {
 	tocado := map[string]bool{}
 	reemplazo := map[string]bool{} // funciones que van con DROP + CREATE
 	// Tablas: borradas. Columnas: borradas o con otro tipo. Una vista que use la tabla
@@ -92,7 +92,7 @@ func tocados(a, b introspeccion.Esquema) (map[string]bool, map[string]bool) {
 	for _, ta := range a.Tablas {
 		tb := b.Buscar(ta.Nombre)
 		if tb == nil {
-			tocado[introspeccion.ClaveTabla(ta.Nombre)] = true
+			tocado[esquema.ClaveTabla(ta.Nombre)] = true
 			for _, c := range ta.Columnas {
 				tocado["columna:"+ta.Nombre+"."+c.Nombre] = true
 			}
@@ -103,7 +103,7 @@ func tocados(a, b introspeccion.Esquema) (map[string]bool, map[string]bool) {
 			tocado["columna:"+ta.Nombre+"."+c] = true
 		}
 		if len(cols) > 0 && !conColumnas[ta.Nombre] {
-			tocado[introspeccion.ClaveTabla(ta.Nombre)] = true // sin detalle: por las dudas
+			tocado[esquema.ClaveTabla(ta.Nombre)] = true // sin detalle: por las dudas
 		}
 	}
 	for _, fa := range a.Funciones {
@@ -129,7 +129,7 @@ func tocados(a, b introspeccion.Esquema) (map[string]bool, map[string]bool) {
 				continue
 			}
 			vb := b.BuscarVista(va.Nombre)
-			if vb == nil || vb.DDL() != va.DDL() || algunoTocado(va.Depende, tocado) {
+			if vb == nil || !esquema.MismaVista(*vb, va) || algunoTocado(va.Depende, tocado) {
 				tocado[va.Clave()] = true
 				cambio = true
 			}
@@ -162,9 +162,9 @@ func algunoTocado(deps []string, tocado map[string]bool) bool {
 // triggerTocado: el trigger cambia, desaparece, su tabla o vista se borra o recrea,
 // su función se recrea, o nombra una columna que cambia (UPDATE OF col, WHEN …):
 // PostgreSQL no deja cambiar el tipo de esa columna con el trigger puesto.
-func triggerTocado(t introspeccion.Trigger, b introspeccion.Esquema, tocado map[string]bool) bool {
+func triggerTocado(t esquema.Trigger, b esquema.Esquema, tocado map[string]bool) bool {
 	tb := b.BuscarTrigger(t.Etiqueta())
-	if tb == nil || tb.DDL() != t.DDL() || tocado[introspeccion.ClaveTabla(t.Tabla)] ||
+	if tb == nil || !esquema.MismoTrigger(*tb, t) || tocado[esquema.ClaveTabla(t.Tabla)] ||
 		tocado["vista:"+t.Tabla] || (t.Funcion != "" && tocado[t.Funcion]) {
 		return true
 	}
@@ -182,8 +182,8 @@ func reMenciona(col string) *regexp.Regexp {
 
 // ordenVistas ordena las vistas de `vs` para que cada una vaya después de las
 // vistas de las que depende (las más internas primero).
-func ordenVistas(vs []introspeccion.Vista) []introspeccion.Vista {
-	por := map[string]introspeccion.Vista{}
+func ordenVistas(vs []esquema.Vista) []esquema.Vista {
+	por := map[string]esquema.Vista{}
 	for _, v := range vs {
 		por[v.Clave()] = v
 	}
@@ -192,7 +192,7 @@ func ordenVistas(vs []introspeccion.Vista) []introspeccion.Vista {
 		nombres = append(nombres, k)
 	}
 	sort.Strings(nombres)
-	var out []introspeccion.Vista
+	var out []esquema.Vista
 	visto := map[string]int{} // 1 = visitando, 2 = listo
 	var visitar func(k string)
 	visitar = func(k string) {
@@ -215,7 +215,7 @@ func ordenVistas(vs []introspeccion.Vista) []introspeccion.Vista {
 	return out
 }
 
-func planificar(a, b introspeccion.Esquema) plan {
+func planificar(a, b esquema.Esquema) plan {
 	var p plan
 	tocado, reemplazo := tocados(a, b)
 
@@ -227,7 +227,7 @@ func planificar(a, b introspeccion.Esquema) plan {
 	}
 
 	// 2) Vistas tocadas: las más externas primero (orden inverso de dependencias).
-	var vistasA []introspeccion.Vista
+	var vistasA []esquema.Vista
 	for _, v := range a.Vistas {
 		if tocado[v.Clave()] {
 			vistasA = append(vistasA, v)
@@ -242,7 +242,7 @@ func planificar(a, b introspeccion.Esquema) plan {
 		switch {
 		case vb == nil:
 			p.avisos = append(p.avisos, fmt.Sprintf("Se borra %s %s. Si algo la consulta, dejará de funcionar.", strings.ToLower(nombre), v.Nombre))
-		case vb.DDL() == v.DDL():
+		case esquema.MismaVista(*vb, v):
 			p.avisos = append(p.avisos, fmt.Sprintf("%s %s se quita y se vuelve a crear porque depende de algo que cambia; si tenía permisos (GRANT), vuelve a darlos.", nombre, v.Nombre))
 		}
 		if vb != nil && v.Materializada {
@@ -292,7 +292,7 @@ func planificar(a, b introspeccion.Esquema) plan {
 	for _, tb := range b.Tipos {
 		ta := a.BuscarTipo(tb.Nombre)
 		if ta == nil {
-			p.crearTipos = append(p.crearTipos, sinSaltoFinal(tb.DDL()))
+			p.crearTipos = append(p.crearTipos, sinSaltoFinal(DDLEnum(tb)))
 			continue
 		}
 		sents, avs := cambiosEnum(*ta, tb)
@@ -314,7 +314,7 @@ func planificar(a, b introspeccion.Esquema) plan {
 			continue
 		}
 		p.creaFunciones = true
-		s := sinSaltoFinal(fb.DDL())
+		s := sinSaltoFinal(DDLFuncion(fb))
 		switch {
 		case dependeDe(fb.Depende, "vista:"):
 			p.funcionesVistas = append(p.funcionesVistas, s)
@@ -345,21 +345,21 @@ func planificar(a, b introspeccion.Esquema) plan {
 	}
 
 	// 8) Vistas nuevas o recreadas: las más internas primero.
-	var vistasB []introspeccion.Vista
+	var vistasB []esquema.Vista
 	for _, v := range b.Vistas {
 		if a.BuscarVista(v.Nombre) == nil || tocado[v.Clave()] {
 			vistasB = append(vistasB, v)
 		}
 	}
 	for _, v := range ordenVistas(vistasB) {
-		p.crearVistas = append(p.crearVistas, sinSaltoFinal(v.DDL()))
+		p.crearVistas = append(p.crearVistas, sinSaltoFinal(DDLVista(v)))
 	}
 
 	// 9) Triggers nuevos o recreados.
 	for _, t := range b.Triggers {
 		ta := a.BuscarTrigger(t.Etiqueta())
 		if ta == nil || triggerTocado(*ta, b, tocado) {
-			p.crearTriggers = append(p.crearTriggers, sinSaltoFinal(t.DDL()))
+			p.crearTriggers = append(p.crearTriggers, sinSaltoFinal(DDLTrigger(t)))
 		}
 	}
 	return p
@@ -377,7 +377,7 @@ func dependeDe(deps []string, prefijo string) bool {
 // cambiosEnum agrega los valores nuevos en su posición. Quitar, renombrar o
 // reordenar valores no se puede hacer de forma segura: solo se avisa y se deja
 // un comentario en el SQL para hacerlo a mano.
-func cambiosEnum(a, b introspeccion.Enum) ([]string, []string) {
+func cambiosEnum(a, b esquema.Enum) ([]string, []string) {
 	var out, avisos []string
 	enA := map[string]bool{}
 	for _, v := range a.Valores {

@@ -55,6 +55,10 @@ func TestFlujoDeLaCLI(t *testing.T) {
 		t.Fatalf("whoami: %s", out)
 	}
 	clitest.DebeCorrer(t, "init", "--servidor", srv.URL, "--crear", "Tienda")
+	// El mismo nombre otra vez, en otra carpeta: el error dice qué proyecto vincular.
+	t.Chdir(t.TempDir())
+	clitest.DebeFallar(t, "marga init --repo 1", "init", "--servidor", srv.URL, "--crear", "Tienda")
+	t.Chdir(proyectoA)
 	clitest.DebeCorrer(t, "env", "add", "dev", dev)
 	clitest.DebeCorrer(t, "env", "add", "staging", staging, "--compartido")
 

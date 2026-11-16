@@ -104,7 +104,7 @@ func (m *Migrador) AplicarScripts(ctx context.Context, tipo string, scripts []pr
 	if err != nil {
 		return err
 	}
-	defer liberar(conn)
+	defer m.liberar(conn)
 	if err := asegurarTablas(ctx, conn); err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (m *Migrador) AplicarScripts(ctx context.Context, tipo string, scripts []pr
 				return err
 			}
 			if lineaBase {
-				_, err := guardarLineaBase(ctx, q)
+				_, err := m.guardarLineaBase(ctx, q)
 				return err
 			}
 			return nil

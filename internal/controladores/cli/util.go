@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"github.com/zara-te05/Marga/internal/datos/motor"
 	"io"
 	"os"
 	"os/user"
@@ -13,10 +14,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/migrador"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
 	"github.com/zara-te05/Marga/internal/datos/remoto"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var (
@@ -100,7 +102,7 @@ func driverDe(motor string) (string, error) {
 	case "sqlserver":
 		return "sqlserver", nil
 	}
-	return "", fmt.Errorf("motor no soportado: %s (usa postgresql, mysql o sqlserver)", motor)
+	return "", sugerencia.Nuevof("usa --motor postgresql, mysql o sqlserver", "motor no soportado: %s", motor)
 }
 
 // plural: plural(1, "migración", "migraciones") -> "1 migración".
@@ -133,7 +135,7 @@ func nombreReporte(nombre string, e proyecto.Entorno, cred remoto.Credencial) st
 // reportar envía al servidor qué tiene aplicado el entorno, su esquema real y su drift.
 // Es opcional: si el proyecto no está vinculado o no hay sesión, no hace nada.
 func reportar(c *cobra.Command, p *proyecto.Proyecto, nombre string, e proyecto.Entorno, m *migrador.Migrador,
-	real *introspeccion.Esquema, drift []string) {
+	real *esquema.Esquema, drift []string) {
 	if p == nil || p.Config.Servidor == "" || p.Config.RepoID == 0 {
 		return
 	}
@@ -236,4 +238,13 @@ func soloComentarios(sql string) bool {
 		}
 	}
 	return true
+}
+
+// dialectoDe: el DDL de un esquema se escribe en el dialecto de su motor
+// (si no se conoce, el de PostgreSQL).
+func dialectoDe(nombre string) esquema.Dialecto {
+	if m, err := motor.De(nombre); err == nil {
+		return m
+	}
+	return motor.PorDefecto()
 }

@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
 	"github.com/zara-te05/Marga/internal/datos/remoto"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var syncRama string
@@ -42,8 +43,8 @@ func analizar(c *cobra.Command, crear bool) (*sincro, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.Config.Servidor == "" || p.Config.RepoID == 0 {
-		return nil, errors.New("este proyecto no está vinculado a un servidor. Usa `marga link --repo ID`")
+	if esLocal(p) {
+		return nil, errModoLocal
 	}
 	cli, _, err := remoto.Conectado(p.Config.Servidor)
 	if err != nil {
@@ -144,6 +145,9 @@ var pushCmd = &cobra.Command{
 	Short: "Envía al servidor las migraciones locales que aún no tiene",
 	Args:  cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
+		if local, err := avisarSiLocal(c, "push"); local || err != nil {
+			return err
+		}
 		s, err := analizar(c, true)
 		if err != nil {
 			return err
@@ -168,7 +172,7 @@ var pushCmd = &cobra.Command{
 			}
 		}
 		if len(s.faltan) > 0 || len(s.renombrar) > 0 {
-			return fmt.Errorf("el servidor tiene cambios en %s que no tienes. Ejecuta `marga pull` primero", s.rama)
+			return sugerencia.Nuevof("marga pull y luego repite marga push", "el servidor tiene cambios en %s que no tienes", s.rama)
 		}
 		// Avisar si alguien editó una migración que ya se había enviado.
 		for id, cm := range s.enviadas {
@@ -197,7 +201,7 @@ var pushCmd = &cobra.Command{
 				sinEsquema = append(sinEsquema, l.ID())
 			}
 			if proyecto.EsVacio(l.Up) {
-				return fmt.Errorf("%s: el archivo .up.sql está vacío", l.ID())
+				return sugerencia.Nuevof("escribe el SQL en "+l.ID()+".up.sql (o bórrala si no la necesitas) y repite marga push", "%s: el archivo .up.sql está vacío", l.ID())
 			}
 			padre := head
 			cm, err := s.cli.CrearCommit(s.p.Config.RepoID, remoto.NuevoCommit{
@@ -232,6 +236,9 @@ var pullCmd = &cobra.Command{
 	Short: "Descarga del servidor las migraciones que no tienes",
 	Args:  cobra.NoArgs,
 	RunE: func(c *cobra.Command, args []string) error {
+		if local, err := avisarSiLocal(c, "pull"); local || err != nil {
+			return err
+		}
 		s, err := analizar(c, false)
 		if err != nil {
 			return err
@@ -459,7 +466,7 @@ func (s *sincro) fusionarLoDeGit(c *cobra.Command) (bool, error) {
 			for _, cf := range sim.Conflictos {
 				linea(c, "    %s", nombreConflicto(cf))
 			}
-			return fusiono, errors.New("revisa que esas migraciones funcionen juntas (marga verificar); si sí, repite con: marga push --forzar")
+			return fusiono, sugerencia.Nuevo("no se fusionó en el servidor por los conflictos de arriba", "marga verificar para comprobar que esas migraciones funcionan juntas; si sí, marga push --forzar")
 		}
 		res, err := s.cli.Fusionar(s.p.Config.RepoID, mejor, s.rama, false, pushForzar)
 		if err != nil {
@@ -502,10 +509,10 @@ func snapshotsDe(p *proyecto.Proyecto, locales []proyecto.Migracion, id string) 
 		return nil, false
 	}
 	// Ambos esquemas (antes y después) deben venir del MISMO entorno.
-	var despues, antes introspeccion.Esquema
+	var despues, antes esquema.Esquema
 	encontrado := false
 	for _, env := range p.EntornosConSnapshots() {
-		despues, antes = introspeccion.Esquema{}, introspeccion.Esquema{}
+		despues, antes = esquema.Esquema{}, esquema.Esquema{}
 		if ok, err := p.LeerSnapshot(env, id, &despues); !ok || err != nil {
 			continue
 		}
@@ -527,15 +534,16 @@ func snapshotsDe(p *proyecto.Proyecto, locales []proyecto.Migracion, id string) 
 }
 
 // SnapshotsEntre lista los objetos que cambian de `antes` a `despues`.
-func SnapshotsEntre(antes, despues introspeccion.Esquema) []remoto.NuevoSnapshot {
-	antes, _ = introspeccion.Completar(antes, despues)
-	despues, _ = introspeccion.Completar(despues, antes)
+func SnapshotsEntre(antes, despues esquema.Esquema) []remoto.NuevoSnapshot {
+	antes, _ = esquema.Completar(antes, despues)
+	despues, _ = esquema.Completar(despues, antes)
 	type obj struct{ tipo, ddl string }
 	a, d := map[string]obj{}, map[string]obj{}
-	for _, o := range antes.Objetos() {
+	dial := dialectoDe(despues.Motor)
+	for _, o := range antes.Objetos(dial) {
 		a[o.Nombre] = obj{o.Tipo, o.DDL}
 	}
-	for _, o := range despues.Objetos() {
+	for _, o := range despues.Objetos(dial) {
 		d[o.Nombre] = obj{o.Tipo, o.DDL}
 	}
 	var out []remoto.NuevoSnapshot

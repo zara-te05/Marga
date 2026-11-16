@@ -14,9 +14,10 @@ import (
 
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/migrador"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 // ---------------------------------------------------------------- Objetos repetibles (sql/)
@@ -71,7 +72,7 @@ func aplicarRepetibles(ctx context.Context, c *cobra.Command, p *proyecto.Proyec
 		linea(c, "  %s %s %s", sAcento.Render("↻"), relleno(relRepetible(p, s.Archivo), 40), sTenue.Render(fmt.Sprintf("%s · %dms", que, d.Milliseconds())))
 	})
 	if err != nil {
-		return fmt.Errorf("se aplicaron %d de %d objetos repetibles; el que falló se deshizo. Corrige el archivo y repite marga up", hechos, len(scripts))
+		return sugerencia.Nuevof("corrige el archivo que falló (el error está arriba) y repite marga up", "se aplicaron %d de %d objetos repetibles; el que falló se deshizo", hechos, len(scripts))
 	}
 	linea(c, "%s %s", sAcento.Render("✓"), plural(hechos, "objeto repetible aplicado", "objetos repetibles aplicados"))
 	return nil
@@ -171,7 +172,7 @@ Cada seed se ejecuta una sola vez por base. Si lo editas, no se repite solo
 		}
 		defer m.Close()
 		if !sigueRamas(nombre, e) {
-			return fmt.Errorf("%s es un entorno compartido: los datos de prueba solo van en entornos personales (dev, local)", nombre)
+			return sugerencia.Nuevof("marga seed --env dev", "%s es un entorno compartido: los datos de prueba solo van en entornos personales (dev, local)", nombre)
 		}
 		seeds, err := p.Seeds()
 		if err != nil {
@@ -187,7 +188,7 @@ Cada seed se ejecuta una sola vez por base. Si lo editas, no se repite solo
 		}
 		for _, f := range migrador.Comparar(locales, aplicadas) {
 			if f.Situacion == migrador.Pendiente || f.Situacion == migrador.Renumerada {
-				return fmt.Errorf("%s tiene migraciones sin aplicar (%s): los seeds esperan el esquema Completo. Primero: marga up --env %s", nombre, f.ID(), nombre)
+				return sugerencia.Nuevof("marga up --env "+nombre+" y luego repite marga seed", "%s tiene migraciones sin aplicar (%s): los seeds esperan el esquema completo", nombre, f.ID())
 			}
 		}
 		hechos, err := m.Scripts(ctx, migrador.TipoSeed)
@@ -215,7 +216,7 @@ Cada seed se ejecuta una sola vez por base. Si lo editas, no se repite solo
 			}
 		}
 		for a := range pedidos {
-			return fmt.Errorf("no existe el seed %s en %s", a, relativo(p, p.DirSeeds()))
+			return sugerencia.Nuevof("revisa los archivos de "+relativo(p, p.DirSeeds())+", o créalo con marga new --seed "+a, "no existe el seed %s en %s", a, relativo(p, p.DirSeeds()))
 		}
 		for _, a := range cambiados {
 			linea(c, "%s %s cambió desde que se ejecutó; no se repite para no duplicar datos (marga seed %s para forzarlo)", sAviso.Render("!"), a, a)
@@ -235,7 +236,7 @@ Cada seed se ejecuta una sola vez por base. Si lo editas, no se repite solo
 			linea(c, "  %s %s %s", sAcento.Render("✓"), relleno(s.Archivo, 40), sTenue.Render(fmt.Sprintf("%dms", d.Milliseconds())))
 		})
 		if err != nil {
-			return fmt.Errorf("se cargaron %d de %d; el que falló se deshizo", n, len(correr))
+			return sugerencia.Nuevof("corrige el seed que falló (el error está arriba) y repite marga seed", "se cargaron %d de %d; el que falló se deshizo", n, len(correr))
 		}
 		linea(c, "%s %s", sAcento.Render("✓"), plural(n, "seed cargado", "seeds cargados"))
 		return nil
@@ -280,7 +281,7 @@ tablas, columnas y palabras clave, \d lista los objetos, \d NOMBRE muestra su DD
 		}
 		defer m.Close()
 		if !sigueRamas(nombre, e) && sqlFlags.guardar && !migFlags.si {
-			return fmt.Errorf("%s es compartido: para guardar cambios ahí confirma con --si (mejor usa una migración)", nombre)
+			return sugerencia.Nuevof(`mejor guarda el cambio como migración (marga new "…"); si de verdad quieres, repite con --si`, "%s es compartido y no confirmaste guardar cambios ahí", nombre)
 		}
 		donde := baseMostrada(e, nombre)
 		correr := func(texto string) error {
@@ -320,7 +321,7 @@ tablas, columnas y palabras clave, \d lista los objetos, \d NOMBRE muestra su DD
 			return Consola(c, os.Stdin, correr)
 		}
 		linea(c, "SQL en %s (%s). Termina con ; · \\? ayuda · \\q para salir", sNegri.Render(donde), modo)
-		return consolaInteractiva(c, func() (introspeccion.Esquema, error) { return m.EsquemaReal(ctx) }, correr)
+		return consolaInteractiva(c, func() (esquema.Esquema, error) { return m.EsquemaReal(ctx) }, correr)
 	},
 }
 

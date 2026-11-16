@@ -2,16 +2,15 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/migrador"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
-	"github.com/zara-te05/Marga/internal/modelos/generador"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
 	"github.com/zara-te05/Marga/internal/modelos/riesgo"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var commitDryRun bool
@@ -48,7 +47,7 @@ No genera: quitar o renombrar valores de un ENUM (deja un aviso), ni renombres
 		desc := strings.Join(args, " ")
 		nombreMig := proyecto.Slug(desc)
 		if nombreMig == "" {
-			return errors.New("la descripción debe tener letras o números")
+			return sugerencia.Nuevo("la descripción debe tener letras o números", `marga commit "agregar columna email a clientes"`)
 		}
 
 		aplicadas, err := m.Historial(ctx)
@@ -58,9 +57,9 @@ No genera: quitar o renombrar valores de un ENUM (deja un aviso), ni renombres
 		for _, f := range migrador.Comparar(locales, aplicadas) {
 			switch f.Situacion {
 			case migrador.Pendiente, migrador.Renumerada:
-				return fmt.Errorf("%s tiene migraciones sin aplicar (%s). Aplícalas primero con: marga up --env %s", nombre, f.ID(), nombre)
+				return sugerencia.Nuevof("marga up --env "+nombre+" y luego repite el commit", "%s tiene migraciones sin aplicar (%s)", nombre, f.ID())
 			case migrador.Modificada, migrador.Huerfana:
-				return fmt.Errorf("el historial de %s no cuadra (%s); revísalo con marga status", nombre, f.ID())
+				return sugerencia.Nuevof("marga status --env "+nombre+" para ver qué no cuadra", "el historial de %s no cuadra (%s)", nombre, f.ID())
 			}
 		}
 
@@ -74,6 +73,10 @@ No genera: quitar o renombrar valores de un ENUM (deja un aviso), ni renombres
 				return err
 			}
 			linea(c, "No había línea base en %s: se guardó el estado actual.", sNegri.Render(nombre))
+			if real, err := m.EsquemaReal(ctx); err == nil && len(locales) == 0 && !vacio(real) {
+				sugerirAdoptar(c, locales, real)
+				return nil
+			}
 			linea(c, "Haz tus cambios en la base y vuelve a ejecutar: marga commit %s", desc)
 			return nil
 		}
@@ -81,12 +84,12 @@ No genera: quitar o renombrar valores de un ENUM (deja un aviso), ni renombres
 		if err != nil {
 			return err
 		}
-		cambios := introspeccion.Comparar(*base, real)
+		cambios := esquema.Comparar(*base, real)
 		if len(cambios) == 0 {
 			linea(c, "No hay cambios en %s desde la última migración. Cambia la base y vuelve a intentarlo.", sNegri.Render(nombre))
 			return nil
 		}
-		gen := generador.Generar(*base, real)
+		gen := m.Motor().Generar(*base, real)
 
 		linea(c, "Cambios detectados en %s:", sNegri.Render(nombre))
 		for _, ch := range cambios {
@@ -96,7 +99,7 @@ No genera: quitar o renombrar valores de un ENUM (deja un aviso), ni renombres
 			for _, a := range gen.Avisos {
 				linea(c, "%s %s", sAviso.Render("!"), a)
 			}
-			return errors.New("esos cambios no se pueden generar automáticamente; escribe la migración a mano con marga new")
+			return sugerencia.Nuevo("esos cambios no se pueden generar automáticamente", `marga new "<descripción>" y escribe el SQL a mano`)
 		}
 		linea(c, "\n%s", sAcento.Render("-- UP"))
 		linea(c, "%s", strings.TrimRight(gen.Up, "\n"))
@@ -126,8 +129,8 @@ No genera: quitar o renombrar valores de un ENUM (deja un aviso), ni renombres
 		// para que `push` sepa qué objetos cambió esta. Un snapshot guardado por una versión
 		// anterior de Marga (sin funciones, vistas ni triggers) también se reemplaza.
 		if n := len(locales); n > 0 {
-			var tmp introspeccion.Esquema
-			if ok, _ := p.LeerSnapshot(e.ClaveSnapshots(nombre), locales[n-1].ID(), &tmp); !ok || tmp.Version < introspeccion.VersionActual {
+			var tmp esquema.Esquema
+			if ok, _ := p.LeerSnapshot(e.ClaveSnapshots(nombre), locales[n-1].ID(), &tmp); !ok || tmp.Version < esquema.VersionActual {
 				_ = p.GuardarSnapshot(e.ClaveSnapshots(nombre), locales[n-1].ID(), base)
 			}
 		}
@@ -184,7 +187,7 @@ Sin argumentos revisa las migraciones que aún no envías al servidor (o todas s
 					}
 				}
 				if !encontrada {
-					return fmt.Errorf("no encontré la migración %q", a)
+					return sugerencia.Nuevof("marga status para ver los nombres de las migraciones", "no encontré la migración %q", a)
 				}
 			}
 		} else {

@@ -1,8 +1,24 @@
-# GoReleaser: compila marga (CLI) y marga-server para Windows, Linux y macOS.
+# GoReleaser: compila marga (CLI) y marga-server para Windows, Linux y macOS, y
+# publica la CLI en Scoop, winget y Homebrew para que se instale en un paso:
+#
+#   Windows:      winget install zara-te05.Marga
+#                 (o: scoop bucket add marga https://github.com/zara-te05/scoop-marga; scoop install marga)
+#   macOS/Linux:  brew install zara-te05/tap/marga
+#
 # Probar en local sin publicar:  goreleaser release --snapshot --clean
+# Revisar este archivo:           goreleaser check
+#
+# Antes del primer release hace falta (una sola vez):
+#   1. Crear los repos github.com/zara-te05/scoop-marga y github.com/zara-te05/homebrew-tap (vacíos).
+#   2. Hacer un fork de github.com/microsoft/winget-pkgs en zara-te05/winget-pkgs.
+#   3. Crear un token personal clásico (classic) con el permiso public_repo (winget necesita
+#      abrir un pull request en microsoft/winget-pkgs, y los tokens fine-grained no pueden)
+#      y guardarlo como secreto MARGA_PUBLICAR_TOKEN del repo Marga.
+# Los pre-releases (v0.6.0-rc.1) no se publican en Scoop, winget ni Homebrew.
 version: 2
 
 project_name: marga
+
 
 builds:
   - id: marga
@@ -60,3 +76,71 @@ release:
   github:
     owner: zara-te05
     name: Marga
+  prerelease: auto
+
+# ---------------------------------------------------------------- Instalación en un paso
+
+scoops:
+  - ids: [marga]
+    name: marga
+    homepage: https://github.com/zara-te05/Marga
+    description: Control de versiones para bases de datos, como git
+    license: Proprietary # cámbiala si el proyecto adopta una licencia (MIT, Apache-2.0…)
+    skip_upload: auto
+    repository:
+      owner: zara-te05
+      name: scoop-marga
+      token: "{{ .Env.MARGA_PUBLICAR_TOKEN }}"
+    commit_author:
+      name: marga-releases
+      email: releases@marga.invalid
+    commit_msg_template: "marga {{ .Tag }}"
+
+winget:
+  - ids: [marga]
+    name: marga
+    publisher: zara-te05
+    package_identifier: zara-te05.Marga
+    short_description: Control de versiones para bases de datos, como git
+    homepage: https://github.com/zara-te05/Marga
+    license: Proprietary # winget la exige; cámbiala junto con la de scoops
+    skip_upload: auto
+    commit_author:
+      name: marga-releases
+      email: releases@marga.invalid
+    commit_msg_template: "New version: zara-te05.Marga {{ .Version }}"
+    repository:
+      owner: zara-te05
+      name: winget-pkgs
+      branch: "marga-{{ .Version }}"
+      token: "{{ .Env.MARGA_PUBLICAR_TOKEN }}"
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
+
+homebrew_casks:
+  - ids: [marga]
+    name: marga
+    binaries: [marga]
+    homepage: https://github.com/zara-te05/Marga
+    description: Control de versiones para bases de datos, como git
+    skip_upload: auto
+    repository:
+      owner: zara-te05
+      name: homebrew-tap
+      token: "{{ .Env.MARGA_PUBLICAR_TOKEN }}"
+    commit_author:
+      name: marga-releases
+      email: releases@marga.invalid
+    commit_msg_template: "marga {{ .Tag }}"
+    # Los binarios no están firmados por Apple: sin esto macOS dice que están "dañados".
+    hooks:
+      post:
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/marga"]
+          end

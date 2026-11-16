@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"github.com/zara-te05/Marga/internal/datos/remoto"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var loginFlags struct {
@@ -90,7 +90,7 @@ func pedirClave() (string, error) {
 	}
 	m := res.(modeloClave)
 	if m.cancelado {
-		return "", errors.New("cancelado")
+		return "", sugerencia.Nuevo("cancelado", "vuelve a correr el comando cuando quieras")
 	}
 	return m.input.Value(), nil
 }
@@ -120,28 +120,33 @@ Tu contraseña no se guarda. Puedes revocar el token desde la web (Cuenta).`,
 			}
 		}
 
-		sesion, u, err := remoto.Nuevo(srv, "").Login(email, clave)
-		if err != nil {
-			return err
-		}
-		cli := remoto.Nuevo(srv, sesion)
-		host, _ := os.Hostname()
-		token, err := cli.CrearToken("CLI · " + host)
-		_ = cli.Logout() // la sesión temporal ya no hace falta
-		if err != nil {
-			return fmt.Errorf("no se pudo crear el token de acceso: %w", err)
-		}
-		m, err := remoto.LeerCredenciales()
-		if err != nil {
-			return err
-		}
-		m[srv] = remoto.Credencial{Token: token, Email: u.Email, Nombre: u.Nombre}
-		if err := remoto.GuardarCredenciales(m); err != nil {
-			return err
-		}
-		linea(c, "%s Sesión iniciada como %s en %s", sAcento.Render("✓"), sNegri.Render(u.Nombre), srv)
-		return nil
+		return iniciarSesion(c, srv, email, clave)
 	},
+}
+
+// iniciarSesion cambia email y contraseña por un token de acceso personal y lo guarda.
+func iniciarSesion(c *cobra.Command, srv, email, clave string) error {
+	sesion, u, err := remoto.Nuevo(srv, "").Login(email, clave)
+	if err != nil {
+		return err
+	}
+	cli := remoto.Nuevo(srv, sesion)
+	host, _ := os.Hostname()
+	token, err := cli.CrearToken("CLI · " + host)
+	_ = cli.Logout() // la sesión temporal ya no hace falta
+	if err != nil {
+		return fmt.Errorf("no se pudo crear el token de acceso: %w", err)
+	}
+	m, err := remoto.LeerCredenciales()
+	if err != nil {
+		return err
+	}
+	m[srv] = remoto.Credencial{Token: token, Email: u.Email, Nombre: u.Nombre}
+	if err := remoto.GuardarCredenciales(m); err != nil {
+		return err
+	}
+	linea(c, "%s Sesión iniciada como %s en %s", sAcento.Render("✓"), sNegri.Render(u.Nombre), srv)
+	return nil
 }
 
 var logoutCmd = &cobra.Command{

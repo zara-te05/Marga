@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var newFlags struct {
@@ -36,14 +36,14 @@ var newCmd = &cobra.Command{
 		}
 		desc := strings.Join(args, " ")
 		if newFlags.repetible && newFlags.seed {
-			return errors.New("usa --repetible o --seed, no los dos")
+			return sugerencia.Nuevo("--repetible y --seed no van juntos", "quita uno de los dos")
 		}
 		if newFlags.repetible || newFlags.seed {
 			return nuevoScript(c, p, desc)
 		}
 		nombre := proyecto.Slug(desc)
 		if nombre == "" {
-			return errors.New("la descripción debe tener letras o números")
+			return sugerencia.Nuevo("la descripción debe tener letras o números", `marga new "crear tabla clientes"`)
 		}
 		version, err := p.SiguienteVersion()
 		if err != nil {
@@ -76,7 +76,7 @@ func nuevoScript(c *cobra.Command, p *proyecto.Proyecto, desc string) error {
 	partes := strings.Split(filepath.ToSlash(desc), "/")
 	for i, parte := range partes {
 		if partes[i] = proyecto.Slug(parte); partes[i] == "" {
-			return errors.New("la descripción debe tener letras o números (y no carpetas vacías)")
+			return sugerencia.Nuevo("la descripción debe tener letras o números (y no carpetas vacías)", `marga new --repetible "vistas/ventas_por_mes"`)
 		}
 	}
 	nombre := strings.Join(partes, "/")

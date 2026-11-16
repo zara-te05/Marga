@@ -1,12 +1,12 @@
-// Package generador escribe el SQL de una migración comparando dos esquemas:
-// el que dejó Marga (línea base) y el que tiene ahora la base de desarrollo.
+// Generar escribe el SQL de una migración comparando dos esquemas: el que
+// dejó Marga (línea base) y el que tiene ahora la base de desarrollo.
 //
 // Cubre tablas, columnas (tipo, NULL, DEFAULT), llave primaria, llaves foráneas,
 // índices y CHECK; y también funciones y procedimientos, vistas (normales y
 // materializadas), triggers y tipos ENUM, en el orden que piden sus dependencias
-// (ver objetos.go). No detecta renombres (los ve como borrar + crear), y de un
+// (ver generar_objetos.go). No detecta renombres (los ve como borrar + crear), y de un
 // ENUM solo agrega valores: quitarlos o renombrarlos se hace a mano.
-package generador
+package postgres
 
 import (
 	"fmt"
@@ -14,19 +14,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
 )
 
-type Resultado struct {
-	Up, Down string
-	Avisos   []string // cosas que el usuario debe revisar antes de confiar en el SQL
-}
-
 // Generar produce el UP (antes → despues) y el DOWN (despues → antes).
-func Generar(antes, despues introspeccion.Esquema) Resultado {
+func Generar(antes, despues esquema.Esquema) esquema.Cambios {
 	up, avisos := sentencias(antes, despues)
 	down, _ := sentencias(despues, antes)
-	return Resultado{Up: unir(up), Down: unir(down), Avisos: avisos}
+	return esquema.Cambios{Up: unir(up), Down: unir(down), Avisos: avisos}
 }
 
 func unir(s []string) string {
@@ -36,12 +31,17 @@ func unir(s []string) string {
 	return strings.Join(s, "\n") + "\n"
 }
 
-var reNextval = regexp.MustCompile(`^nextval\('(?:public\.)?"?([A-Za-z0-9_]+)"?'::regclass\)$`)
+var reNextval = regexp.MustCompile(`^nextval\('(?:"?([A-Za-z0-9_]+)"?\.)?"?([A-Za-z0-9_]+)"?'::regclass\)$`)
 
 // defColumna escribe la definición de una columna. Las columnas SERIAL se escriben
 // como serial (su secuencia no existe en una base nueva, así que nextval(...) fallaría).
-func defColumna(tabla string, c introspeccion.Columna) string {
-	if m := reNextval.FindStringSubmatch(c.Defecto); m != nil && m[1] == tabla+"_"+c.Nombre+"_seq" {
+func defColumna(tabla string, c esquema.Columna) string {
+	esq, nombre := "public", tabla
+	if i := strings.LastIndex(tabla, "."); i >= 0 {
+		esq, nombre = tabla[:i], tabla[i+1:]
+	}
+	if m := reNextval.FindStringSubmatch(c.Defecto); m != nil && m[2] == nombre+"_"+c.Nombre+"_seq" &&
+		(m[1] == esq || (m[1] == "" && esq == "public")) {
 		switch c.Tipo {
 		case "integer":
 			return c.Nombre + " serial"
@@ -51,10 +51,10 @@ func defColumna(tabla string, c introspeccion.Columna) string {
 			return c.Nombre + " smallserial"
 		}
 	}
-	return c.Nombre + " " + c.Tipo + introspeccion.Modificadores(c)
+	return c.Nombre + " " + c.Tipo + Modificadores(c)
 }
 
-func crearTabla(t introspeccion.Tabla) string {
+func crearTabla(t esquema.Tabla) string {
 	partes := make([]string, 0, len(t.Columnas)+1)
 	for _, c := range t.Columnas {
 		partes = append(partes, "    "+defColumna(t.Nombre, c))
@@ -65,7 +65,7 @@ func crearTabla(t introspeccion.Tabla) string {
 	return fmt.Sprintf("CREATE TABLE %s (\n%s\n);", t.Nombre, strings.Join(partes, ",\n"))
 }
 
-func agregarFK(tabla string, f introspeccion.LlaveForanea) string {
+func agregarFK(tabla string, f esquema.LlaveForanea) string {
 	s := fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
 		tabla, f.Nombre, strings.Join(f.Columnas, ", "), f.Tabla, strings.Join(f.RefColumnas, ", "))
 	if f.AlBorrar != "" {
@@ -74,11 +74,11 @@ func agregarFK(tabla string, f introspeccion.LlaveForanea) string {
 	return s + ";"
 }
 
-func claveFK(f introspeccion.LlaveForanea) string {
+func claveFK(f esquema.LlaveForanea) string {
 	return f.Nombre + "|" + strings.Join(f.Columnas, ",") + "|" + f.Tabla + "|" + strings.Join(f.RefColumnas, ",") + "|" + f.AlBorrar
 }
 
-func nombresOrdenados(e introspeccion.Esquema) []string {
+func nombresOrdenados(e esquema.Esquema) []string {
 	out := make([]string, 0, len(e.Tablas))
 	for _, t := range e.Tablas {
 		out = append(out, t.Nombre)
@@ -91,21 +91,21 @@ func nombresOrdenados(e introspeccion.Esquema) []string {
 // quitar FKs e índices → borrar tablas → crear tablas → columnas → PK → índices → FKs.
 // Un índice que respalda una restricción UNIQUE se borra quitando la restricción,
 // y se recrea como índice + restricción para que el esquema quede idéntico.
-func quitarIndice(tabla string, i introspeccion.Indice) string {
+func quitarIndice(tabla string, i esquema.Indice) string {
 	if i.Restriccion {
 		return fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s;", tabla, i.Nombre)
 	}
 	return fmt.Sprintf("DROP INDEX IF EXISTS %s;", i.Nombre)
 }
 
-func ponerIndice(tabla string, i introspeccion.Indice) string {
+func ponerIndice(tabla string, i esquema.Indice) string {
 	if i.Restriccion {
 		return fmt.Sprintf("%s;\nALTER TABLE %s ADD CONSTRAINT %s UNIQUE USING INDEX %s;", i.Definicion, tabla, i.Nombre, i.Nombre)
 	}
 	return i.Definicion + ";"
 }
 
-func sentencias(a, b introspeccion.Esquema) ([]string, []string) {
+func sentencias(a, b esquema.Esquema) ([]string, []string) {
 	var (
 		quitarFK, quitarIdx, borrar, crear, columnas, pks, ponerIdx, ponerFK []string
 		avisos                                                               []string
@@ -217,10 +217,10 @@ func sentencias(a, b introspeccion.Esquema) ([]string, []string) {
 	return todo, avisos
 }
 
-func cambiosColumnas(ta, tb introspeccion.Tabla) ([]string, []string) {
+func cambiosColumnas(ta, tb esquema.Tabla) ([]string, []string) {
 	var out, avisos []string
 	n := ta.Nombre
-	colA := map[string]introspeccion.Columna{}
+	colA := map[string]esquema.Columna{}
 	for _, c := range ta.Columnas {
 		colA[c.Nombre] = c
 	}

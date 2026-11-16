@@ -1,12 +1,13 @@
 package cli
 
 import (
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 // comandoEditor arma el comando para abrir `archivo` en el editor de la persona:
@@ -32,7 +33,7 @@ func comandoEditor(archivo string) (*exec.Cmd, error) {
 		}
 	}
 	if len(partes) == 0 {
-		return nil, errors.New("no encontré un editor: define la variable EDITOR (por ejemplo, \"code --wait\" o \"nvim\")")
+		return nil, sugerencia.Nuevo("no encontré un editor", `define la variable EDITOR, por ejemplo en PowerShell: $env:EDITOR = "code --wait"`)
 	}
 	// VS Code y similares regresan de inmediato si no se les pide esperar.
 	if b := strings.ToLower(filepath.Base(partes[0])); (b == "code" || b == "code.cmd" || b == "cursor" || b == "subl") && !strings.Contains(ed, "-w") {

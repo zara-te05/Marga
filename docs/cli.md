@@ -3,13 +3,23 @@
 Control de versiones para bases de datos. Aplica, revierte y sincroniza migraciones
 de PostgreSQL, y las comparte con tu equipo a través del servidor de Marga (`marga-server`).
 
-**Instalar**: descarga `marga_<versión>_<sistema>.zip` de la página de *Releases* del repositorio
-y pon `marga` (o `marga.exe`) en tu `PATH`. O compílala desde la raíz del repositorio:
+¿Primera vez? Sigue el [inicio rápido](inicio-rapido.md): de cero a tu primera migración en 5 minutos.
+
+**Instalar** en un paso:
 
 ```
-go build -o marga.exe ./cmd/marga      # Windows  (en Linux/Mac: go build -o marga ./cmd/marga)
-marga version
+winget install zara-te05.Marga                 # Windows
+scoop bucket add marga https://github.com/zara-te05/scoop-marga; scoop install marga
+brew install zara-te05/tap/marga               # macOS y Linux
 ```
+
+Sin gestor de paquetes: `irm https://raw.githubusercontent.com/zara-te05/Marga/main/scripts/instalar.ps1 | iex`
+(Windows) o `curl -fsSL https://raw.githubusercontent.com/zara-te05/Marga/main/scripts/instalar.sh | sh`.
+O compílala desde la raíz del repositorio: `go build -o marga.exe ./cmd/marga`.
+
+`marga version` dice qué versión tienes, desde dónde se ejecuta, si hay otro `marga` más viejo
+que la terminal use antes (el clásico `marga.exe` olvidado en `go\bin`) y si hay una versión
+nueva, con el comando para actualizar (`winget upgrade`, `scoop update`, `brew upgrade`…).
 
 - `marga <comando>` → la CLI, en tu terminal (PowerShell, bash…), en scripts y en CI. `marga` sin
   argumentos muestra la ayuda. Para autocompletar comandos: `marga completion powershell` (o bash, zsh, fish).
@@ -81,16 +91,57 @@ Cada color se puede cambiar en `~/.marga/tema.json` (en Windows, `C:\Users\<tú>
 notas en Windows. En PowerShell: `$env:EDITOR = "code --wait"` (o `"nvim"`); para dejarlo fijo,
 agrégalo a tu perfil (`notepad $PROFILE`).
 
+## `marga init`: crear el proyecto
+
+En una terminal, `marga init` sin opciones te guía: pregunta el nombre del proyecto y la
+cadena de conexión de tu base (y la prueba en ese momento), si usarás un servidor de Marga
+(si dices que sí, inicia sesión y crea o vincula el proyecto ahí) y, si la base ya tiene
+tablas, si quieres adoptarla en el mismo paso (ver `marga adoptar`).
+
+Con cualquier opción no pregunta nada, igual que antes, para scripts y CI:
+
+| Comando | Qué hace |
+|---|---|
+| `marga init --local` | proyecto sin servidor; no pide login |
+| `marga init --crear "Tienda"` | crea el proyecto en el servidor y lo vincula (necesita `marga login`) |
+| `marga init --repo 7` | vincula un proyecto que ya existe en el servidor |
+| `--servidor URL`, `--motor`, `--dir`, `--nombre` | servidor, motor, carpeta de migraciones y nombre del proyecto |
+
+Fuera de una terminal, con la variable `CI` o con `MARGA_NO_INTERACTIVO=1`, `marga init` sin
+opciones es lo mismo que `marga init --local`.
+
+### Modo local (sin servidor)
+
+Un proyecto sin servidor funciona completo: `new`, `commit`, `up`, `down`, `status`, `drift`,
+`adoptar`, `verificar`, las bases por rama… El historial vive en git (la carpeta
+`migrations/`) y en la tabla `marga_history` de cada base. `marga push` y `marga pull` lo
+dicen y terminan sin error; `log`, `branch`, `checkout` y `merge` explican que son del
+servidor. Para pasar a usar un servidor: `marga login` y `marga link --repo ID`.
+
+## Errores: siempre con el siguiente paso
+
+Cada error termina con una línea `prueba:` con lo que conviene hacer:
+
+```
+Error: http://localhost:8080 respondió 404 en /api/health: ahí no hay un servidor de Marga (¿está apagado o es otra URL?)
+  prueba: levanta el servidor con marga-server y comprueba que abra http://localhost:8080/api/health; o usa --servidor con la URL correcta
+```
+
+Para un comando o una opción que no existe, además avisa si la terminal está usando otro
+`marga` (probablemente uno viejo) antes que este.
+
 ## Flujo de trabajo
 
 ```powershell
 # 1. Crear el proyecto en la carpeta de tu app
-marga login --servidor http://localhost:8080        # pide email y contraseña (oculta)
-marga init --crear "Tienda Online"                  # o --repo 7 para uno que ya existe
+marga init                                          # te guía (o: marga init --local, sin servidor)
+marga login --servidor http://localhost:8080        # con servidor: pide email y contraseña (oculta)
+marga init --crear "Tienda Online"                  # …y crea el proyecto ahí (o --repo 7 para uno que ya existe)
 
 # 2. Decir dónde está la base de datos
 marga env add dev "postgres://usuario:clave@localhost:5432/tienda?sslmode=disable"
 marga env probar dev
+marga adoptar                             # solo si esa base YA tenía tablas: la 0001 es su esquema actual
 
 # 3. Escribir una migración (dos formas)
 marga new crear tabla clientes            # a mano: crea los archivos vacíos
@@ -125,6 +176,32 @@ marga url --escribir .env          # que tu app use la base de la rama actual
 marga ramas                        # las bases por rama: tamaño, último uso
 marga ramas borrar feature/facturas
 ```
+
+## `marga adoptar`: empezar con una base que ya existe
+
+En un proyecto real la base casi nunca está vacía. `marga adoptar` toma el esquema
+que ya tiene y lo convierte en la migración `0001`:
+
+```powershell
+marga init --crear "Mi app"
+marga env add dev "postgres://usuario:clave@localhost:5432/miapp?sslmode=disable"
+marga adoptar                  # o: marga adoptar "esquema heredado"
+marga adoptar --simular        # ver qué escribiría, sin escribir nada
+```
+
+- Incluye tablas, índices, llaves, CHECK, tipos ENUM, funciones, procedimientos, vistas,
+  triggers, y además los esquemas, extensiones y secuencias sueltas que use.
+- Antes de escribir nada lo comprueba en una base temporal: aplica la 0001 sobre una base
+  vacía, verifica que sale idéntica a la tuya, y que el DOWN la deja vacía otra vez.
+  Si algo no cuadra se detiene y te dice qué; `--forzar` escribe la migración de todos
+  modos para que la corrijas a mano.
+- No toca tus datos: en esa base la 0001 queda marcada como aplicada.
+- Solo se usa al empezar: si el proyecto ya tiene migraciones o la base ya tiene historial,
+  se niega. `marga status`, `marga drift` y `marga commit` te lo sugieren cuando detectan
+  una base con tablas y un proyecto sin migraciones.
+
+Tus compañeros clonan el repo, apuntan `marga env add dev …` a una base vacía y
+`marga up` les reconstruye todo.
 
 ## Qué guarda y dónde
 
@@ -437,6 +514,8 @@ marga up --env prod --si
 | `MARGA_TOKEN` | token de acceso personal; reemplaza a `marga login` |
 | `MARGA_SERVIDOR` | servidor por defecto cuando no hay proyecto (en lugar de `http://localhost:8080`) |
 | `MARGA_PASSWORD` | contraseña para `marga login` sin teclado |
+| `MARGA_NO_INTERACTIVO` | `marga init` no pregunta nada (igual que en CI) |
+| `MARGA_SIN_AVISO_VERSION` | `marga version` no consulta si hay una versión nueva |
 | `EDITOR` / `VISUAL` | editor para `e` en `marga ui` y `\e` en `marga sql` (p. ej. `code --wait`, `nvim`) |
 
 ## Limitaciones actuales
@@ -444,4 +523,6 @@ marga up --env prod --si
 - Aplicar migraciones: solo PostgreSQL (`env probar` también funciona con MySQL y SQL Server).
 - `marga checkout` solo existe para proyectos sin git; con git, Marga sigue la rama de git.
 - Las bases por rama solo existen en PostgreSQL y en entornos personales.
-- La introspección y el drift solo funcionan en PostgreSQL.
+- La introspección, el drift y `marga adoptar` solo funcionan en PostgreSQL. Cada motor
+  vive en `internal/datos/motor/<motor>/` detrás de la interfaz `Motor`; agregar MySQL es
+  implementar esa interfaz.

@@ -12,6 +12,7 @@ import (
 	"github.com/zara-te05/Marga/internal/datos/migrador"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
 	"github.com/zara-te05/Marga/internal/datos/ramabd"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 // Una base de datos por rama: en los entornos personales (dev, local) cada rama de
@@ -181,7 +182,7 @@ func crearBaseRama(ctx context.Context, c *cobra.Command, p *proyecto.Proyecto, 
 		}
 		nuevo = ramabd.NombreConHash(baseP, rama)
 		if existe, err := admin.Existe(ctx, nuevo); err != nil || existe {
-			return nil, fmt.Errorf("ya existe una base llamada %s que no es de esta rama; Marga no la toca", nuevo)
+			return nil, sugerencia.Nuevof("revisa si esa base es tuya; si no la usas, bórrala a mano (DROP DATABASE) y repite", "ya existe una base llamada %s que no es de esta rama; Marga no la toca", nuevo)
 		}
 	}
 
@@ -198,7 +199,7 @@ func crearBaseRama(ctx context.Context, c *cobra.Command, p *proyecto.Proyecto, 
 	if origen != principal {
 		bo := local.Base(nombre, origen)
 		if bo == nil {
-			return nil, fmt.Errorf("la rama %s no tiene base propia en %s (sus bases: %s)", origen, nombre, strings.Join(append([]string{principal}, local.Ramas(nombre)...), ", "))
+			return nil, sugerencia.Nuevof("marga ramas para ver qué ramas tienen base", "la rama %s no tiene base propia en %s (hay: %s)", origen, nombre, strings.Join(append([]string{principal}, local.Ramas(nombre)...), ", "))
 		}
 		if ok, _ := admin.Existe(ctx, bo.Base); !ok {
 			linea(c, "%s La base de %s ya no existe: se copia la de %s.", sAviso.Render("!"), origen, principal)
@@ -247,9 +248,8 @@ func crearBaseRama(ctx context.Context, c *cobra.Command, p *proyecto.Proyecto, 
 			for _, cx := range oc.Conexiones {
 				lista = append(lista, "    - "+cx.String())
 			}
-			return nil, fmt.Errorf("no se pudo crear la base de la rama %s: PostgreSQL no deja copiar %s mientras alguien esté conectado a ella:\n%s\n"+
-				"  Cierra esas conexiones (pgAdmin, tu app…) y vuelve a intentarlo,\n"+
-				"  o crea la base vacía con las migraciones de la rama: marga up --vacia",
+			return nil, sugerencia.Nuevof("cierra esas conexiones (pgAdmin, tu app…) y repite, o crea la base vacía con las migraciones de la rama: marga up --vacia",
+				"no se pudo crear la base de la rama %s: PostgreSQL no deja copiar %s mientras alguien esté conectado a ella:\n%s",
 				rama, baseO, strings.Join(lista, "\n"))
 		}
 		return nil, err
@@ -301,10 +301,10 @@ func entornosConRamas(p *proyecto.Proyecto) ([]string, map[string]proyecto.Entor
 	if ramaBDFlags.env != "" {
 		e, ok := m[ramaBDFlags.env]
 		if !ok {
-			return nil, nil, fmt.Errorf("el entorno %q no existe (usa `marga env ls`)", ramaBDFlags.env)
+			return nil, nil, sugerencia.Nuevof("marga env ls para ver los que hay", "el entorno %q no existe", ramaBDFlags.env)
 		}
 		if !sigueRamas(ramaBDFlags.env, e) {
-			return nil, nil, fmt.Errorf("%s es compartido: los entornos compartidos (staging, prod…) no tienen una base por rama", ramaBDFlags.env)
+			return nil, nil, sugerencia.Nuevof("usa un entorno personal: --env dev", "%s es compartido: los entornos compartidos (staging, prod…) no tienen una base por rama", ramaBDFlags.env)
 		}
 		return []string{ramaBDFlags.env}, m, nil
 	}
@@ -315,7 +315,7 @@ func entornosConRamas(p *proyecto.Proyecto) ([]string, map[string]proyecto.Entor
 		}
 	}
 	if len(out) == 0 {
-		return nil, nil, errors.New("no hay entornos personales (dev, local): solo esos tienen una base por rama")
+		return nil, nil, sugerencia.Nuevo("no hay entornos personales (dev, local): solo esos tienen una base por rama", "marga env add dev "+proyecto.EjemploURL)
 	}
 	return out, m, nil
 }
@@ -335,7 +335,7 @@ func abrirRamas(necesitaGit bool) (*ctxRamas, error) {
 	}
 	repo := gitDe(p)
 	if repo == nil && necesitaGit {
-		return nil, errors.New("este proyecto no usa git: las bases por rama siguen a las ramas de git (con `git init` se activan)")
+		return nil, sugerencia.Nuevo("este proyecto no usa git: las bases por rama siguen a las ramas de git", "git init (y haz un primer commit) para activarlas")
 	}
 	local, err := p.Local()
 	if err != nil {
@@ -484,9 +484,9 @@ func borrarBaseRama(ctx context.Context, c *cobra.Command, r *ctxRamas, nombre s
 	b := r.local.Base(nombre, rama)
 	if b == nil {
 		if rama == r.principal {
-			return fmt.Errorf("%s es la rama principal: usa la base de la cadena de conexión de %s y Marga no la borra", rama, nombre)
+			return sugerencia.Nuevof("marga ramas para ver las bases que sí se pueden borrar", "%s es la rama principal: usa la base de la cadena de conexión de %s y Marga no la borra", rama, nombre)
 		}
-		return fmt.Errorf("la rama %s no tiene base propia en %s", rama, nombre)
+		return sugerencia.Nuevof("marga ramas para ver qué ramas tienen base", "la rama %s no tiene base propia en %s", rama, nombre)
 	}
 	admin, baseP, _, err := adminDe(ctx, e)
 	if err != nil {
@@ -500,7 +500,7 @@ func borrarBaseRama(ctx context.Context, c *cobra.Command, r *ctxRamas, nombre s
 			for _, cx := range oc.Conexiones {
 				lista = append(lista, "    - "+cx.String())
 			}
-			return fmt.Errorf("no se borró %s porque hay conexiones abiertas:\n%s\n  Ciérralas, o repite con --forzar para cerrarlas", b.Base, strings.Join(lista, "\n"))
+			return sugerencia.Nuevof("ciérralas, o repite con --forzar para que Marga las cierre", "no se borró %s porque hay conexiones abiertas:\n%s", b.Base, strings.Join(lista, "\n"))
 		}
 		return err
 	}
@@ -538,7 +538,7 @@ var ramasBorrarCmd = &cobra.Command{
 			hecho = true
 		}
 		if !hecho {
-			return fmt.Errorf("la rama %s no tiene base propia en %s", args[0], strings.Join(nombres, ", "))
+			return sugerencia.Nuevof("marga ramas para ver qué ramas tienen base", "la rama %s no tiene base propia en %s", args[0], strings.Join(nombres, ", "))
 		}
 		if args[0] == r.actual {
 			linea(c, "%s", sTenue.Render("Es tu rama actual: la próxima vez que la uses (marga up) se vuelve a crear."))
@@ -561,10 +561,10 @@ var ramasReiniciarCmd = &cobra.Command{
 			return err
 		}
 		if r.actual == "" {
-			return errors.New("git no está en ninguna rama (HEAD separado)")
+			return sugerencia.Nuevo("git no está en ninguna rama (HEAD separado)", "git checkout <rama> y repite")
 		}
 		if r.actual == r.principal {
-			return fmt.Errorf("estás en %s, la rama principal: su base es la de la cadena de conexión y Marga no la reinicia", r.actual)
+			return sugerencia.Nuevof("cámbiate a una rama de trabajo (git checkout -b mi-rama) y repite", "estás en %s, la rama principal: su base es la de la cadena de conexión y Marga no la reinicia", r.actual)
 		}
 		nombres, ents, err := entornosConRamas(r.p)
 		if err != nil {
@@ -631,7 +631,7 @@ var ramasLimpiarCmd = &cobra.Command{
 			}
 		}
 		if len(fallos) > 0 {
-			return fmt.Errorf("no se pudieron borrar: %s", strings.Join(fallos, ", "))
+			return sugerencia.Nuevof("cierra las conexiones a esas bases y repite, o usa --forzar", "no se pudieron borrar: %s", strings.Join(fallos, ", "))
 		}
 		return nil
 	},

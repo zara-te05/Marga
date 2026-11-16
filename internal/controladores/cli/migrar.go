@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/migrador"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
 	"github.com/zara-te05/Marga/internal/datos/remoto"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
 	"github.com/zara-te05/Marga/internal/modelos/riesgo"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var migFlags struct {
@@ -44,7 +45,11 @@ func conectar(ctx context.Context, c *cobra.Command) (*proyecto.Proyecto, []proy
 	}
 	m, err := migrador.Abrir(ctx, e)
 	if err != nil {
-		return p, locales, nombre, e, nil, fmt.Errorf("%s: %w", nombre, err)
+		err = fmt.Errorf("%s: %w", nombre, err)
+		if sugerencia.De(err) == "" {
+			err = sugerencia.Con(err, pruebaConexion(e.Motor, nombre))
+		}
+		return p, locales, nombre, e, nil, err
 	}
 	return p, locales, nombre, e, m, nil
 }
@@ -58,13 +63,13 @@ var statusCmd = &cobra.Command{
 	RunE: func(c *cobra.Command, args []string) error {
 		ctx := context.Background()
 		p, locales, nombre, e, m, err := conectar(ctx, c)
-		if p != nil && m == nil && strings.Contains(fmt.Sprint(err), "no hay entornos") {
+		if p != nil && m == nil && errors.Is(err, proyecto.ErrSinEntornos) {
 			// Sin entornos: al menos listamos lo local.
 			linea(c, "%d migraciones locales (sin entorno configurado):", len(locales))
 			for _, l := range locales {
 				linea(c, "  %s %s", sTenue.Render("·"), l.ID())
 			}
-			linea(c, "Agrega uno con: marga env add dev \"postgres://...\"")
+			linea(c, "prueba: marga env add dev %s", proyecto.EjemploURL)
 			return nil
 		}
 		if err != nil {
@@ -123,6 +128,7 @@ var statusCmd = &cobra.Command{
 			linea(c, "%s No se pudo revisar el drift: %v", sAviso.Render("!"), err)
 		case nuevaBase:
 			linea(c, "%s", sTenue.Render("Se guardó el esquema actual como línea base: desde ahora se detectan cambios hechos fuera de Marga."))
+			sugerirAdoptar(c, locales, real)
 		case len(cambios) > 0:
 			mostrarDrift(c, nombre, cambios, 8)
 		default:
@@ -152,9 +158,8 @@ func revisarDrift(ctx context.Context, c *cobra.Command, m *migrador.Migrador, n
 	if migFlags.dryRun {
 		return nil // la simulación no toca nada: solo avisa
 	}
-	return errors.New("no se hizo nada: la base tiene cambios hechos fuera de Marga.\n" +
-		"  Si son correctos: marga drift --aceptar --env " + nombre + "\n" +
-		"  Si no: deshazlos a mano y vuelve a intentarlo")
+	return sugerencia.Nuevo("no se hizo nada: la base tiene cambios hechos fuera de Marga",
+		"si son correctos, marga drift --aceptar --env "+nombre+"; si no, deshazlos a mano (o guárdalos como migración con marga commit) y repite")
 }
 
 // ---------------------------------------------------------------- up
@@ -206,11 +211,11 @@ var upCmd = &cobra.Command{
 			}
 		}
 		if len(vacias) > 0 {
-			return fmt.Errorf("no se aplicó nada: %s no tiene SQL todavía (edita su .up.sql)", strings.Join(vacias, ", "))
+			return sugerencia.Nuevof("escribe el SQL en "+vacias[0]+".up.sql y repite marga up", "no se aplicó nada: %s no tiene SQL todavía", strings.Join(vacias, ", "))
 		}
 		if len(problemas) > 0 {
-			return errors.New("no se aplicó nada porque el historial no cuadra:\n  - " + strings.Join(problemas, "\n  - ") +
-				"\nNunca edites una migración ya aplicada: crea una nueva con `marga new`.")
+			return sugerencia.Nuevo("no se aplicó nada porque el historial no cuadra:\n  - "+strings.Join(problemas, "\n  - "),
+				"deja la migración aplicada como estaba (git checkout -- migrations/) y pon el cambio en una nueva con marga new")
 		}
 		if len(renumeradas) > 0 && !migFlags.dryRun {
 			if err := m.Renumerar(ctx, renumeradas); err != nil {
@@ -276,7 +281,7 @@ var upCmd = &cobra.Command{
 			return nil
 		}
 		if esProduccion(nombre) && !migFlags.si {
-			return fmt.Errorf("%q parece producción: revisa con --dry-run y confirma con --si", nombre)
+			return sugerencia.Nuevof("revisa con --dry-run y, si está bien, repite con --si", "%q parece producción y no confirmaste el cambio", nombre)
 		}
 		if len(pendientes) == 0 {
 			if err := aplicarRepetibles(ctx, c, p, m, nombre, reps); err != nil {
@@ -291,7 +296,7 @@ var upCmd = &cobra.Command{
 
 		linea(c, "Aplicando %s en %s…", plural(len(pendientes), "migración", "migraciones"), sNegri.Render(nombre))
 		hechas := 0
-		err = m.Subir(ctx, pendientes, autor(p), func(mig proyecto.Migracion, d time.Duration, snap *introspeccion.Esquema, err error) {
+		err = m.Subir(ctx, pendientes, autor(p), func(mig proyecto.Migracion, d time.Duration, snap *esquema.Esquema, err error) {
 			if err != nil {
 				linea(c, "  %s %s %s", sError.Render("✗"), mig.ID(), sError.Render(err.Error()))
 				return
@@ -313,7 +318,8 @@ var upCmd = &cobra.Command{
 			if hechas > 0 {
 				reportar(c, p, nombre, e, m, nil, nil)
 			}
-			return fmt.Errorf("se aplicaron %d de %d; la que falló se deshizo por completo", hechas, len(pendientes))
+			return sugerencia.Nuevof("corrige el .up.sql de la migración que falló (el error está arriba) y repite marga up --env "+nombre,
+				"se aplicaron %d de %d; la que falló se deshizo por completo", hechas, len(pendientes))
 		}
 		linea(c, "%s %s", sAcento.Render("✓"), plural(hechas, "migración aplicada", "migraciones aplicadas"))
 		errRep := aplicarRepetibles(ctx, c, p, m, nombre, reps)
@@ -347,7 +353,7 @@ var downCmd = &cobra.Command{
 			return nil
 		}
 		if migFlags.pasos < 1 {
-			return errors.New("--pasos debe ser al menos 1")
+			return sugerencia.Nuevo("--pasos debe ser al menos 1", "marga down --pasos 1")
 		}
 		porVersion := map[string]proyecto.Migracion{}
 		for _, l := range locales {
@@ -358,10 +364,10 @@ var downCmd = &cobra.Command{
 			a := aplicadas[i]
 			l, ok := porVersion[a.Version]
 			if !ok {
-				return fmt.Errorf("%s_%s está aplicada pero no tengo su archivo para revertirla (¿marga pull?)", a.Version, a.Nombre)
+				return sugerencia.Nuevof("marga pull (si está en el servidor) o git pull (si la tiene tu equipo en git)", "%s_%s está aplicada pero no tengo su archivo para revertirla", a.Version, a.Nombre)
 			}
 			if l.Down == "" {
-				return fmt.Errorf("%s no tiene script DOWN; escribe %s.down.sql para poder revertirla", l.ID(), l.ID())
+				return sugerencia.Nuevof("escribe en "+l.ID()+".down.sql el SQL que deshace la migración y repite", "%s no tiene script DOWN", l.ID())
 			}
 			if l.Checksum != a.Checksum {
 				linea(c, "%s %s cambió después de aplicarse; se usará el .down.sql actual", sAviso.Render("!"), l.ID())
@@ -381,12 +387,12 @@ var downCmd = &cobra.Command{
 			return nil
 		}
 		if esProduccion(nombre) && !migFlags.si {
-			return fmt.Errorf("%q parece producción: revisa con --dry-run y confirma con --si", nombre)
+			return sugerencia.Nuevof("revisa con --dry-run y, si está bien, repite con --si", "%q parece producción y no confirmaste el cambio", nombre)
 		}
 
 		linea(c, "Revirtiendo %s en %s…", plural(len(aRevertir), "migración", "migraciones"), sNegri.Render(nombre))
 		hechas := 0
-		err = m.Bajar(ctx, aRevertir, func(mig proyecto.Migracion, d time.Duration, _ *introspeccion.Esquema, err error) {
+		err = m.Bajar(ctx, aRevertir, func(mig proyecto.Migracion, d time.Duration, _ *esquema.Esquema, err error) {
 			if err != nil {
 				linea(c, "  %s %s %s", sError.Render("✗"), mig.ID(), sError.Render(err.Error()))
 				return
@@ -398,7 +404,7 @@ var downCmd = &cobra.Command{
 			reportar(c, p, nombre, e, m, nil, nil)
 		}
 		if err != nil {
-			return fmt.Errorf("se revirtieron %d de %d", hechas, len(aRevertir))
+			return sugerencia.Nuevof("corrige el .down.sql que falló (el error está arriba) y repite marga down --env "+nombre, "se revirtieron %d de %d", hechas, len(aRevertir))
 		}
 		linea(c, "%s %s", sAcento.Render("✓"), plural(hechas, "migración revertida", "migraciones revertidas"))
 		return nil
@@ -431,10 +437,10 @@ func guardarSnapshotPrevio(ctx context.Context, p *proyecto.Proyecto, m *migrado
 			continue
 		}
 		previa := locales[i-1].ID()
-		var tmp introspeccion.Esquema
+		var tmp esquema.Esquema
 		// Un snapshot de una versión anterior de Marga no tiene funciones, vistas ni
 		// triggers: se reemplaza para que push sepa cuáles cambia esta migración.
-		if ok, _ := p.LeerSnapshot(entorno, previa, &tmp); ok && tmp.Version >= introspeccion.VersionActual {
+		if ok, _ := p.LeerSnapshot(entorno, previa, &tmp); ok && tmp.Version >= esquema.VersionActual {
 			return
 		}
 		if real, err := m.EsquemaReal(ctx); err == nil {
@@ -512,7 +518,8 @@ func verificarAprobaciones(c *cobra.Command, p *proyecto.Proyecto, nombre string
 		}
 	}
 	if len(faltan) > 0 {
-		return true, fmt.Errorf("%s requiere que otra persona apruebe cada migración antes de aplicarla:\n  - %s\nSe aprueban en la web: Commits → Revisiones", nombre, strings.Join(faltan, "\n  - "))
+		return true, sugerencia.Nuevof("pide a alguien del equipo que las apruebe en la web (Commits → Revisiones) y repite marga up",
+			"%s requiere que otra persona apruebe cada migración antes de aplicarla:\n  - %s", nombre, strings.Join(faltan, "\n  - "))
 	}
 	linea(c, "%s Todas las migraciones pendientes están aprobadas (%s requiere aprobación)", sAcento.Render("✓"), nombre)
 	return true, nil

@@ -41,8 +41,10 @@ func DebeFallar(t *testing.T, contiene string, args ...string) string {
 	if err == nil {
 		t.Fatalf("marga %s debía fallar:\n%s", strings.Join(args, " "), out)
 	}
-	if !strings.Contains(err.Error()+out, contiene) {
-		t.Fatalf("marga %s: esperaba %q en el error:\n%v\n%s", strings.Join(args, " "), contiene, err, out)
+	// Se busca en lo que ve la persona: el error, su "prueba: …" y la salida.
+	visto := err.Error() + "\nprueba: " + cli.Sugerencia(err) + "\n" + out
+	if !strings.Contains(visto, contiene) {
+		t.Fatalf("marga %s: esperaba %q en el error:\n%s", strings.Join(args, " "), contiene, visto)
 	}
 	return err.Error()
 }

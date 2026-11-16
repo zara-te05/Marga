@@ -4,16 +4,16 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/migrador"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
 	"github.com/zara-te05/Marga/internal/datos/ramabd"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var verificarFlags struct {
@@ -77,7 +77,7 @@ La base se crea en el servidor de --url, de $MARGA_VERIFICAR_URL o del entorno
 		_, _ = rand.Read(b)
 		nombreBD := "marga_verificar_" + hex.EncodeToString(b)
 		if err := admin.CrearVacia(ctx, nombreBD, "(verificar)"); err != nil {
-			return fmt.Errorf("%w (el usuario necesita permiso CREATEDB)", err)
+			return sugerencia.Con(err, "dale permiso al usuario (ALTER USER <usuario> CREATEDB;) o usa --url con otro usuario")
 		}
 		base, _ := ramabd.BaseDeURL(servidor)
 		defer func() {
@@ -109,7 +109,7 @@ La base se crea en el servidor de --url, de $MARGA_VERIFICAR_URL o del entorno
 			for _, f := range v.fallos {
 				linea(c, "    - %s", f)
 			}
-			return errors.New("la verificación falló")
+			return sugerencia.Nuevo("la verificación falló", "corrige los problemas de arriba en los archivos de migrations/ y repite marga verificar")
 		}
 		linea(c, "%s Todo bien: las migraciones se aplican desde cero, se revierten limpio y se vuelven a aplicar", sAcento.Render("✓"))
 		return nil
@@ -126,14 +126,14 @@ func servidorParaVerificar(p *proyecto.Proyecto) (string, error) {
 	}
 	nombre, err := entornoPersonalPorDefecto(p, verificarFlags.env)
 	if err != nil {
-		return "", fmt.Errorf("%w; o indica el servidor con --url", err)
+		return "", sugerencia.Con(err, "marga verificar --url \"postgres://usuario:clave@localhost:5432/postgres\" (un servidor donde pueda crear bases temporales)")
 	}
 	_, e, err := p.Entorno(nombre)
 	if err != nil {
 		return "", err
 	}
 	if e.Motor != "" && e.Motor != "postgresql" {
-		return "", fmt.Errorf("verificar solo funciona con PostgreSQL (%s es %s)", nombre, e.Motor)
+		return "", sugerencia.Nuevof("marga verificar --url con un servidor de PostgreSQL", "verificar solo funciona con PostgreSQL (%s es %s)", nombre, e.Motor)
 	}
 	return e.URLReal()
 }
@@ -159,11 +159,11 @@ func (v *verificacion) correr(locales []proyecto.Migracion, reps, seeds []proyec
 		return
 	}
 	// esquemas[i] = el esquema ANTES de aplicar locales[i]; esquemas[n] = al final.
-	esquemas := []introspeccion.Esquema{vacio}
+	esquemas := []esquema.Esquema{vacio}
 
 	v.paso("1. Aplicar desde cero")
 	autorV := "marga verificar"
-	err = v.m.Subir(v.ctx, locales, autorV, func(mig proyecto.Migracion, d time.Duration, snap *introspeccion.Esquema, err error) {
+	err = v.m.Subir(v.ctx, locales, autorV, func(mig proyecto.Migracion, d time.Duration, snap *esquema.Esquema, err error) {
 		if err != nil {
 			linea(v.c, "  %s %s %s", sError.Render("✗"), mig.ID(), sError.Render(err.Error()))
 			return
@@ -190,8 +190,8 @@ func (v *verificacion) correr(locales []proyecto.Migracion, reps, seeds []proyec
 			}
 			break
 		}
-		var despues *introspeccion.Esquema
-		err := v.m.Bajar(v.ctx, []proyecto.Migracion{mig}, func(_ proyecto.Migracion, _ time.Duration, snap *introspeccion.Esquema, err error) {
+		var despues *esquema.Esquema
+		err := v.m.Bajar(v.ctx, []proyecto.Migracion{mig}, func(_ proyecto.Migracion, _ time.Duration, snap *esquema.Esquema, err error) {
 			despues = snap
 		})
 		if err != nil {
@@ -200,7 +200,7 @@ func (v *verificacion) correr(locales []proyecto.Migracion, reps, seeds []proyec
 			break
 		}
 		desde = i
-		if dif := introspeccion.Comparar(esquemas[i], *despues); len(dif) > 0 {
+		if dif := esquema.Comparar(esquemas[i], *despues); len(dif) > 0 {
 			linea(v.c, "  %s %s %s", sError.Render("✗"), relleno(mig.ID(), 40), sError.Render("el DOWN no deja la base como estaba:"))
 			for _, d := range dif {
 				linea(v.c, "        %s", d)
@@ -213,7 +213,7 @@ func (v *verificacion) correr(locales []proyecto.Migracion, reps, seeds []proyec
 
 	v.paso("3. Aplicar otra vez")
 	if desde < len(locales) {
-		err := v.m.Subir(v.ctx, locales[desde:], autorV, func(mig proyecto.Migracion, d time.Duration, _ *introspeccion.Esquema, err error) {
+		err := v.m.Subir(v.ctx, locales[desde:], autorV, func(mig proyecto.Migracion, d time.Duration, _ *esquema.Esquema, err error) {
 			if err != nil {
 				linea(v.c, "  %s %s %s", sError.Render("✗"), mig.ID(), sError.Render(err.Error()))
 				return
@@ -228,7 +228,7 @@ func (v *verificacion) correr(locales []proyecto.Migracion, reps, seeds []proyec
 		linea(v.c, "  %s", sTenue.Render("nada que volver a aplicar"))
 	}
 	if real, err := v.m.EsquemaReal(v.ctx); err == nil {
-		if dif := introspeccion.Comparar(final, real); len(dif) > 0 {
+		if dif := esquema.Comparar(final, real); len(dif) > 0 {
 			v.fallo("después de revertir y volver a aplicar, el esquema no es el mismo (%s)", resumirLista(dif, 2))
 		}
 	}

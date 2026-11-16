@@ -29,10 +29,11 @@ cmd/                    marga y marga-server (solo arrancan)
 internal/
   modelos/              lógica pura, igual en CLI y servidor
     riesgo/             análisis del SQL peligroso
-    generador/          escribe el SQL de `marga commit`
+    esquema/            el modelo del esquema (tablas, vistas, funciones…) y cómo compararlo
     diff/ checksum/ version/
   datos/                bases de datos, archivos y red
-    introspeccion/      lee el esquema real de PostgreSQL
+    motor/              lo que cambia de un motor a otro (interfaz Motor)
+      postgres/         leer el esquema, escribir el SQL de `marga commit`, bloqueos
     migrador/           aplica, revierte y detecta drift en la base del usuario
     ramabd/             una base por rama de git
     proyecto/           la carpeta .marga/ y los archivos de migración
@@ -52,8 +53,18 @@ tests/
   e2e/                  la CLI completa contra un servidor real
   apoyo/                ayudas compartidas por las pruebas
 deploy/                 producción con Docker
-docs/                   cli.md, servidor.md, despliegue.md
+docs/                   cli.md, servidor.md, despliegue.md, estado.md
 ```
+
+## Instalar
+
+```
+winget install zara-te05.Marga         # Windows (o Scoop: ver docs/cli.md)
+brew install zara-te05/tap/marga       # macOS y Linux
+```
+
+Y luego el [inicio rápido](docs/inicio-rapido.md): de cero a tu primera migración en 5 minutos,
+sin servidor (`marga init` te pregunta lo necesario).
 
 ## Empezar (desarrollo)
 
@@ -72,7 +83,7 @@ go build -o marga.exe ./cmd/marga
 .\marga.exe init --crear "Mi proyecto"
 ```
 
-Guías: [CLI](docs/cli.md) · [servidor y API](docs/servidor.md) · [despliegue](docs/despliegue.md)
+Guías: [inicio rápido](docs/inicio-rapido.md) · [CLI](docs/cli.md) · [servidor y API](docs/servidor.md) · [despliegue](docs/despliegue.md) · [estado: hecho y pendiente](docs/estado.md)
 
 ## Pruebas
 
@@ -96,11 +107,14 @@ corre las tres en cada push y pull request.
 ## Versiones
 
 Al subir una etiqueta, el workflow **Release** publica los ejecutables de `marga` y `marga-server`
-para Windows, Linux y macOS (amd64 y arm64) y la imagen `ghcr.io/zara-te05/marga-server`:
+para Windows, Linux y macOS (amd64 y arm64), la CLI en Scoop, winget y Homebrew (ver el
+comentario al inicio de `.goreleaser.yaml` para lo que hay que preparar una vez) y la imagen
+`ghcr.io/zara-te05/marga-server`:
 
 ```bash
 git tag v0.4.0
 git push origin v0.4.0
 ```
 
-`marga version` y `/api/health` muestran la versión de cada binario.
+`marga version` y `/api/health` muestran la versión de cada binario; `marga version` además
+avisa cuando hay una más nueva.

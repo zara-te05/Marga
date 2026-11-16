@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var envCmd = &cobra.Command{
@@ -33,7 +34,7 @@ var envAddCmd = &cobra.Command{
 			return err
 		}
 		if !reNombreEnv.MatchString(args[0]) {
-			return fmt.Errorf("nombre de entorno inválido: %q (letras, números, - y _)", args[0])
+			return sugerencia.Nuevof("usa letras, números, - y _, empezando con letra: marga env add dev …", "nombre de entorno inválido: %q", args[0])
 		}
 		motor := envMotor
 		if motor == "" {
@@ -47,7 +48,7 @@ var envAddCmd = &cobra.Command{
 			return err
 		}
 		if envCompartido && envPersonal {
-			return fmt.Errorf("usa --compartido o --personal, no los dos")
+			return sugerencia.Nuevo("--compartido y --personal no van juntos", "quita uno de los dos")
 		}
 		// dev/local se asumen personales (la base de cada desarrollador); el resto, compartidos.
 		compartido := !proyecto.EsPersonalPorNombre(args[0])
@@ -118,7 +119,7 @@ var envRmCmd = &cobra.Command{
 			return err
 		}
 		if _, ok := m[args[0]]; !ok {
-			return fmt.Errorf("el entorno %q no existe", args[0])
+			return sugerencia.Nuevof("marga env ls para ver los que hay", "el entorno %q no existe", args[0])
 		}
 		delete(m, args[0])
 		if err := p.GuardarEntornos(m); err != nil {
@@ -155,7 +156,7 @@ var envProbarCmd = &cobra.Command{
 			return err
 		}
 		if err := ProbarConexion(driver, url); err != nil {
-			return fmt.Errorf("%s: %w", nombre, err)
+			return sugerencia.Con(fmt.Errorf("%s: %w", nombre, err), pruebaConexion(e.Motor, nombre))
 		}
 		linea(c, "%s Conexión correcta con %s (%s)", sAcento.Render("✓"), sNegri.Render(nombre), e.URLOculta())
 		return nil

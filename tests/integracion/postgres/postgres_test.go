@@ -1,14 +1,14 @@
-package generador_test
+package postgres_test
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/zara-te05/Marga/internal/modelos/generador"
+	"github.com/zara-te05/Marga/internal/datos/motor/postgres"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
 	"github.com/zara-te05/Marga/tests/apoyo/pruebabd"
 )
 
@@ -17,9 +17,9 @@ import (
 func TestIdaYVuelta(t *testing.T) {
 	db, _ := pruebabd.Abrir(t)
 	ctx := context.Background()
-	leer := func() introspeccion.Esquema {
+	leer := func() esquema.Esquema {
 		t.Helper()
-		e, err := introspeccion.Leer(ctx, db)
+		e, err := postgres.Leer(ctx, db)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,7 +52,7 @@ CREATE TABLE facturas (
 );`)
 	b := leer()
 
-	gen := generador.Generar(a, b)
+	gen := postgres.Generar(a, b)
 	if strings.TrimSpace(gen.Up) == "" || strings.TrimSpace(gen.Down) == "" {
 		t.Fatalf("generó vacío:\n%s\n---\n%s", gen.Up, gen.Down)
 	}
@@ -64,16 +64,16 @@ CREATE TABLE facturas (
 
 	// B → A con el DOWN
 	pruebabd.Exec(t, db, gen.Down)
-	if d := introspeccion.Comparar(a, leer()); len(d) != 0 {
+	if d := esquema.Comparar(a, leer()); len(d) != 0 {
 		t.Fatalf("el DOWN no regresó a A:\n%s\n%v", gen.Down, d)
 	}
 	// A → B con el UP
 	pruebabd.Exec(t, db, gen.Up)
-	if d := introspeccion.Comparar(b, leer()); len(d) != 0 {
+	if d := esquema.Comparar(b, leer()); len(d) != 0 {
 		t.Fatalf("el UP no llegó a B:\n%s\n%v", gen.Up, d)
 	}
 	// Sin cambios no genera nada.
-	if g := generador.Generar(b, b); strings.TrimSpace(g.Up) != "" {
+	if g := postgres.Generar(b, b); strings.TrimSpace(g.Up) != "" {
 		t.Fatalf("sin cambios generó:\n%s", g.Up)
 	}
 }
@@ -85,9 +85,9 @@ CREATE TABLE facturas (
 func TestIdaYVueltaObjetos(t *testing.T) {
 	db, _ := pruebabd.Abrir(t)
 	ctx := context.Background()
-	leer := func() introspeccion.Esquema {
+	leer := func() esquema.Esquema {
 		t.Helper()
-		e, err := introspeccion.Leer(ctx, db)
+		e, err := postgres.Leer(ctx, db)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -172,7 +172,7 @@ CREATE TRIGGER v_clientes_ins INSTEAD OF INSERT ON v_clientes FOR EACH ROW EXECU
 DROP PROCEDURE limpiar();`)
 	b := leer()
 
-	gen := generador.Generar(a, b)
+	gen := postgres.Generar(a, b)
 	t.Logf("UP:\n%s\nDOWN:\n%s\nAvisos: %v", gen.Up, gen.Down, gen.Avisos)
 
 	// El orden importa: triggers y vistas fuera → cambios → vistas y triggers dentro.
@@ -193,14 +193,14 @@ DROP PROCEDURE limpiar();`)
 	}
 
 	pruebabd.Exec(t, db, gen.Down)
-	if d := introspeccion.Comparar(a, leer()); len(d) != 0 {
+	if d := esquema.Comparar(a, leer()); len(d) != 0 {
 		t.Fatalf("el DOWN no regresó a A:\n%s\n%v", gen.Down, d)
 	}
 	pruebabd.Exec(t, db, gen.Up)
-	if d := introspeccion.Comparar(b, leer()); len(d) != 0 {
+	if d := esquema.Comparar(b, leer()); len(d) != 0 {
 		t.Fatalf("el UP no llegó a B:\n%s\n%v", gen.Up, d)
 	}
-	if g := generador.Generar(b, b); strings.TrimSpace(g.Up) != "" {
+	if g := postgres.Generar(b, b); strings.TrimSpace(g.Up) != "" {
 		t.Fatalf("sin cambios generó:\n%s", g.Up)
 	}
 }
@@ -210,18 +210,18 @@ func TestEnumValores(t *testing.T) {
 	db, _ := pruebabd.Abrir(t)
 	ctx := context.Background()
 	pruebabd.Exec(t, db, `CREATE TYPE estado AS ENUM ('nuevo', 'pagado');`)
-	a, _ := introspeccion.Leer(ctx, db)
+	a, _ := postgres.Leer(ctx, db)
 	pruebabd.Exec(t, db, `ALTER TYPE estado ADD VALUE 'enviado' BEFORE 'pagado'; ALTER TYPE estado ADD VALUE 'cancelado';`)
-	b, _ := introspeccion.Leer(ctx, db)
+	b, _ := postgres.Leer(ctx, db)
 
-	gen := generador.Generar(a, b)
+	gen := postgres.Generar(a, b)
 	if !strings.Contains(gen.Up, `ADD VALUE 'enviado' BEFORE 'pagado'`) || !strings.Contains(gen.Up, `ADD VALUE 'cancelado';`) {
 		t.Fatalf("UP:\n%s", gen.Up)
 	}
 	if !strings.Contains(gen.Down, "-- marga: quita a mano el valor 'enviado'") || strings.Contains(gen.Down, "ALTER") {
 		t.Fatalf("el DOWN debe pedir quitar el valor a mano, sin SQL:\n%s", gen.Down)
 	}
-	if g := generador.Generar(b, a); len(g.Avisos) != 2 {
+	if g := postgres.Generar(b, a); len(g.Avisos) != 2 {
 		t.Fatalf("quitar dos valores debe dar dos avisos: %v", g.Avisos)
 	}
 
@@ -229,8 +229,8 @@ func TestEnumValores(t *testing.T) {
 	db2, _ := pruebabd.Abrir(t)
 	pruebabd.Exec(t, db2, `CREATE TYPE estado AS ENUM ('nuevo', 'pagado');`)
 	pruebabd.Exec(t, db2, gen.Up)
-	b2, _ := introspeccion.Leer(ctx, db2)
-	if d := introspeccion.Comparar(b, b2); len(d) != 0 {
+	b2, _ := postgres.Leer(ctx, db2)
+	if d := esquema.Comparar(b, b2); len(d) != 0 {
 		t.Fatalf("el UP no llegó a B: %v", d)
 	}
 }
@@ -246,37 +246,37 @@ CREATE TABLE t (id int PRIMARY KEY, n int CHECK (n > 0), e estado);
 CREATE FUNCTION f() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
 CREATE TRIGGER tr BEFORE INSERT ON t FOR EACH ROW EXECUTE FUNCTION f();
 CREATE VIEW v AS SELECT id FROM t;`)
-	real, _ := introspeccion.Leer(ctx, db)
+	real, _ := postgres.Leer(ctx, db)
 
 	// Así se veía el JSON que guardaba Marga antes de esta versión.
 	viejo := `{"motor":"postgresql","tablas":[{"nombre":"t","columnas":[
 		{"nombre":"id","tipo":"integer","nulo":false},{"nombre":"n","tipo":"integer","nulo":true},
 		{"nombre":"e","tipo":"estado","nulo":true}],"pk":["id"],"pk_nombre":"t_pkey","fks":[],"indices":[]}]}`
-	var base introspeccion.Esquema
+	var base esquema.Esquema
 	if err := json.Unmarshal([]byte(viejo), &base); err != nil {
 		t.Fatal(err)
 	}
 	if base.Version != 0 {
 		t.Fatalf("version = %d", base.Version)
 	}
-	if d := introspeccion.Comparar(base, real); len(d) == 0 {
+	if d := esquema.Comparar(base, real); len(d) == 0 {
 		t.Fatal("sin completar, la base vieja debería verse distinta (es lo que hay que evitar)")
 	}
-	completa, inc := introspeccion.Completar(base, real)
+	completa, inc := esquema.Completar(base, real)
 	if n := len(inc); n != 5 { // 1 CHECK + 1 tipo + 1 función + 1 vista + 1 trigger
 		t.Errorf("se incorporaron %d objetos, esperaba 5", n)
 	}
-	if d := introspeccion.Comparar(completa, real); len(d) != 0 {
+	if d := esquema.Comparar(completa, real); len(d) != 0 {
 		t.Fatalf("la base completada no debe tener drift: %v", d)
 	}
-	if completa.Version != introspeccion.VersionActual {
+	if completa.Version != esquema.VersionActual {
 		t.Fatalf("version = %d", completa.Version)
 	}
 	// Ya completada, no se vuelve a tocar: un cambio nuevo sí es drift.
 	pruebabd.Exec(t, db, `CREATE VIEW v2 AS SELECT 1 AS x;`)
-	real2, _ := introspeccion.Leer(ctx, db)
-	if otra, inc := introspeccion.Completar(completa, real2); len(inc) != 0 || len(introspeccion.Comparar(otra, real2)) != 1 {
-		t.Fatalf("una base v2 no se completa: inc=%v %v", inc, introspeccion.Comparar(otra, real2))
+	real2, _ := postgres.Leer(ctx, db)
+	if otra, inc := esquema.Completar(completa, real2); len(inc) != 0 || len(esquema.Comparar(otra, real2)) != 1 {
+		t.Fatalf("una base v2 no se completa: inc=%v %v", inc, esquema.Comparar(otra, real2))
 	}
 }
 

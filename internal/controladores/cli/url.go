@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 var urlFlags struct {
@@ -72,7 +73,7 @@ funciona dentro de $(...).`,
 			return nil
 		}
 		if !reNombreVar.MatchString(urlFlags.variable) {
-			return fmt.Errorf("nombre de variable inválido: %q", urlFlags.variable)
+			return sugerencia.Nuevof("usa letras, números y _, por ejemplo --variable DATABASE_URL", "nombre de variable inválido: %q", urlFlags.variable)
 		}
 		cambio, err := escribirVariable(urlFlags.escribir, urlFlags.variable, url)
 		if err != nil {
@@ -121,9 +122,10 @@ func entornoPersonalPorDefecto(p *proyecto.Proyecto, pedido string) (string, err
 		return personales[0], nil
 	}
 	if len(m) == 0 {
-		return "", errors.New("no hay entornos. Agrega uno con `marga env add dev \"postgres://...\"`")
+		return "", proyecto.ErrSinEntornos
 	}
-	return "", fmt.Errorf("hay %d entornos; elige uno con --env (%s)", len(m), strings.Join(proyecto.NombresEntornos(m), ", "))
+	nombres := proyecto.NombresEntornos(m)
+	return "", sugerencia.Nuevof("agrega --env "+nombres[0]+" (o el que quieras de: "+strings.Join(nombres, ", ")+")", "hay %d entornos y no dijiste cuál usar", len(m))
 }
 
 // escribirVariable pone VAR=valor en un archivo .env: reemplaza la línea si ya

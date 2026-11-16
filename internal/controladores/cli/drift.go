@@ -2,7 +2,7 @@ package cli
 
 import (
 	"context"
-	"fmt"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 	"github.com/zara-te05/Marga/internal/vistas/terminal"
 	"strings"
 
@@ -35,6 +35,9 @@ Cualquier diferencia (una columna agregada a mano, un índice borrado…) es "dr
 		switch {
 		case nuevaBase:
 			linea(c, "No había línea base en %s: se guardó el esquema actual. Desde ahora se detectan cambios.", sNegri.Render(nombre))
+			if locales, err := p.Migraciones(); err == nil {
+				sugerirAdoptar(c, locales, real)
+			}
 		case len(cambios) == 0:
 			linea(c, "%s Sin drift en %s: el esquema coincide con lo que dejó Marga", sAcento.Render("✓"), sNegri.Render(nombre))
 		case driftAceptar:
@@ -81,7 +84,7 @@ Con un nombre muestra su DDL: una tabla, una vista, un tipo, un trigger o una fu
 			buscado := strings.TrimSpace(args[0])
 			ddls := buscarDDL(real, buscado)
 			if len(ddls) == 0 {
-				return fmt.Errorf("no hay ninguna tabla, vista, función, trigger ni tipo llamado %q en %s", buscado, nombre)
+				return sugerencia.Nuevof("marga esquema --env "+nombre+" para ver los nombres", "no hay ninguna tabla, vista, función, trigger ni tipo llamado %q en %s", buscado, nombre)
 			}
 			linea(c, "%s", terminal.Resaltar(strings.Join(ddls, "\n\n")))
 			return nil

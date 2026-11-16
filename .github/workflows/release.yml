@@ -1,8 +1,8 @@
 name: Release
 
 # Al subir una etiqueta (git tag v0.5.0 && git push origin v0.5.0) se publican
-# los ejecutables de marga y marga-server para Windows, Linux y macOS, y la
-# imagen de Docker del servidor en ghcr.io.
+# los ejecutables de marga y marga-server para Windows, Linux y macOS, la CLI en
+# Scoop, winget y Homebrew, y la imagen de Docker del servidor en ghcr.io.
 on:
   push:
     tags: ["v*"]
@@ -28,6 +28,8 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Publica en Scoop, winget y Homebrew (ver .goreleaser.yaml).
+          MARGA_PUBLICAR_TOKEN: ${{ secrets.MARGA_PUBLICAR_TOKEN }}
 
   imagen:
     runs-on: ubuntu-latest

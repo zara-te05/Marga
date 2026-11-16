@@ -1,13 +1,12 @@
 package cli
 
 import (
-	"errors"
-	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
 	"github.com/zara-te05/Marga/internal/datos/remoto"
+	"github.com/zara-te05/Marga/internal/modelos/sugerencia"
 )
 
 func relPath(base, f string) (string, error) {
@@ -21,8 +20,8 @@ func vinculado() (*proyecto.Proyecto, *remoto.Cliente, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	if p.Config.Servidor == "" || p.Config.RepoID == 0 {
-		return nil, nil, errors.New("este proyecto no está vinculado a un servidor. Usa `marga link --repo ID`")
+	if esLocal(p) {
+		return nil, nil, errModoLocal
 	}
 	cli, _, err := remoto.Conectado(p.Config.Servidor)
 	return p, cli, err
@@ -89,7 +88,7 @@ usan la rama actual. Cámbiate con git checkout. Este comando es para proyectos 
 			return err
 		}
 		if gitDe(p) != nil {
-			return fmt.Errorf("este proyecto usa git y Marga sigue su rama (ahora %s). Cámbiate con: git checkout %s", ramaDeTrabajo(p), args[0])
+			return sugerencia.Nuevof("git checkout "+args[0], "este proyecto usa git y Marga sigue su rama (ahora %s)", ramaDeTrabajo(p))
 		}
 		ramas, err := cli.Ramas(p.Config.RepoID)
 		if err != nil {
@@ -100,7 +99,7 @@ usan la rama actual. Cámbiate con git checkout. Este comando es para proyectos 
 			existe = existe || r.Nombre == args[0]
 		}
 		if !existe {
-			return fmt.Errorf("la rama %q no existe en el servidor (créala con marga branch %s)", args[0], args[0])
+			return sugerencia.Nuevof("marga branch "+args[0]+" para crearla", "la rama %q no existe en el servidor", args[0])
 		}
 		p.Config.Rama = args[0]
 		if err := p.Guardar(); err != nil {
@@ -163,7 +162,7 @@ si chocan. Si ambas ramas tocaron la misma tabla, Marga se detiene (conflicto).`
 					linea(c, "        %s %s", sTenue.Render(hacia+":"), h)
 				}
 			}
-			return errors.New("no se fusionó. Revisa que esas migraciones sean compatibles entre sí; si lo son, repite con --forzar")
+			return sugerencia.Nuevo("no se fusionó por los conflictos de arriba", "marga verificar para comprobar que esas migraciones funcionan juntas; si sí, repite con --forzar")
 		case "fast_forward":
 			verbo := "avanzó"
 			if !res.Aplicado {

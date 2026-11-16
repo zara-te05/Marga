@@ -24,8 +24,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/spf13/cobra"
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
 )
 
 const maxHistorialSQL = 500
@@ -92,7 +92,7 @@ func AgregarHistorial(h []string, s string) []string {
 // ---------------------------------------------------------------- autocompletado
 
 // palabrasDe junta los nombres del esquema para el autocompletado.
-func palabrasDe(e introspeccion.Esquema) []string {
+func palabrasDe(e esquema.Esquema) []string {
 	set := map[string]bool{}
 	for _, t := range e.Tablas {
 		set[t.Nombre] = true
@@ -370,7 +370,7 @@ const ayudaConsolaSQL = `  SQL terminado en ;          se ejecuta (Enter); sin ;
   \q                          salir`
 
 // consolaInteractiva es la Consola de `marga sql` cuando la entrada es una terminal.
-func consolaInteractiva(c *cobra.Command, leerEsquema func() (introspeccion.Esquema, error), correr func(string) error) error {
+func consolaInteractiva(c *cobra.Command, leerEsquema func() (esquema.Esquema, error), correr func(string) error) error {
 	esq, err := leerEsquema()
 	if err != nil {
 		linea(c, "%s No se pudo leer el esquema para autocompletar: %v", sAviso.Render("!"), err)
@@ -448,7 +448,7 @@ func consolaInteractiva(c *cobra.Command, leerEsquema func() (introspeccion.Esqu
 }
 
 // describir es \d: sin nombre lista los objetos; con nombre muestra su DDL.
-func describir(c *cobra.Command, e introspeccion.Esquema, nombre string) {
+func describir(c *cobra.Command, e esquema.Esquema, nombre string) {
 	if nombre != "" {
 		ddls := buscarDDL(e, nombre)
 		if len(ddls) == 0 {
@@ -480,9 +480,9 @@ func describir(c *cobra.Command, e introspeccion.Esquema, nombre string) {
 
 // buscarDDL encuentra un objeto por nombre: tabla, vista, tipo, trigger o función
 // (por nombre o firma; con varias sobrecargas devuelve todas).
-func buscarDDL(e introspeccion.Esquema, buscado string) []string {
+func buscarDDL(e esquema.Esquema, buscado string) []string {
 	var ddls []string
-	for _, o := range e.Objetos() {
+	for _, o := range e.Objetos(dialectoDe(e.Motor)) {
 		base, _, _ := strings.Cut(o.Nombre, "(")
 		etiqueta, _, _ := strings.Cut(o.Nombre, " ON ")
 		if o.Nombre == buscado || (o.Tipo == "funcion" || o.Tipo == "procedimiento") && base == buscado ||

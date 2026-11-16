@@ -90,17 +90,26 @@ func Conectado(servidor string) (*Cliente, Credencial, error) {
 	}
 	c, ok := m[servidor]
 	if !ok {
-		return nil, c, fmt.Errorf("no has iniciado sesión en %s. Usa `marga login --servidor %s`", servidor, servidor)
+		return nil, c, &Error{Msg: "no has iniciado sesión en " + servidor, Prueba: "marga login --servidor " + servidor}
 	}
 	return Nuevo(servidor, c.Token), c, nil
 }
 
+// Error es un error de la API (o de la conexión con ella, con Status 0).
+// Prueba es la siguiente acción que puede intentar la persona.
 type Error struct {
 	Status int
 	Msg    string
+	Prueba string
 }
 
-func (e *Error) Error() string { return e.Msg }
+func (e *Error) Error() string      { return e.Msg }
+func (e *Error) Sugerencia() string { return e.Prueba }
+
+// SinConexion: no se pudo hablar con el servidor (apagado, URL equivocada, sin red).
+func (e *Error) SinConexion() bool {
+	return e.Status == 0 && strings.HasPrefix(e.Msg, "no hay conexión")
+}
 
 func (c *Cliente) do(method, path string, body, out any) error {
 	var rd io.Reader
@@ -122,27 +131,80 @@ func (c *Cliente) do(method, path string, body, out any) error {
 	}
 	res, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("no hay conexión con el servidor %s", c.Base)
+		return &Error{Msg: "no hay conexión con el servidor " + c.Base,
+			Prueba: "levanta el servidor (marga-server) o corrige la URL con --servidor; si trabajas solo, no necesitas servidor (marga init --local)"}
 	}
 	defer res.Body.Close()
 	data, _ := io.ReadAll(io.LimitReader(res.Body, 50<<20))
 	if res.StatusCode >= 400 {
-		var e struct {
-			Error string `json:"error"`
-		}
-		_ = json.Unmarshal(data, &e)
-		if e.Error == "" {
-			e.Error = res.Status
-		}
-		if res.StatusCode == http.StatusUnauthorized && c.Token != "" {
-			e.Error += " — vuelve a iniciar sesión con `marga login`"
-		}
-		return &Error{res.StatusCode, e.Error}
+		return errorDeRespuesta(c.Base, path, res, data, c.Token != "")
 	}
 	if out != nil && len(data) > 0 {
 		return json.Unmarshal(data, out)
 	}
 	return nil
+}
+
+// errorDeRespuesta traduce una respuesta de error de la API a un mensaje con su
+// siguiente paso. El servidor de Marga siempre responde {"error": "..."} en /api/:
+// si no viene así, en esa URL hay otra cosa (otro programa, un proxy, la web sola).
+func errorDeRespuesta(base, path string, res *http.Response, data []byte, conToken bool) *Error {
+	var e struct {
+		Error string `json:"error"`
+		BD    string `json:"bd"` // solo /api/health
+	}
+	esMarga := json.Unmarshal(data, &e) == nil && (e.Error != "" || e.BD != "")
+	out := &Error{Status: res.StatusCode, Msg: e.Error}
+	switch {
+	case e.Error == "" && e.BD != "":
+		out.Msg = "el servidor de " + base + " está arriba pero su base de datos no: " + e.BD
+		out.Prueba = "revisa MARGA_DB_URL de marga-server y que PostgreSQL esté corriendo"
+	case !esMarga && res.StatusCode == http.StatusNotFound:
+		out.Msg = fmt.Sprintf("%s respondió 404 en /api%s: ahí no hay un servidor de Marga (¿está apagado o es otra URL?)", base, rutaSinConsulta(path))
+		out.Prueba = "levanta el servidor con marga-server y comprueba que abra " + base + "/api/health; o usa --servidor con la URL correcta"
+	case !esMarga:
+		out.Msg = fmt.Sprintf("%s respondió %s: no parece un servidor de Marga", base, res.Status)
+		out.Prueba = "comprueba que " + base + "/api/health responda; si no, levanta marga-server o corrige la URL con --servidor"
+	case res.StatusCode == http.StatusNotFound && e.Error == "ruta de API no encontrada":
+		out.Msg = "el servidor de " + base + " no conoce esta operación (/api" + rutaSinConsulta(path) + "): parece de una versión anterior a la CLI"
+		out.Prueba = "actualiza marga-server a la misma versión que la CLI (compara con marga version)"
+	case res.StatusCode == http.StatusUnauthorized && conToken:
+		out.Msg += " (tu sesión venció o el token se revocó)"
+		out.Prueba = "marga login --servidor " + base
+	case res.StatusCode == http.StatusUnauthorized:
+		out.Prueba = "revisa tu email y contraseña; si no tienes cuenta, regístrate en " + base
+	case res.StatusCode == http.StatusTooManyRequests:
+		out.Prueba = "espera unos minutos y vuelve a intentarlo"
+	case res.StatusCode >= 500:
+		out.Prueba = "revisa los logs de marga-server; si su base de datos está caída, " + base + "/api/health lo dice"
+	}
+	return out
+}
+
+func rutaSinConsulta(p string) string {
+	if i := strings.IndexByte(p, '?'); i >= 0 {
+		return p[:i]
+	}
+	return p
+}
+
+// Salud consulta /api/health: sirve para saber si en esa URL hay un servidor de Marga.
+func (c *Cliente) Salud() (version string, err error) {
+	var r struct {
+		OK      bool   `json:"ok"`
+		BD      string `json:"bd"`
+		Version string `json:"version"`
+	}
+	if err := c.do("GET", "/health", nil, &r); err != nil {
+		return "", err
+	}
+	return r.Version, nil
+}
+
+// Repos lista los proyectos a los que tienes acceso.
+func (c *Cliente) Repos() ([]Repo, error) {
+	var rs []Repo
+	return rs, c.do("GET", "/repos", nil, &rs)
 }
 
 // ---------------------------------------------------------------- Tipos de la API

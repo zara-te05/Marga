@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zara-te05/Marga/internal/datos/introspeccion"
 	"github.com/zara-te05/Marga/internal/datos/proyecto"
+	"github.com/zara-te05/Marga/internal/modelos/esquema"
 	"github.com/zara-te05/Marga/tests/apoyo/pruebabd"
 )
 
@@ -36,7 +36,7 @@ func TestSubirBajarYDrift(t *testing.T) {
 		migDown("0002", "email", "ALTER TABLE clientes ADD COLUMN email text;", "ALTER TABLE clientes DROP COLUMN email;"),
 	}
 	var eventos []string
-	ev := func(mg proyecto.Migracion, _ time.Duration, snap *introspeccion.Esquema, err error) {
+	ev := func(mg proyecto.Migracion, _ time.Duration, snap *esquema.Esquema, err error) {
 		if err == nil && snap == nil {
 			t.Errorf("%s: sin snapshot", mg.ID())
 		}
