@@ -5,11 +5,12 @@
  * - Pinta el avatar del usuario y su menú (cerrar sesión)
  * - Utilidades: escapeHTML, tiempo relativo, repositorio activo
  *
- * Si abres las páginas con doble clic (file://) no hay backend: MargaAPI.online = false
- * y las páginas siguen mostrando su contenido de demostración.
+ * Sin servidor (doble clic, file://) o con ?demo en la URL, las peticiones las responde
+ * marga-demo.js con datos de ejemplo: todas las pantallas funcionan igual, solo lectura.
  */
 (function () {
-  const online = location.protocol === 'http:' || location.protocol === 'https:';
+  const demo = window.MargaDemo || null;
+  const online = !!demo || location.protocol === 'http:' || location.protocol === 'https:';
   // Páginas públicas: no exigen sesión.
   const isLogin = /(login|restablecer)\.html$/.test(location.pathname);
 
@@ -24,6 +25,13 @@
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     };
     if (body !== undefined) opts.body = JSON.stringify(body);
+    if (demo) {
+      try {
+        return await demo.responder(method, path, body);
+      } catch (e) {
+        throw new ApiError(e.status ?? 0, e.message);
+      }
+    }
 
     let res;
     try {
@@ -120,6 +128,7 @@
 
   const API = {
     online,
+    demo: !!demo,
     ApiError,
     me: null,
     get: (p) => request('GET', p),
